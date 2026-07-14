@@ -412,6 +412,17 @@
 .contact-detail-icon.map-icon   { background: linear-gradient(135deg, #e11d48, #be123c); box-shadow: 0 4px 12px rgba(225, 29, 72, 0.2); }
 .contact-detail-icon.reg-icon   { background: linear-gradient(135deg, #6366f1, #4338ca); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); }
 
+.contact-detail-icon svg {
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+  fill: none !important;
+}
+
+.contact-detail-icon.wa-icon svg {
+  fill: #ffffff !important;
+  stroke: none !important;
+}
+
 /* -- صندوق ساعات العمل -- */
 .contact-hours-box {
   background: rgba(255, 255, 255, 0.6);
