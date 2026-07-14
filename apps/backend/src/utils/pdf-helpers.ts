@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as https from "https";
+import * as os from "os";
 
 // Use require to bypass missing TypeScript typings for arabic-persian-reshaper
 const { ArabicShaper } = require("arabic-persian-reshaper");
@@ -28,8 +29,8 @@ function downloadFile(url: string, dest: string): Promise<void> {
 }
 
 export async function ensureFontsExist(): Promise<{ regular: string; bold: string }> {
-  // Store fonts in apps/backend/fonts to avoid build triggers
-  const fontsDir = path.resolve(process.cwd(), "fonts");
+  // Store fonts in OS temp directory because Vercel/Serverless is a read-only filesystem
+  const fontsDir = path.join(os.tmpdir(), "kanan-fonts");
   if (!fs.existsSync(fontsDir)) {
     fs.mkdirSync(fontsDir, { recursive: true });
   }
