@@ -1666,20 +1666,25 @@ svg.lucide {
   overflow: visible !important;
 }
 
-/* إزالة إطار وخلفية كرت اللوجو في أسفل الصفحة */
+/* إزالة إطار وخلفية كرت اللوجو في أسفل الصفحة وضمان توسيطه بالكامل */
 .footer-logo-card {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
-  justify-content: center;
-  align-items: center;
-  display: flex;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .footer-logo-img {
-  max-height: 288px !important;
+  max-height: 420px !important;
+  max-width: 100% !important;
   width: auto !important;
+  height: auto !important;
+  display: block !important;
 }
 
 
