@@ -263,16 +263,31 @@ export function PublicSite({
   const [showWhatsApp, setShowWhatsApp] = useState(true);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname === "/contact") {
+      setShowWhatsApp(false);
+      return;
+    }
     const handleScroll = () => {
-      // Hide the widget when the scroll is near the bottom (overlapping the dark footer)
-      const threshold = document.documentElement.scrollHeight - window.innerHeight - 380;
-      if (window.scrollY > threshold) {
-        setShowWhatsApp(false);
+      const contactSec = document.getElementById("contact");
+      if (contactSec) {
+        const rect = contactSec.getBoundingClientRect();
+        // Hide if the contact section starts entering the viewport
+        if (rect.top < window.innerHeight) {
+          setShowWhatsApp(false);
+        } else {
+          setShowWhatsApp(true);
+        }
       } else {
-        setShowWhatsApp(true);
+        const threshold = document.documentElement.scrollHeight - window.innerHeight - 800;
+        if (window.scrollY > threshold) {
+          setShowWhatsApp(false);
+        } else {
+          setShowWhatsApp(true);
+        }
       }
     };
     window.addEventListener("scroll", handleScroll);
+    handleScroll(); // Trigger once on mount
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -775,10 +790,6 @@ export function PublicSite({
 
       <footer className="site-footer">
         <div className="footer-cols-two">
-          <div className="footer-logo-card">
-            <img src="/kenan-logo.png" alt="KENAN Safety & Security" className="footer-logo-img" />
-          </div>
-          
           <div className="footer-contact-column">
             <h4>معلومات التواصل</h4>
             <div className="contact-divider"></div>
@@ -849,6 +860,10 @@ export function PublicSite({
                 </svg>
               </a>
             </div>
+          </div>
+
+          <div className="footer-logo-card">
+            <img src="/kenan-logo.png" alt="KENAN Safety & Security" className="footer-logo-img" />
           </div>
         </div>
         
