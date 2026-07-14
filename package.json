@@ -1,0 +1,29 @@
+{
+  "name": "kanan-erp",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run start:dev --prefix apps/backend",
+    "dev:frontend": "npm run dev --prefix apps/frontend",
+    "build:backend": "npm run build --prefix apps/backend",
+    "build:frontend": "npm run build --prefix apps/frontend",
+    "build:shared": "npm run build --prefix packages/shared",
+    "vercel-build": "npx prisma generate --schema=database/schema.prisma || echo 'Prisma generate skipped'",
+    "postinstall": "npx prisma generate --schema=database/schema.prisma || echo 'Prisma generate skipped'"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "dotenv": "^17.4.2"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.4",
+    "@prisma/adapter-libsql": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "prisma": "^7.8.0"
+  }
+}

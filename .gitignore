@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+screenshots/
+.env
+.env.*
+client_secret_*.json
+
+.vercel

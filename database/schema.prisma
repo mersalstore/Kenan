@@ -1,0 +1,717 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+// 1. المستخدمين والموظفين
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole // [ADMIN, PROJECT_MANAGER, SITE_ENGINEER, PROCUREMENT, WORKER, TECHNICIAN]
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // العلاقات
+  managedProjects Project[]               @relation("ProjectEngineer")
+  projectAccesses UserProjectPermission[]
+  auditLogs       AuditLog[]
+  deficiencies    SiteDeficiency[]        @relation("DeficiencyCreator")
+  refreshTokens   RefreshToken[]
+  dailyReports    DailySiteReport[]       @relation("DailyReportEngineer")
+  supplyOrders    SupplyOrder[]           @relation("SupplyOrderCreator")
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  PROJECT_MANAGER
+  SITE_ENGINEER
+  PROCUREMENT
+  WORKER
+  TECHNICIAN
+}
+
+// 2. إدارة التوكينات للمصادقة وتجديدها
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+// 3. الصلاحيات الديناميكية لكل دور/قسم ولكل مشروع
+model RolePermission {
+  id     String   @id @default(uuid())
+  role   UserRole
+  module String // مثل: "projects", "quotations", "finance", "inventory"
+  action Action // [CREATE, READ, UPDATE, DELETE]
+
+  @@unique([role, module, action])
+  @@map("role_permissions")
+}
+
+enum Action {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+}
+
+// الصلاحيات الخاصة بمشروع معين (Per-Project permissions) للمهندسين
+model UserProjectPermission {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("user_project_permissions")
+}
+
+// 4. العملاء
+model Client {
+  id                     String   @id @default(uuid())
+  name                   String
+  phone                  String
+  address                String
+  type                   String // "شركة" | "مالك وحدة" | إلخ
+  notes                  String?
+  sector                 String? // "حكومي" | "خاص"
+  email                  String?
+  city                   String?
+  commercialRegister     String?
+  taxId                  String?
+  digitalWallet          String?
+  documentationAuthority String?
+  createdAt              DateTime @default(now())
+
+  // العلاقات
+  projects             Project[]
+  quotations           Quotation[]
+  maintenanceContracts MaintenanceContract[]
+  contracts            Contract[]
+
+  @@map("clients")
+}
+
+// 5. المشاريع والمواقع
+model Project {
+  id         String        @id @default(uuid())
+  name       String
+  type       String // "نظام إنذار حريق" | "كاميرات وشبكات" | إلخ
+  clientId   String
+  client     Client        @relation(fields: [clientId], references: [id])
+  address    String
+  startDate  DateTime
+  endDate    DateTime
+  status     ProjectStatus @default(PLANNED) // [PLANNED, IN_PROGRESS, ON_HOLD, DELAYED, COMPLETED]
+  engineerId String?
+  engineer   User?         @relation("ProjectEngineer", fields: [engineerId], references: [id], onDelete: SetNull)
+  budget     Decimal       
+  progress   Int           @default(0) // 0 to 100
+  createdAt  DateTime      @default(now())
+
+  // العلاقات
+  stages               ProjectStage[]
+  assignments          ProjectAssignment[]
+  invoices             Invoice[]
+  expenses             Expense[]
+  contracts            Contract[]
+  deficiencies         SiteDeficiency[]
+  systems              ProjectSystem[]
+  materials            ProjectMaterial[]
+  projectPermissions   UserProjectPermission[]
+  maintenanceContracts MaintenanceContract[]
+  dailyReports         DailySiteReport[]
+  supplyOrders         SupplyOrder[]
+
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  PLANNED // لم يبدأ
+  IN_PROGRESS // جاري
+  ON_HOLD // متوقف
+  DELAYED // متأخر
+  COMPLETED // مكتمل
+}
+
+// 6. مراحل التنفيذ الديناميكية
+model ProjectStage {
+  id                String      @id @default(uuid())
+  projectId         String
+  project           Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name              String
+  status            StageStatus @default(TODO) // [TODO, DOING, DONE]
+  notes             String?
+  color             String      @default("#e11d48") // Uiverse dynamic styles
+  customerSignature String? // توقيع العميل (URL)
+  updatedAt         DateTime    @updatedAt
+
+  // العلاقات
+  histories ProjectStageHistory[]
+
+  @@map("project_stages")
+}
+
+enum StageStatus {
+  TODO // لم يبدأ
+  DOING // جاري
+  DONE // تم
+}
+
+model ProjectStageHistory {
+  id        String       @id @default(uuid())
+  stageId   String
+  stage     ProjectStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  status    StageStatus
+  notes     String?
+  updatedBy String // معرف المستخدم المغير للحالة
+  updatedAt DateTime     @default(now())
+
+  @@map("project_stage_histories")
+}
+
+// 7. العمال والمقاولين وتعيينات المواقع
+model Worker {
+  id             String   @id @default(uuid())
+  name           String
+  specialty      String
+  phone          String
+  dailyRate      Decimal  
+  nationalId     String?
+  employmentType String   @default("يومي") // "يومي" | "شهري"
+  monthlySalary  Decimal  @default(0) 
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  // العلاقات
+  assignments ProjectAssignment[]
+  attendance  AttendanceRecord[]
+  leaves      Leave[]
+  payrollRuns PayrollRun[]
+
+  @@map("workers")
+}
+
+model Contractor {
+  id        String  @id @default(uuid())
+  name      String
+  phone     String
+  specialty String
+  company   String
+  address   String
+  notes     String?
+
+  // العلاقات
+  assignments ProjectAssignment[]
+  teams       WorkTeam[]
+
+  @@map("contractors")
+}
+
+model ProjectAssignment {
+  id           String      @id @default(uuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workerId     String?
+  worker       Worker?     @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  contractorId String?
+  contractor   Contractor? @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  teamId       String?
+  team         WorkTeam?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  roleOnSite   String
+  startDate    DateTime
+  endDate      DateTime?
+
+  @@map("project_assignments")
+}
+
+// 7.5 فرق العمل (داخلية أو تابعة لمقاول باطن)
+model WorkTeam {
+  id              String      @id @default(uuid())
+  name            String
+  subcontractorId String?
+  subcontractor   Contractor? @relation(fields: [subcontractorId], references: [id], onDelete: SetNull)
+  teamLead        String?
+  trade           String?
+  createdAt       DateTime    @default(now())
+
+  assignments ProjectAssignment[]
+
+  @@map("work_teams")
+}
+
+// 8. سجل الحضور والإجازات
+model AttendanceRecord {
+  id            String           @id @default(uuid())
+  workerId      String
+  worker        Worker           @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  projectId     String?
+  date          DateTime         
+  status        AttendanceStatus
+  checkIn       String? // "08:00"
+  checkOut      String? // "16:00"
+  hours         Decimal          @default(0) 
+  overtimeHours Decimal          @default(0) 
+
+  @@unique([workerId, date])
+  @@map("attendance_records")
+}
+
+enum AttendanceStatus {
+  PRESENT // حاضر
+  ABSENT // غياب
+  LEAVE // إجازة
+}
+
+model Leave {
+  id        String      @id @default(uuid())
+  workerId  String
+  worker    Worker      @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  type      LeaveType
+  startDate DateTime    
+  endDate   DateTime    
+  status    LeaveStatus @default(PENDING) // [PENDING, APPROVED, REJECTED]
+  reason    String
+
+  @@map("leaves")
+}
+
+enum LeaveType {
+  ANNUAL // سنوية
+  SICK // مرضية
+  UNPAID // بدون راتب
+}
+
+enum LeaveStatus {
+  PENDING // مطلوبة
+  APPROVED // مقبولة
+  REJECTED // مرفوضة
+}
+
+// مسيرات الرواتب للموظفين
+model PayrollRun {
+  id             String        @id @default(uuid())
+  workerId       String
+  worker         Worker        @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  period         String // "2026-06"
+  presentDays    Int
+  baseAmount     Decimal       
+  overtimeAmount Decimal       
+  deductions     Decimal       
+  netAmount      Decimal       
+  status         PayrollStatus @default(DRAFT) // [DRAFT, APPROVED, PAID]
+  notes          String?
+
+  @@map("payroll_runs")
+}
+
+enum PayrollStatus {
+  DRAFT // مسودة
+  APPROVED // معتمد
+  PAID // مدفوع
+}
+
+// 9. عروض الأسعار (Quotations)
+model Quotation {
+  id         String          @id @default(uuid())
+  number     String          @unique // مثل "QT-2026-001"
+  clientId   String
+  client     Client          @relation(fields: [clientId], references: [id])
+  date       DateTime
+  validUntil DateTime
+  status     QuotationStatus @default(DRAFT)
+  value      Decimal          // شامل الضريبة
+  taxPercent Decimal         @default(15.0) 
+  currency   String          @default("SAR")
+  notes      String?
+  createdAt  DateTime        @default(now())
+
+  // العلاقات
+  items        QuotationItem[]
+  supplyOrders SupplyOrder[]
+
+  @@map("quotations")
+}
+
+enum QuotationStatus {
+  DRAFT // مسودة
+  SENT // مرسل
+  APPROVED // معتمد
+  REJECTED // ملغي
+}
+
+model QuotationItem {
+  id          String    @id @default(uuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  name        String
+  brand       String?
+  qty         Decimal   
+  price       Decimal   
+  total       Decimal   
+
+  @@map("quotation_items")
+}
+
+// 10. العقود وقوالب العقود (Contracts & Templates)
+model Contract {
+  id                        String   @id @default(uuid())
+  projectId                 String
+  project                   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientId                  String
+  client                    Client   @relation(fields: [clientId], references: [id])
+  value                     Decimal  
+  currency                  String   @default("SAR")
+  startDate                 DateTime
+  endDate                   DateTime
+  warranty                  String
+  clauses                   String
+  secondPartyName           String?
+  secondPartyRegister       String?
+  secondPartyRepresentative String?
+  secondPartyRole           String?  @default("المالك")
+  locationCity              String?
+  locationDistrict          String?
+  locationPlot              String?
+  locationPlan              String?
+  quotationNumber           String?
+  quotationValue            Decimal? 
+  specs                     String[] // الـ 13 بند والمواصفات
+  createdAt                 DateTime @default(now())
+
+  // العلاقات
+  payments PaymentTerm[]
+
+  @@map("contracts")
+}
+
+model PaymentTerm {
+  id         String   @id @default(uuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  label      String
+  percent    Decimal   // نسبة الدفعة من إجمالي العقد
+
+  @@map("payment_terms")
+}
+
+// قوالب إعدادات البنود والشروط في الإعدادات
+model ContractTemplate {
+  id        String       @id @default(uuid())
+  type      TemplateType @unique
+  content   String // النص الافتراضي للبنود
+  updatedAt DateTime     @updatedAt
+
+  @@map("contract_templates")
+}
+
+enum TemplateType {
+  TERMS // الشروط العامة
+  CONDITIONS // شروط التنفيذ والتركيب
+  SAFETY // إجراءات الأمن والسلامة
+  PAYMENTS // قوالب الدفعات المالية
+}
+
+// 11. المالية (الفواتير والمصاريف)
+model Invoice {
+  id        String        @id @default(uuid())
+  projectId String
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number    String        @unique // "INV-2026-001"
+  amount    Decimal       
+  status    InvoiceStatus @default(PARTIAL)
+  dueDate   DateTime?
+  paidAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  PAID // مدفوعة
+  PARTIAL // جزئية
+  LATE // متأخرة
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  type        String // "خامات" | "عمال" | "نقل" | إلخ
+  amount      Decimal  
+  description String
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@map("expenses")
+}
+
+// 12. المخزن وصرف المواد (Inventory)
+model InventoryItem {
+  id            String   @id @default(uuid())
+  name          String
+  brand         String?
+  quantity      Decimal  @default(0) 
+  unit          String   @default("قطعة")
+  purchasePrice Decimal  
+  salePrice     Decimal  
+  supplier      String?
+  receivedAt    DateTime
+  minQuantity   Decimal  @default(0) 
+  createdAt     DateTime @default(now())
+
+  @@map("inventory_items")
+}
+
+model ProjectMaterial {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  itemId    String // مرجع لصنف المخزن الأصلي
+  name      String // اسم الصنف المسجل وقت الصرف
+  unit      String
+  qty       Decimal  
+  unitPrice Decimal  
+  date      DateTime @default(now())
+
+  @@map("project_materials")
+}
+
+// 13. نواقص وملاحظات المهندس والاستشاري للموقع
+model SiteDeficiency {
+  id           String             @id @default(uuid())
+  projectId    String
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  raisedById   String
+  raisedBy     User               @relation("DeficiencyCreator", fields: [raisedById], references: [id])
+  description  String
+  severity     DeficiencySeverity @default(MEDIUM) // [LOW, MEDIUM, HIGH]
+  status       DeficiencyStatus   @default(OPEN) // [OPEN, IN_PROGRESS, RESOLVED]
+  raisedDate   DateTime           @default(now())
+  resolvedDate DateTime?
+
+  @@map("site_deficiencies")
+}
+
+enum DeficiencySeverity {
+  LOW // منخفضة
+  MEDIUM // متوسطة
+  HIGH // عالية
+}
+
+enum DeficiencyStatus {
+  OPEN // مفتوح
+  IN_PROGRESS // قيد المعالجة
+  RESOLVED // تم الحل
+}
+
+// 14. الأنظمة الفنية ومكوناتها في المشاريع
+model ProjectSystem {
+  id        String       @id @default(uuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      SystemType
+  name      String
+  status    SystemStatus @default(DESIGN)
+  notes     String?
+
+  components SystemComponent[]
+
+  @@map("project_systems")
+}
+
+enum SystemType {
+  VENTILATION // تهوية وتكييف / سحب دخان
+  FIRE_FIGHTING // شبكة إطفاء / رشاشات
+  FIRE_ALARM // إنذار حريق
+}
+
+enum SystemStatus {
+  DESIGN // تصميم
+  INSTALLING // جاري التركيب
+  INSTALLED // مركّب
+  TESTING // تشغيل تجريبي
+  CERTIFIED // معتمد
+}
+
+model SystemComponent {
+  id            String                 @id @default(uuid())
+  systemId      String
+  system        ProjectSystem          @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  componentType String // محبس | حساس | لوحة | إلخ
+  description   String
+  manufacturer  String
+  model         String
+  quantity      Decimal                
+  unit          String
+  location      String
+  installStatus ComponentInstallStatus @default(PENDING)
+  installDate   DateTime?
+
+  @@map("system_components")
+}
+
+enum ComponentInstallStatus {
+  PENDING // بانتظار
+  INSTALLED // مركّب
+  TESTED // تم اختباره
+}
+
+// 14.5 التقرير اليومي الموحد للموقع
+model DailySiteReport {
+  id                    String   @id @default(uuid())
+  projectId             String
+  project               Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submittedById         String
+  submittedBy           User     @relation("DailyReportEngineer", fields: [submittedById], references: [id])
+  date                  DateTime @default(now())
+  workersCount          Int      @default(0) // عدد العمالة
+  problems              String? // المشاكل
+  solutions             String? // الحلول
+  needsQuoteRequest     Boolean  @default(false) // يحتاج طلب سعر
+  needsConsultantReview Boolean  @default(false) // يحتاج مراجعة استشاري
+  engineerNotes         String? // ملاحظات مهندس المشروع
+  completionPercent     Int      @default(0) // نسبة استلام المشروع
+  signature             String? // توقيع/اعتماد
+  createdAt             DateTime @default(now())
+
+  systemEntries DailyReportSystemEntry[]
+
+  @@map("daily_site_reports")
+}
+
+model DailyReportSystemEntry {
+  id             String          @id @default(uuid())
+  reportId       String
+  report         DailySiteReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  systemType     SystemType // [FIRE_ALARM, FIRE_FIGHTING, VENTILATION]
+  foundationDone Boolean         @default(false) // تأسيس
+  wiringDone     Boolean         @default(false) // أسلاك
+  installDone    Boolean         @default(false) // تركيب
+
+  @@unique([reportId, systemType])
+  @@map("daily_report_system_entries")
+}
+
+// 14.6 طلبات التوريد واستلام البضاعة (بناءً على عرض السعر والكميات)
+model SupplyOrder {
+  id          String            @id @default(uuid())
+  orderNumber String            @unique // "SUP-2026-001"
+  projectId   String
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  quotationId String?
+  quotation   Quotation?        @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  status      SupplyOrderStatus @default(PENDING)
+  notes       String?
+  createdById String
+  createdBy   User              @relation("SupplyOrderCreator", fields: [createdById], references: [id])
+  createdAt   DateTime          @default(now())
+
+  items SupplyOrderItem[]
+
+  @@map("supply_orders")
+}
+
+model SupplyOrderItem {
+  id          String      @id @default(uuid())
+  orderId     String
+  order       SupplyOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  name        String
+  brand       String?
+  orderedQty  Decimal // الكمية المطلوبة (من عرض السعر)
+  receivedQty Decimal     @default(0) // الكمية المستلمة فعليًا بالموقع
+  unit        String?
+  confirmed   Boolean     @default(false) // تأكيد مهندس الموقع على الاستلام
+
+  @@map("supply_order_items")
+}
+
+enum SupplyOrderStatus {
+  PENDING // بانتظار التوريد
+  PARTIAL // استلام جزئي
+  RECEIVED // تم الاستلام بالكامل
+}
+
+// 15. الصيانة الدورية وزياراتها
+model MaintenanceContract {
+  id             String                       @id @default(uuid())
+  contractNumber String                       @unique // "MNT-2026-001"
+  clientId       String
+  client         Client                       @relation(fields: [clientId], references: [id])
+  projectId      String?
+  project        Project?                     @relation(fields: [projectId], references: [id])
+  value          Decimal                      
+  currency       String                       @default("SAR")
+  startDate      DateTime
+  endDate        DateTime
+  frequency      MaintenanceContractFrequency @default(MONTHLY)
+  status         MaintenanceContractStatus    @default(ACTIVE)
+  notes          String?
+
+  visits MaintenanceVisit[]
+
+  @@map("maintenance_contracts")
+}
+
+enum MaintenanceContractFrequency {
+  MONTHLY // شهري
+  QUARTERLY // ربع سنوي
+  SEMI_ANNUAL // نصف سنوي
+  ANNUAL // سنوي
+}
+
+enum MaintenanceContractStatus {
+  ACTIVE // نشط
+  EXPIRED // منتهي
+  RENEWED // متجدد
+  CANCELLED // ملغي
+}
+
+model MaintenanceVisit {
+  id            String              @id @default(uuid())
+  contractId    String
+  contract      MaintenanceContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  scheduledDate DateTime
+  completedDate DateTime?
+  status        VisitStatus         @default(SCHEDULED)
+  performedBy   String? // المهندس / الفني القائم بالزيارة
+  notes         String?
+
+  @@map("maintenance_visits")
+}
+
+enum VisitStatus {
+  SCHEDULED // مجدولة
+  DONE // تمت
+  MISSED // فائتة (تحتسب برمجياً بناءً على التاريخ)
+}
+
+// 16. سجل النشاطات العام (Audit Logs) لتوثيق جميع حركات قاعدة البيانات
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  timestamp  DateTime @default(now())
+  action     String // "CREATE" | "UPDATE" | "DELETE"
+  entityType String // اسم الجدول مثل "Project", "Quotation"
+  entityId   String
+  oldValue   Json? // القيم القديمة قبل التعديل
+  newValue   Json? // القيم الجديدة بعد التعديل
+
+  @@map("audit_logs")
+}
