@@ -1666,5 +1666,22 @@ svg.lucide {
   overflow: visible !important;
 }
 
+/* إزالة إطار وخلفية كرت اللوجو في أسفل الصفحة */
+.footer-logo-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+.footer-logo-img {
+  max-height: 80px !important;
+  width: auto !important;
+}
+
+
 
 

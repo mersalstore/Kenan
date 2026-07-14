@@ -260,6 +260,21 @@ export function PublicSite({
   const [activeItem, setActiveItem] = useState<ShowcaseItem | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"about" | "process" | "why">("about");
+  const [showWhatsApp, setShowWhatsApp] = useState(true);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Hide the widget when the scroll is near the bottom (overlapping the dark footer)
+      const threshold = document.documentElement.scrollHeight - window.innerHeight - 380;
+      if (window.scrollY > threshold) {
+        setShowWhatsApp(false);
+      } else {
+        setShowWhatsApp(true);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (!activeItem && !lightbox) return;
@@ -943,7 +958,15 @@ export function PublicSite({
       )}
 
       {/* Floating WhatsApp Widget */}
-      <div className="floating-whatsapp-container">
+      <div 
+        className="floating-whatsapp-container"
+        style={{
+          opacity: showWhatsApp ? 1 : 0,
+          pointerEvents: showWhatsApp ? "auto" : "none",
+          transition: "opacity 0.3s ease, transform 0.3s ease",
+          transform: showWhatsApp ? "translateY(0)" : "translateY(20px)"
+        }}
+      >
         <a
           href={`https://wa.me/${site.contactWhatsApp || "966574590198"}?text=${encodeURIComponent(site.contactWhatsAppMsg || "أريد معاينة مجانية لموقعي")}`}
           target="_blank"
