@@ -6155,6 +6155,13 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   const visibleNav = navItems.filter((item) => canAccess(item.id as Section));
 
   const [activeSection, setActiveSection] = useState<Section>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const sec = params.get("section") as Section;
+      if (sec && canAccess(sec)) {
+        return sec;
+      }
+    }
     if (isAdmin) return "dashboard";
     const sections = (user.sections ?? []) as Section[];
     if (sections.includes("dashboard")) return "dashboard";
@@ -6260,7 +6267,37 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     }
   }, [activeSection]);
 
-  const [selectedProjectId, setSelectedProjectId] = useState<number | string>(projects[0]?.id ?? 1);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | string>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const projId = params.get("projectId");
+      if (projId) {
+        return isNaN(Number(projId)) ? projId : Number(projId);
+      }
+    }
+    return projects[0]?.id ?? 1;
+  });
+
+  // Sync state to URL query parameters
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      const prevSection = url.searchParams.get("section");
+      const prevProjId = url.searchParams.get("projectId");
+      const nextProjIdStr = String(selectedProjectId);
+
+      if (prevSection !== activeSection || (activeSection === "projectDetail" && prevProjId !== nextProjIdStr) || (activeSection !== "projectDetail" && prevProjId !== null)) {
+        url.searchParams.set("section", activeSection);
+        if (activeSection === "projectDetail") {
+          url.searchParams.set("projectId", nextProjIdStr);
+        } else {
+          url.searchParams.delete("projectId");
+        }
+        window.history.replaceState(null, "", url.pathname + url.search);
+      }
+    }
+  }, [activeSection, selectedProjectId]);
+
   const [notice, setNotice] = useState("");
   const [showRawToast, setShowRawToast] = useState(false);
 
