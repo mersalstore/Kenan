@@ -1640,4 +1640,20 @@ svg.lucide {
   }
 }
 
+/* تنسيق الجداول داخل عروض الأسعار والوثائق الرسمية لمنع شريط التمرير وضمان ملاءمتها للطباعة والمعاينة */
+.contract-page table,
+.contract-doc table,
+.contract-modal table {
+  min-width: auto !important;
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+.contract-page .table-wrap,
+.contract-doc .table-wrap,
+.contract-modal .table-wrap {
+  overflow: visible !important;
+}
+
+
 
