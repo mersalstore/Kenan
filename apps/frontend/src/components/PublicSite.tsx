@@ -268,22 +268,33 @@ export function PublicSite({
       return;
     }
     const handleScroll = () => {
+      // 1. Check if Hero is active/on-screen
+      const heroSec = document.getElementById("home");
+      let isHeroActive = window.scrollY < 550;
+      if (heroSec) {
+        const heroRect = heroSec.getBoundingClientRect();
+        if (heroRect.bottom > 150) {
+          isHeroActive = true;
+        } else {
+          isHeroActive = false;
+        }
+      }
+
+      // 2. Check if Contact section is active/on-screen
       const contactSec = document.getElementById("contact");
+      let isContactActive = false;
       if (contactSec) {
-        const rect = contactSec.getBoundingClientRect();
-        // Hide if the contact section starts entering the viewport
-        if (rect.top < window.innerHeight) {
-          setShowWhatsApp(false);
-        } else {
-          setShowWhatsApp(true);
+        const contactRect = contactSec.getBoundingClientRect();
+        if (contactRect.top < window.innerHeight) {
+          isContactActive = true;
         }
+      }
+
+      // 3. Show only in middle areas (neither hero nor contact/footer)
+      if (isHeroActive || isContactActive) {
+        setShowWhatsApp(false);
       } else {
-        const threshold = document.documentElement.scrollHeight - window.innerHeight - 800;
-        if (window.scrollY > threshold) {
-          setShowWhatsApp(false);
-        } else {
-          setShowWhatsApp(true);
-        }
+        setShowWhatsApp(true);
       }
     };
     window.addEventListener("scroll", handleScroll);
