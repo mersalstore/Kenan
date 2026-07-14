@@ -69,9 +69,9 @@ export class QuotationsController {
   }
 
   // PDF Export
-  @Get(":id/pdf")
-  async exportPdf(@Param("id") id: string, @Query() query: any, @Res() res: Response) {
-    const buffer = await this.quotationsService.generatePdf(id, query);
+  @Post(":id/pdf")
+  async exportPdf(@Param("id") id: string, @Body() body: any, @Res() res: Response) {
+    const buffer = await this.quotationsService.generatePdf(id, body);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=quotation-${id}.pdf`,

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { ReportsService } from "./reports.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../auth/guards/permissions.guard";
@@ -26,13 +26,13 @@ export class ReportsController {
   }
 
   // Export Project PDF
-  @Get("project/:projectId/pdf")
+  @Post("project/:projectId/pdf")
   async exportProjectPdf(
     @Param("projectId") projectId: string,
-    @Query() query: any,
+    @Body() body: any,
     @Res() res: Response,
   ) {
-    const buffer = await this.reportsService.generateProjectPdf(projectId, query);
+    const buffer = await this.reportsService.generateProjectPdf(projectId, body);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=project-report-${projectId}.pdf`,

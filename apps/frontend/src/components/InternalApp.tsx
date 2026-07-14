@@ -51,6 +51,8 @@ import {
   Wrench,
   X,
   MIcon,
+  Edit,
+  Save,
 } from "./icons";
 import { ChangeEvent, FormEvent, useMemo, useState, useEffect, useRef, type ReactNode, ComponentType } from "react";
 import {
@@ -2267,12 +2269,15 @@ function StaffView({
   staff,
   addStaff,
   deleteStaff,
+  updateStaff,
 }: {
   staff: StaffAccount[];
   addStaff: (member: Omit<StaffAccount, "id">) => void;
   deleteStaff: (id: number) => void;
+  updateStaff?: (id: number, member: Partial<StaffAccount>) => void;
 }) {
   const assignable = navItems.filter((item) => item.id !== "settings");
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -2298,17 +2303,18 @@ function StaffView({
 
   const labelFor = (id: Section) => navItems.find((item) => item.id === id)?.label ?? id;
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!name.trim() || !email.trim() || !password) return;
-    addStaff({
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      password,
-      role,
-      sections,
-      permissions: perms,
-    });
+  const startEdit = (member: StaffAccount) => {
+    setEditingId(member.id);
+    setName(member.name);
+    setEmail(member.email);
+    setPassword("");
+    setRole(member.role);
+    setSections(member.sections || ["dashboard"]);
+    setPerms(member.permissions || { dashboard: "edit" });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
     setName("");
     setEmail("");
     setPassword("");
@@ -2317,10 +2323,43 @@ function StaffView({
     setPerms({ dashboard: "edit" });
   };
 
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!name.trim() || !email.trim()) return;
+
+    if (editingId !== null) {
+      if (updateStaff) {
+        const updatePayload: Partial<StaffAccount> = {
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          role,
+          sections,
+          permissions: perms,
+        };
+        if (password) {
+          updatePayload.password = password;
+        }
+        updateStaff(editingId, updatePayload);
+      }
+      cancelEdit();
+    } else {
+      if (!password) return;
+      addStaff({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+        role,
+        sections,
+        permissions: perms,
+      });
+      cancelEdit();
+    }
+  };
+
   return (
     <section className="content-grid">
       <form className="form-panel" onSubmit={submit}>
-        <SectionTitle icon={UserPlus} title="إنشاء حساب موظف" />
+        <SectionTitle icon={UserPlus} title={editingId !== null ? "تعديل حساب موظف" : "إنشاء حساب موظف"} />
         <label>
           الاسم
           <input value={name} onChange={(event) => setName(event.target.value)} required />
@@ -2333,11 +2372,18 @@ function StaffView({
             onChange={(event) => setEmail(event.target.value)}
             placeholder="name@kenan.com"
             required
+            disabled={editingId !== null}
           />
         </label>
         <label>
-          كلمة المرور
-          <input value={password} onChange={(event) => setPassword(event.target.value)} required />
+          كلمة المرور {editingId !== null && "(اختياري)"}
+          <input
+            type="text"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required={editingId === null}
+            placeholder={editingId !== null ? "اتركها فارغة للاحتفاظ بالكلمة الحالية" : ""}
+          />
         </label>
         <label>
           الدور
@@ -2370,10 +2416,17 @@ function StaffView({
             })}
           </div>
         </div>
-        <button className="primary-button">
-          <UserPlus size={18} />
-          إنشاء الحساب
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button className="primary-button" style={{ flex: 1 }}>
+            {editingId !== null ? <Save size={18} /> : <UserPlus size={18} />}
+            {editingId !== null ? "حفظ التعديلات" : "إنشاء الحساب"}
+          </button>
+          {editingId !== null && (
+            <button type="button" className="secondary-button" onClick={cancelEdit}>
+              إلغاء
+            </button>
+          )}
+        </div>
       </form>
 
       <div className="panel wide">
@@ -2391,15 +2444,20 @@ function StaffView({
                   <span className="staff-avatar">
                     <UserCog size={20} />
                   </span>
-                  <div>
-                    <h3>{member.name}</h3>
-                    <span>{member.role}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ margin: 0, fontSize: "1rem" }}>{member.name}</h3>
+                    <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{member.role}</span>
                   </div>
-                  <button type="button" className="icon-danger" title="حذف" onClick={() => deleteStaff(member.id)}>
-                    <Trash2 size={17} />
-                  </button>
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <button type="button" className="secondary-button" style={{ minWidth: "32px", width: "32px", height: "32px", minHeight: "32px", padding: 0, display: "inline-flex", justifyContent: "center", alignItems: "center" }} title="تعديل" onClick={() => startEdit(member)}>
+                      <Edit size={15} />
+                    </button>
+                    <button type="button" className="icon-danger" title="حذف" style={{ minWidth: "32px", width: "32px", height: "32px", minHeight: "32px", padding: 0, display: "inline-flex", justifyContent: "center", alignItems: "center" }} onClick={() => deleteStaff(member.id)}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
-                <p className="staff-email" dir="ltr">
+                <p className="staff-email" dir="ltr" style={{ margin: "8px 0", fontSize: "0.85rem", color: "var(--muted)" }}>
                   {member.email}
                 </p>
                 <div className="staff-perms">
@@ -6588,7 +6646,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
 
   const downloadQuotationPdf = async (id: string | number, num: string) => {
     try {
-      const queryParams = new URLSearchParams({
+      const payload = {
         nameAr: site.companyNameAr || "",
         nameEn: site.companyNameEn || "",
         crNumber: site.companyCRNumber || "",
@@ -6598,8 +6656,11 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
         email: site.contactEmail || "",
         stamp: site.stamp || "",
         signature: site.signature || ""
-      }).toString();
-      const blob = await apiFetch(`/api/quotations/${id}/pdf?${queryParams}`);
+      };
+      const blob = await apiFetch(`/api/quotations/${id}/pdf`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -6629,7 +6690,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
 
   const downloadProjectReportPdf = async (projectId: string | number, projectName: string) => {
     try {
-      const queryParams = new URLSearchParams({
+      const payload = {
         nameAr: site.companyNameAr || "",
         nameEn: site.companyNameEn || "",
         crNumber: site.companyCRNumber || "",
@@ -6639,8 +6700,11 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
         email: site.contactEmail || "",
         stamp: site.stamp || "",
         signature: site.signature || ""
-      }).toString();
-      const blob = await apiFetch(`/api/reports/project/${projectId}/pdf?${queryParams}`);
+      };
+      const blob = await apiFetch(`/api/reports/project/${projectId}/pdf`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -7176,6 +7240,43 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       setNotice("تم تعطيل حساب الموظف");
     } catch (e) {
       setNotice(e instanceof Error ? e.message : "تعذر تعطيل الحساب");
+    }
+  };
+
+  const updateStaffMember = async (id: number, member: Partial<StaffAccount>) => {
+    try {
+      const existing = staff.find((s) => s.id === id);
+      if (!existing) return;
+      
+      if (existing.backendId) {
+        const payload: any = {};
+        if (member.name) payload.name = member.name;
+        if (member.role) payload.role = staffRoleToApi[member.role] || "WORKER";
+        if (member.password) payload.password = member.password;
+        
+        await apiFetch(`/api/users/${existing.backendId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+      }
+      
+      setStaff((cur) =>
+        cur.map((s) =>
+          s.id === id
+            ? {
+                ...s,
+                name: member.name ?? s.name,
+                email: member.email ?? s.email,
+                role: member.role ?? s.role,
+                sections: member.sections ?? s.sections,
+                permissions: member.permissions ?? s.permissions,
+              }
+            : s
+        )
+      );
+      setNotice("تم تحديث حساب الموظف بنجاح");
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "تعذر تحديث حساب الموظف");
     }
   };
 
@@ -8094,7 +8195,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       case "alerts":
         return <AlertsView alerts={visibleAlerts} onResolve={resolveAlert} goToSection={setActiveSection} />;
       case "settings":
-        return <StaffView staff={staff} addStaff={addStaffMember} deleteStaff={deleteStaffMember} />;
+        return <StaffView staff={staff} addStaff={addStaffMember} deleteStaff={deleteStaffMember} updateStaff={updateStaffMember} />;
       default:
         return (
           <DashboardView

@@ -87,3 +87,5 @@ export const Sparkles = createIcon("auto_awesome");
 export const UserRoundCheck = createIcon("person_check");
 export const Wind = createIcon("air");
 export const LayoutDashboard = createIcon("dashboard");
+export const Edit = createIcon("edit");
+export const Save = createIcon("save");
