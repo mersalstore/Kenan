@@ -1,7 +1,9 @@
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8787";
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
-  const url = `${BACKEND_URL}${endpoint}`;
+  const cleanBackend = BACKEND_URL.replace(/\/$/, "");
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = `${cleanBackend}${cleanEndpoint}`;
   const accessToken = typeof window !== "undefined" ? localStorage.getItem("kanan_access_token") : null;
 
   const headers = new Headers(options.headers || {});
