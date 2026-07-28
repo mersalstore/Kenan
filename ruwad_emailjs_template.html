@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>رمز التحقق OTP - شركة رواد | Ruwad</title>
+  <style>
+    /* Reset & Email Client Fixes */
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    table { border-collapse: collapse !important; }
+    body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #090d16; font-family: 'Segoe UI', Arial, sans-serif; }
+
+    /* Hover & Micro-interactions for supported clients */
+    .otp-box:hover {
+      border-color: #8b5cf6 !important;
+      box-shadow: 0 0 15px rgba(139, 92, 246, 0.4) !important;
+    }
+    .action-btn:hover {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5) !important;
+      box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5) !important;
+    }
+
+    /* Media Queries for Mobile Responsiveness */
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { width: 100% !important; padding: 10px !important; }
+      .email-card { padding: 25px 18px !important; border-radius: 16px !important; }
+      .brand-title { font-size: 22px !important; }
+      .otp-container { gap: 6px !important; direction: ltr !important; }
+      .otp-digit {
+        width: 40px !important;
+        height: 48px !important;
+        font-size: 24px !important;
+        line-height: 48px !important;
+        border-radius: 8px !important;
+      }
+      .heading-text { font-size: 20px !important; }
+      .desc-text { font-size: 14px !important; }
+    }
+  </style>
+</head>
+<body style="background-color: #090d16; margin: 0; padding: 40px 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: rtl; text-align: right; color: #f8fafc;">
+
+  <!-- Outer Main Table -->
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #090d16; width: 100%;">
+    <tr>
+      <td align="center" style="padding: 10px;">
+        
+        <!-- Main Email Container (Max Width 580px) -->
+        <table role="presentation" class="email-wrapper" width="580" border="0" cellspacing="0" cellpadding="0" style="width: 580px; max-width: 580px; margin: 0 auto;">
+          
+          <!-- BRAND HEADER / LOGO -->
+          <tr>
+            <td align="center" style="padding-bottom: 24px;">
+              <table role="presentation" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px; padding: 12px 24px;">
+                    <!-- Ruwad SVG Logo -->
+                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 79.99 77.99' width='44' height='44'><path fill='%23a78bfa' d='M14.59,22.73h15.6l11.03,12.14h2.67c9.02,0,13.59-5.68,13.59-11.47s-4.57-11.59-13.59-11.59H9.8L0,0h46.35c16.93,0,25.29,11.7,25.29,23.28,0,10.47-6.68,20.95-20.17,23.06l28.52,31.64h-17.16l-27.3-31.31H14.15v31.31H.56v-43.12h24.73l-10.7-12.14Z'/></svg>" alt="رواد | Ruwad" width="44" height="44" style="display: block; width: 44px; height: 44px; vertical-align: middle;">
+                  </td>
+                  <td style="padding-right: 14px; text-align: right;">
+                    <span class="brand-title" style="font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; display: block;">رواد <span style="color: #a78bfa; font-weight: 400; font-size: 18px;">RUWAD</span></span>
+                    <span style="font-size: 12px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;">Security Verification</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- MAIN CARD BODY -->
+          <tr>
+            <td class="email-card" style="background: #131b2e; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 40px 32px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); text-align: center;">
+              
+              <!-- Lock Icon Badge -->
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center" style="padding-bottom: 20px;">
+                    <div style="width: 56px; height: 56px; line-height: 56px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 50%; display: inline-block;">
+                      <span style="font-size: 24px; color: #818cf8;">🔒</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Heading -->
+              <h1 class="heading-text" style="margin: 0 0 12px 0; font-size: 24px; font-weight: 700; color: #ffffff;">رمز التحقق الخاص بك</h1>
+              
+              <!-- Greeting / Description -->
+              <p class="desc-text" style="margin: 0 0 28px 0; font-size: 15px; line-height: 1.6; color: #94a3b8;">
+                مرحباً <strong style="color: #e2e8f0;">{{user_name}}</strong>،<br>
+                استخدم كود الـ OTP التالي لإكمال العملية المطلوبة على منصة <strong style="color: #a78bfa;">رواد</strong>. لا تشارك هذا كود مع أي شخص.
+              </p>
+
+              <!-- 6-DIGIT OTP DISPLAY SECTION -->
+              <!-- EmailJS Dynamic Placeholder option A: {{otp_code}} formatted OR 6 individual digits -->
+              <div style="margin: 30px 0; padding: 20px 10px; background: rgba(15, 23, 42, 0.6); border: 1px dashed rgba(139, 92, 246, 0.4); border-radius: 16px;">
+                <table role="presentation" border="0" cellspacing="0" cellpadding="0" align="center" style="margin: 0 auto; direction: ltr;">
+                  <tr>
+                    <!-- If user passes a single string {{otp_code}}, we display it prominently -->
+                    <td align="center">
+                      <div style="font-family: 'Courier New', Consolas, monospace; font-size: 36px; font-weight: 800; letter-spacing: 12px; color: #38bdf8; text-shadow: 0 0 12px rgba(56, 189, 248, 0.5); padding-left: 12px;">
+                        {{otp_code}}
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Notice Expiration -->
+              <p style="margin: 20px 0 0 0; font-size: 13px; color: #cbd5e1;">
+                ⏳ هذا الرمز صالح لمدة <strong style="color: #f43f5e;">{{expiry_minutes}} دقائق</strong> فقط.
+              </p>
+
+              <!-- Divider -->
+              <div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 32px 0;"></div>
+
+              <!-- Security Warning -->
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="background: rgba(239, 68, 68, 0.08); border-right: 3px solid #ef4444; border-radius: 6px; padding: 12px 16px; text-align: right;">
+                    <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #fca5a5;">
+                      ⚠️ <strong>تنبيه أمني:</strong> موظفو شركة رواد لن يطلبوا منك هذا الرمز تحت أي ظرف. إذا لم تطلب هذا الرمز، يُرجى تجاهل هذه الرسالة وتأمين حسابك.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td align="center" style="padding-top: 24px; padding-bottom: 20px;">
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;">
+                © 2026 شركة رواد - Ruwad Inc. جميع الحقوق محفوظة.
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #475569;">
+                هذه الرسالة تم إرسالها تلقائياً، الرجاء عدم الرد عليها.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

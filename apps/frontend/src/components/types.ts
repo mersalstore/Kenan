@@ -245,6 +245,13 @@ export type Quotation = {
   taxPercent: number; // e.g. 15
   currency?: string; // EGP افتراضي | SAR | AED
   notes?: string;
+  clientName?: string;
+  locationCity?: string;
+  locationDistrict?: string;
+  locationPlot?: string;
+  locationPlan?: string;
+  projectAddress?: string;
+  introText?: string;
 };
 
 // ===== تفاصيل المشروع الكاملة (تُفتح بالضغط على مربع المشروع) =====

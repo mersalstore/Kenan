@@ -1,9 +1,14 @@
 node_modules/
 dist/
+apps/frontend/out/
+apps/frontend/.next/
 *.log
+*.err.log
 screenshots/
 .env
 .env.*
 client_secret_*.json
-
 .vercel
+.vercel_backup/
+*.zip
+*.db

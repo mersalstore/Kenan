@@ -1,17 +1,24 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getAuthConfig, getStoredUser, loginWithEmail, loginWithGoogle, logout, type AuthUser } from "../components/auth";
 import { InternalApp } from "../components/InternalApp";
 import { PublicSite, ContactPage } from "../components/PublicSite";
 
 export default function App() {
-  const [config] = useState(() => getAuthConfig());
-  const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
+  const [config, setConfig] = useState<ReturnType<typeof getAuthConfig>>(() => getAuthConfig());
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [mode, setMode] = useState<"site" | "login">("site");
   const [view, setView] = useState<"site" | "app">("app");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setConfig(getAuthConfig());
+    setUser(getStoredUser());
+    setMounted(true);
+  }, []);
 
   const handleGoogleCredential = useCallback(async (credential: string) => {
     setAuthLoading(true);
@@ -49,6 +56,8 @@ export default function App() {
     setView("app");
     setMode("site");
   }, []);
+
+  if (!mounted) return null;
 
   // صفحة التواصل المستقلة — تشتغل بدون تسجيل دخول
   if (typeof window !== "undefined" && window.location.pathname === "/contact") {

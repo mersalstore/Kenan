@@ -1152,9 +1152,17 @@ function ContractDocument({
 
   const HeaderWave = () => (
     <div className="page-header-wave">
-      <svg viewBox="0 0 500 80" preserveAspectRatio="none">
-        <path d="M 150,0 L 500,0 L 500,60 Q 420,20 350,50 T 150,30 Z" fill="#e11d48" />
-        <path d="M 300,0 L 500,0 L 500,40 Q 450,15 400,30 T 300,20 Z" fill="#1e293b" />
+      <svg viewBox="0 0 1000 110" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
+        {/* Top Left Corner Navy & Red Accents */}
+        <path d="M 0,0 L 140,0 C 70,35 0,65 0,0 Z" fill="#d91c24" />
+        <path d="M 0,0 L 185,0 C 95,45 0,80 0,25 Z" fill="#141b34" />
+
+        {/* Right Top Sweeping Red & Navy Curves matching PDF header */}
+        <path d="M 220,0 C 440,48 740,98 1000,92 L 1000,32 C 740,48 440,20 220,0 Z" fill="#141b34" />
+        <path d="M 260,0 C 460,42 750,84 1000,78 L 1000,48 C 750,54 460,25 260,0 Z" fill="#ffffff" />
+        <path d="M 290,0 C 480,36 760,74 1000,62 L 1000,0 Z" fill="#d91c24" />
+        <path d="M 370,0 C 540,28 770,42 1000,22 L 1000,12 C 770,30 540,18 370,0 Z" fill="#141b34" />
+        <path d="M 410,0 C 570,22 780,32 1000,14 L 1000,8 C 780,22 570,12 410,0 Z" fill="#ffffff" />
       </svg>
     </div>
   );
@@ -1370,7 +1378,7 @@ function ContractFooter() {
   return (
     <footer className="contract-footer">
       <div className="footer-column">
-        <span className="footer-label">وقع الالكتروني</span>
+        <span className="footer-label">الموقع الالكتروني</span>
         <span className="footer-val">kenan4saftey.com</span>
       </div>
       <div className="footer-divider" />
@@ -2410,20 +2418,33 @@ function QuotationDocument({
   const subtotal = quotation.items.reduce((acc, it) => acc + it.total, 0);
   const vat = Math.round(subtotal * (quotation.taxPercent / 100));
   const finalTotal = subtotal + vat;
+  const HeaderWave = () => (
+    <div className="page-header-wave">
+      <svg viewBox="0 0 1000 110" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
+        {/* Top Left Corner Navy & Red Accents */}
+        <path d="M 0,0 L 140,0 C 70,35 0,65 0,0 Z" fill="#d91c24" />
+        <path d="M 0,0 L 185,0 C 95,45 0,80 0,25 Z" fill="#141b34" />
+
+        {/* Right Top Sweeping Red & Navy Curves matching PDF header */}
+        <path d="M 220,0 C 440,48 740,98 1000,92 L 1000,32 C 740,48 440,20 220,0 Z" fill="#141b34" />
+        <path d="M 260,0 C 460,42 750,84 1000,78 L 1000,48 C 750,54 460,25 260,0 Z" fill="#ffffff" />
+        <path d="M 290,0 C 480,36 760,74 1000,62 L 1000,0 Z" fill="#d91c24" />
+        <path d="M 370,0 C 540,28 770,42 1000,22 L 1000,12 C 770,30 540,18 370,0 Z" fill="#141b34" />
+        <path d="M 410,0 C 570,22 780,32 1000,14 L 1000,8 C 780,22 570,12 410,0 Z" fill="#ffffff" />
+      </svg>
+    </div>
+  );
 
   return (
     <div className="contract-doc">
       <div className="contract-page">
-        {/* Header Section */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #e11d48", paddingBottom: "10px", marginBottom: "15px" }}>
-          <div style={{ textAlign: "right" }}>
-            <h1 style={{ margin: 0, fontSize: "1.4rem", color: "#e11d48", fontWeight: "bold" }}>مؤسسة كنان لأنظمة الأمن والسلامة</h1>
-            <span style={{ fontSize: "0.8rem", color: "#64748b" }}>رقم السجل التجاري: 7050404537 | الرقم الضريبي: 313072607300003</span>
-          </div>
-          <div>
-            <img src="/kenan-logo.png" alt="KENAN Logo" style={{ height: "65px" }} />
-          </div>
-        </div>
+        {/* Header Section Matching PDF */}
+        <header className="contract-page-header">
+          <img src="/kenan-logo.png" alt="KENAN Logo" className="page-header-logo" />
+          <HeaderWave />
+        </header>
+
+        <h2 className="contract-page-title" style={{ margin: "5px 0 15px 0" }}>عرض سعر أنظمة سلامة</h2>
 
         {/* Metadata info */}
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px", fontSize: "0.85rem", background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
@@ -2432,12 +2453,14 @@ function QuotationDocument({
           <div><strong>صالح لغاية:</strong> {formattedValidUntil} م</div>
         </div>
 
-        {/* Intro Text */}
+        {/* Dynamic Intro Text from System */}
         <div style={{ marginBottom: "15px", fontSize: "0.95rem", lineHeight: "1.6", direction: "rtl", textAlign: "right" }}>
-          <div style={{ fontWeight: "bold", fontSize: "1.05rem", marginBottom: "6px" }}>السادة: {client?.name || "................"} المحترمين</div>
+          <div style={{ fontWeight: "bold", fontSize: "1.05rem", marginBottom: "6px" }}>
+            السادة: {quotation.clientName || client?.name || "................"} المحترمين
+          </div>
           <div style={{ fontWeight: "600", marginBottom: "4px" }}>السلام عليكم ورحمة الله وبركاته،،،</div>
           <p style={{ margin: 0, textIndent: "15px" }}>
-            يسر مؤسسة كنان لأنظمة الأمن والسلامة أن تقدم عرض سعرها لتوريد وتنفيذ أنظمة السلامة لكم في موقعكم في مدينة / {client?.city || "الرياض"} {client?.address ? ` - ${client.address}` : "محافظة الخرج"} وذلك حسب المخطط المعتمد.
+            {quotation.introText || `يسر مؤسسة كنان لأنظمة الأمن والسلامة أن تقدم عرض سعرها لتوريد وتنفيذ أنظمة السلامة لكم في موقعكم في مدينة / ${quotation.locationCity || client?.city || "الرياض"}${quotation.locationDistrict ? ` - حي ${quotation.locationDistrict}` : ""}${quotation.locationPlot ? ` - قطعة رقم (${quotation.locationPlot})` : ""}${quotation.locationPlan ? ` - مخطط رقم (${quotation.locationPlan})` : ""}${quotation.projectAddress || client?.address ? ` - ${quotation.projectAddress || client?.address}` : ""} وذلك حسب المخطط المعتمد.`}
           </p>
         </div>
 
@@ -2514,36 +2537,7 @@ function QuotationDocument({
           </ul>
         </div>
 
-        <table className="contract-sign-table" style={{ marginTop: "20px" }}>
-          <thead>
-            <tr>
-              <th>مقدم العرض (الطرف الأول)</th>
-              <th>اعتماد العميل (الطرف الثاني)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <div className="sign-cell" style={{ minHeight: "120px" }}>
-                  <span style={{ fontWeight: "800", display: "block" }}>مؤسسة كنان لأنظمة الأمن والسلامة</span>
-                  <span style={{ fontSize: "0.8rem", display: "block", color: "#64748b" }}>القسم الفني والمالي</span>
-                  {stamp && <img src={stamp} alt="ختم الشركة" className="stamp-img" style={{ maxHeight: "65px", margin: "5px auto" }} />}
-                  {signature && <img src={signature} alt="توقيع الشركة" className="stamp-img" style={{ maxHeight: "45px", margin: "5px auto" }} />}
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "10px" }}>التوقيع والختم: ............................</span>
-                </div>
-              </td>
-              <td>
-                <div className="sign-cell" style={{ minHeight: "120px" }}>
-                  <span style={{ fontWeight: "800", display: "block" }}>{client?.name || "................"}</span>
-                  <span style={{ fontSize: "0.8rem", display: "block", color: "#64748b" }}>بصفته: عميل</span>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "60px" }}>التوقيع بالاعتماد: ............................</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* Bank details aligned nicely inside a neat block */}
+        {/* Bank & Tax details */}
         <div className="bank-info-box" style={{ marginTop: "15px", padding: "10px", background: "#f8fafc", border: "1px solid #cbd5e1" }}>
           <strong style={{ fontSize: "0.85rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "4px", marginBottom: "6px" }}>
             الحساب البنكي والضريبي للمؤسسة:
@@ -2555,6 +2549,8 @@ function QuotationDocument({
             <div style={{ gridColumn: "span 2" }}><strong>الآيبان:</strong> <code style={{ fontStyle: "normal" }}>SA9080000448608016265902</code></div>
           </div>
         </div>
+
+        {/* Note: Signature table for Offeror & Client Approval removed per user request */}
 
         <ContractFooter />
       </div>
@@ -2642,7 +2638,21 @@ function QuotationsView({
       return;
     }
 
-    addQuotation(clientId, date, validUntil, formItems, value, notes, currency);
+    const locationCity = String(data.get("locationCity") || "");
+    const locationDistrict = String(data.get("locationDistrict") || "");
+    const locationPlot = String(data.get("locationPlot") || "");
+    const locationPlan = String(data.get("locationPlan") || "");
+    const projectAddress = String(data.get("projectAddress") || "");
+    const introText = String(data.get("introText") || "");
+
+    addQuotation(clientId, date, validUntil, formItems, value, notes, currency, {
+      locationCity,
+      locationDistrict,
+      locationPlot,
+      locationPlan,
+      projectAddress,
+      introText,
+    });
     setFormItems([{ name: "", brand: "", qty: 1, price: 0, total: 0 }]);
     event.currentTarget.reset();
   };
@@ -2718,6 +2728,23 @@ function QuotationsView({
               <option key={c}>{c}</option>
             ))}
           </select>
+        </label>
+
+        <div style={{ borderBottom: "1px dashed var(--line)", paddingBottom: "6px", marginTop: "8px" }}>
+          <strong style={{ fontSize: "0.86rem", color: "var(--brand)" }}>بيانات موقع العمل ونص الترويسة بالعرض:</strong>
+        </div>
+        <div className="two-fields">
+          <Field label="المدينة" name="locationCity" defaultValue="الرياض" placeholder="اسم المدينة" />
+          <Field label="الحي" name="locationDistrict" placeholder="اسم الحي" />
+        </div>
+        <div className="two-fields">
+          <Field label="رقم القطعة" name="locationPlot" placeholder="رقم قطعة الأرض" />
+          <Field label="رقم المخطط" name="locationPlan" placeholder="رقم المخطط التنظيمي" />
+        </div>
+        <Field label="عنوان / تفاصيل الموقع" name="projectAddress" placeholder="مثال: التجمع الخامس / حي عرقـة" />
+        <label>
+          نص الترويسة المخصص (اختياري)
+          <textarea name="introText" rows={2} placeholder="اتركه فارغاً للاعتماد على النص التلقائي من النظام..." />
         </label>
 
         <div style={{ marginTop: "12px", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
@@ -3991,9 +4018,25 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   const deleteClient = (id: number) => { setClients((cur) => cur.filter((c) => c.id !== id)); setNotice("تم حذف العميل بنجاح"); };
   const updateClient = (client: Client) => { setClients((cur) => cur.map((c) => (c.id === client.id ? client : c))); setNotice("تم تحديث بيانات العميل"); };
 
-  const addQuotation = (clientId: number, date: string, validUntil: string, items: QuotationItem[], value: number, notes?: string, currencyCode: string = "EGP") => {
+  const addQuotation = (
+    clientId: number,
+    date: string,
+    validUntil: string,
+    items: QuotationItem[],
+    value: number,
+    notes?: string,
+    currencyCode: string = "EGP",
+    extraDetails?: {
+      locationCity?: string;
+      locationDistrict?: string;
+      locationPlot?: string;
+      locationPlan?: string;
+      projectAddress?: string;
+      introText?: string;
+    }
+  ) => {
     const id = nextId(quotations);
-    const newQ: Quotation = { id, number: `QT-2026-${String(id).padStart(3, "0")}`, clientId, date, validUntil, status: "مسودة", items, value, taxPercent: 15, currency: currencyCode, notes };
+    const newQ: Quotation = { id, number: `QT-2026-${String(id).padStart(3, "0")}`, clientId, date, validUntil, status: "مسودة", items, value, taxPercent: 15, currency: currencyCode, notes, ...extraDetails };
     setQuotations((cur) => [...cur, newQ]);
     setNotice("تم إنشاء عرض السعر بنجاح");
   };

@@ -1681,7 +1681,7 @@ function ContractFooter({ site }: { site: SiteSettings }) {
   return (
     <footer className="contract-footer">
       <div className="footer-column">
-        <span className="footer-label">وقع الالكتروني</span>
+        <span className="footer-label">الموقع الالكتروني</span>
         <span className="footer-val">kenan4saftey.com</span>
       </div>
       <div className="footer-divider" />
@@ -3305,10 +3305,12 @@ function QuotationDocument({
 
         {/* Intro Text */}
         <div style={{ marginBottom: "15px", fontSize: "0.95rem", lineHeight: "1.6", direction: "rtl", textAlign: "right" }}>
-          <div style={{ fontWeight: "bold", fontSize: "1.05rem", marginBottom: "6px" }}>السادة: {client?.name || "................"} المحترمين</div>
+          <div style={{ fontWeight: "bold", fontSize: "1.05rem", marginBottom: "6px" }}>
+            السادة: {quotation.clientName || client?.name || "................"} المحترمين
+          </div>
           <div style={{ fontWeight: "600", marginBottom: "4px" }}>السلام عليكم ورحمة الله وبركاته،،،</div>
           <p style={{ margin: 0, textIndent: "15px" }}>
-            يسر مؤسسة كنان لأنظمة الأمن والسلامة أن تقدم عرض سعرها لتوريد وتنفيذ أنظمة السلامة لكم في موقعكم في مدينة / {client?.city || "الرياض"} {client?.address ? ` - ${client.address}` : "محافظة الخرج"} وذلك حسب المخطط المعتمد.
+            {quotation.introText || `يسر مؤسسة كنان لأنظمة الأمن والسلامة أن تقدم عرض سعرها لتوريد وتنفيذ أنظمة السلامة لكم في موقعكم في مدينة / ${quotation.locationCity || client?.city || "الرياض"}${quotation.locationDistrict ? ` - حي ${quotation.locationDistrict}` : ""}${quotation.locationPlot ? ` - قطعة رقم (${quotation.locationPlot})` : ""}${quotation.locationPlan ? ` - مخطط رقم (${quotation.locationPlan})` : ""}${quotation.projectAddress || client?.address ? ` - ${quotation.projectAddress || client?.address}` : ""} وذلك حسب المخطط المعتمد.`}
           </p>
         </div>
 
@@ -3388,36 +3390,7 @@ function QuotationDocument({
           </ul>
         </div>
 
-        <table className="contract-sign-table" style={{ marginTop: "20px" }}>
-          <thead>
-            <tr>
-              <th>مقدم العرض (الطرف الأول)</th>
-              <th>اعتماد العميل (الطرف الثاني)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <div className="sign-cell" style={{ minHeight: "120px" }}>
-                  <span style={{ fontWeight: "800", display: "block" }}>مؤسسة كنان لأنظمة الأمن والسلامة</span>
-                  <span style={{ fontSize: "0.8rem", display: "block", color: "#64748b" }}>القسم الفني والمالي</span>
-                  {stamp && <img src={stamp} alt="ختم الشركة" className="stamp-img" style={{ maxHeight: "65px", margin: "5px auto" }} />}
-                  {signature && <img src={signature} alt="توقيع الشركة" className="stamp-img" style={{ maxHeight: "45px", margin: "5px auto" }} />}
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "10px" }}>التوقيع والختم: ............................</span>
-                </div>
-              </td>
-              <td>
-                <div className="sign-cell" style={{ minHeight: "120px" }}>
-                  <span style={{ fontWeight: "800", display: "block" }}>{client?.name || "................"}</span>
-                  <span style={{ fontSize: "0.8rem", display: "block", color: "#64748b" }}>بصفته: عميل</span>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "60px" }}>التوقيع بالاعتماد: ............................</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* Bank details aligned nicely inside a neat block */}
+        {/* Bank & Tax details */}
         <div className="bank-info-box" style={{ marginTop: "15px", padding: "10px", background: "#f8fafc", border: "1px solid #cbd5e1" }}>
           <strong style={{ fontSize: "0.85rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "4px", marginBottom: "6px" }}>
             الحساب البنكي والضريبي للمؤسسة:
@@ -3429,6 +3402,8 @@ function QuotationDocument({
             <div style={{ gridColumn: "span 2" }}><strong>الآيبان:</strong> <code style={{ fontStyle: "normal" }}>SA9080000448608016265902</code></div>
           </div>
         </div>
+
+        {/* Note: Signature table for Offeror & Client Approval removed per user request */}
 
         <ContractFooter site={site} />
       </div>

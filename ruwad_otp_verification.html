@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام التحقق برمز OTP - شركة رواد (Ruwad)</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- EmailJS SDK -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+  <style>
+    /* CSS Encapsulation & Design System */
+    :root {
+      --bg-dark: #07090e;
+      --card-bg: rgba(18, 24, 38, 0.85);
+      --primary: #6366f1;
+      --primary-glow: #8b5cf6;
+      --accent: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --error: #ef4444;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 40%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: var(--text-main);
+      overflow-x: hidden;
+    }
+
+    /* Uiverse Glassmorphism & Cyber Container */
+    .ruwad-otp-wrapper {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 28px;
+      padding: 40px 32px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      text-align: center;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    /* Logo Header */
+    .ruwad-logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      padding: 10px 22px;
+      border-radius: 50px;
+      margin-bottom: 24px;
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+    }
+
+    .ruwad-logo-badge svg {
+      width: 36px;
+      height: 36px;
+      filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.6));
+    }
+
+    .ruwad-brand-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+
+    .ruwad-brand-name span {
+      color: var(--primary-glow);
+      font-size: 16px;
+      font-weight: 600;
+      margin-right: 6px;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .subtitle strong {
+      color: var(--accent);
+      direction: ltr;
+      display: inline-block;
+    }
+
+    /* 6-Digit OTP Inputs Group (LTR direction for numbers) */
+    .otp-input-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      direction: ltr;
+      margin-bottom: 24px;
+    }
+
+    .otp-field {
+      width: 52px;
+      height: 60px;
+      border-radius: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      background: rgba(15, 23, 42, 0.8);
+      color: #ffffff;
+      font-size: 26px;
+      font-weight: 800;
+      text-align: center;
+      outline: none;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Uiverse States: Focus, Hover, Active */
+    .otp-field:hover {
+      border-color: rgba(139, 92, 246, 0.5);
+    }
+
+    .otp-field:focus {
+      border-color: var(--primary-glow);
+      background: rgba(30, 41, 59, 0.9);
+      box-shadow: 0 0 18px rgba(139, 92, 246, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .otp-field.filled {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    }
+
+    /* Buttons & Actions */
+    .uiverse-btn-verify {
+      width: 100%;
+      padding: 16px;
+      border-radius: 16px;
+      border: none;
+      background: linear-gradient(135deg, var(--primary), var(--primary-glow));
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+      transition: all 0.25s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .uiverse-btn-verify:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(139, 92, 246, 0.6);
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    }
+
+    .uiverse-btn-verify:active {
+      transform: translateY(1px);
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .uiverse-btn-verify:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Resend Section */
+    .resend-box {
+      margin-top: 24px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .resend-link {
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+
+    .resend-link:hover {
+      color: #7dd3fc;
+      text-decoration: underline;
+    }
+
+    .resend-link.disabled {
+      color: #64748b;
+      cursor: not-allowed;
+      text-decoration: none;
+    }
+
+    /* Status Messages & Animations */
+    .status-msg {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .status-msg.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .status-msg.success {
+      display: block;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    .shake {
+      animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* EmailJS Config Modal / Box */
+    .config-box {
+      margin-top: 30px;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      text-align: right;
+      font-size: 13px;
+    }
+
+    .config-box h4 {
+      color: var(--primary-glow);
+      margin-bottom: 8px;
+    }
+
+    .config-box input {
+      width: 100%;
+      padding: 8px 12px;
+      margin-top: 6px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #090d16;
+      color: #fff;
+      font-size: 12px;
+      outline: none;
+    }
+
+    /* Mobile Responsive Layout Adjustments */
+    @media (max-width: 480px) {
+      .ruwad-otp-wrapper {
+        padding: 30px 18px;
+        border-radius: 20px;
+      }
+      .otp-input-group {
+        gap: 6px;
+      }
+      .otp-field {
+        width: 42px;
+        height: 52px;
+        font-size: 22px;
+        border-radius: 10px;
+      }
+      .title {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ruwad-otp-wrapper" id="otpCard">
+    
+    <!-- Ruwad Brand Header -->
+    <div class="ruwad-logo-badge">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 79.99 77.99">
+        <path fill="#a78bfa" d="M14.59,22.73h15.6l11.03,12.14h2.67c9.02,0,13.59-5.68,13.59-11.47s-4.57-11.59-13.59-11.59H9.8L0,0h46.35c16.93,0,25.29,11.7,25.29,23.28,0,10.47-6.68,20.95-20.17,23.06l28.52,31.64h-17.16l-27.3-31.31H14.15v31.31H.56v-43.12h24.73l-10.7-12.14Z"/>
+      </svg>
+      <div class="ruwad-brand-name">رواد <span>RUWAD</span></div>
+    </div>
+
+    <h2 class="title">رمز التحقق الأمني (OTP)</h2>
+    <p class="subtitle">تم إرسال رمز التحقق المكون من 6 أرقام إلى البريد الإلكتروني:<br><strong id="userEmailDisplay">user@example.com</strong></p>
+
+    <!-- 6-DIGIT OTP INPUTS -->
+    <div class="otp-input-group" id="otpInputs">
+      <input type="text" class="otp-field" maxlength="1" pattern="[0-9]" inputmode="numeric" autofocus autocomplete="off">
+      <input type="text" class="otp-field" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+      <input type="text" class="otp-field" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+      <input type="text" class="otp-field" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+      <input type="text" class="otp-field" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+      <input type="text" class="otp-field" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+    </div>
+
+    <!-- Verify Button -->
+    <button class="uiverse-btn-verify" id="btnVerify" onclick="verifyOTP()">
+      <span>تأكيد الرمز</span>
+      <span>⚡</span>
+    </button>
+
+    <!-- Status Alert Message -->
+    <div class="status-msg" id="statusMsg"></div>
+
+    <!-- Resend Timer -->
+    <div class="resend-box">
+      لم يصلك الرمز؟ <span class="resend-link disabled" id="resendBtn" onclick="resendOTP()">إعادة الإرسال (<span id="timer">60</span>s)</span>
+    </div>
+
+    <!-- EMAILJS CONFIG & TRIGGER SECTION -->
+    <div class="config-box">
+      <h4>إعدادات إرسال الإيميل (EmailJS Integration)</h4>
+      <label style="color:#94a3b8; font-size:11px;">البريد المستهدف:</label>
+      <input type="email" id="targetEmail" value="user@example.com" onchange="document.getElementById('userEmailDisplay').innerText = this.value">
+      
+      <button class="uiverse-btn-verify" style="padding: 10px; font-size: 13px; background: linear-gradient(135deg, #059669, #10b981);" onclick="sendOtpEmail()">
+        إرسال رمز OTP جديد عبر EmailJS 📧
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    // Variables
+    let currentGeneratedOTP = "123456"; // Default OTP code
+    let countdown = 60;
+    let timerInterval = null;
+
+    // EmailJS Public Credentials (User fills their own keys from EmailJS dashboard)
+    const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY"; // Replace with your EmailJS Public Key
+    const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID"; // Replace with your Service ID
+    const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID"; // Replace with your Template ID
+
+    // Initialize EmailJS
+    if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY") {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+    }
+
+    // Initialize 6-Digit OTP Fields Logic (Focus Next, Backspace, Paste)
+    const fields = document.querySelectorAll('.otp-field');
+    const btnVerify = document.getElementById('btnVerify');
+
+    fields.forEach((field, index) => {
+      // Keyup handling
+      field.addEventListener('keyup', (e) => {
+        const val = field.value;
+        
+        if (val.length === 1) {
+          field.classList.add('filled');
+          if (index < fields.length - 1) {
+            fields[index + 1].focus();
+          }
+        }
+
+        if (e.key === 'Backspace') {
+          field.classList.remove('filled');
+          if (index > 0 && val === '') {
+            fields[index - 1].focus();
+          }
+        }
+      });
+
+      // Prevent non-numeric inputs
+      field.addEventListener('input', (e) => {
+        field.value = field.value.replace(/[^0-9]/g, '');
+      });
+
+      // Handle Paste event (Pasting 6 digits)
+      field.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pastedData = (e.clipboardData || window.clipboardData).getData('text').trim();
+        if (/^\d{6}$/.test(pastedData)) {
+          pastedData.split('').forEach((char, idx) => {
+            if (fields[idx]) {
+              fields[idx].value = char;
+              fields[idx].classList.add('filled');
+            }
+          });
+          fields[5].focus();
+        }
+      });
+    });
+
+    // Generate 6-Digit OTP Code
+    function generate6DigitOTP() {
+      return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    // Send OTP Email via EmailJS
+    async function sendOtpEmail() {
+      const email = document.getElementById('targetEmail').value;
+      if (!email || !email.includes('@')) {
+        showStatus('يرجى كتابة بريد إلكتروني صحيح أولاً.', 'error');
+        return;
+      }
+
+      currentGeneratedOTP = generate6DigitOTP();
+      showStatus(`جاري إرسال رمز OTP (${currentGeneratedOTP}) إلى ${email}...`, 'success');
+
+      // EmailJS Payload
+      const templateParams = {
+        to_email: email,
+        user_name: email.split('@')[0],
+        otp_code: currentGeneratedOTP,
+        expiry_minutes: "5",
+        company_name: "شركة رواد - Ruwad"
+      };
+
+      try {
+        if (EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") {
+          console.log("EmailJS Params:", templateParams);
+          showStatus(`رمز OTP المولد للتجربة: [ ${currentGeneratedOTP} ] (قم بتعويض مفاتيح EmailJS لإرساله فعلياً)`, 'success');
+        } else {
+          await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+          showStatus(`تم إرسال رمز التحقق بنجاح إلى ${email}`, 'success');
+        }
+        startResendTimer();
+      } catch (err) {
+        console.error("EmailJS Error:", err);
+        showStatus('حدث خطأ أثناء الإرسال عبر EmailJS: ' + (err.text || err.message || 'تحقق من المفاتيح'), 'error');
+      }
+    }
+
+    // Verify OTP Logic
+    function verifyOTP() {
+      let enteredOTP = "";
+      fields.forEach(f => enteredOTP += f.value);
+
+      if (enteredOTP.length < 6) {
+        showStatus('يرجى إدخال رمز التحقق كاملاً (6 أرقام)', 'error');
+        shakeCard();
+        return;
+      }
+
+      if (enteredOTP === currentGeneratedOTP) {
+        showStatus('🎉 تم التحقق من الرمز بنجاح! مرحباً بك في رواد.', 'success');
+        btnVerify.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+        btnVerify.innerHTML = '<span>تم التفعيل بنجاح ✅</span>';
+      } else {
+        showStatus('❌ رمز التحقق غير صحيح، حاول مرة أخرى.', 'error');
+        shakeCard();
+      }
+    }
+
+    // Shake animation on error
+    function shakeCard() {
+      const card = document.getElementById('otpCard');
+      card.classList.add('shake');
+      setTimeout(() => card.classList.remove('shake'), 400);
+    }
+
+    // Status Message display
+    function showStatus(msg, type) {
+      const statusEl = document.getElementById('statusMsg');
+      statusEl.className = `status-msg ${type}`;
+      statusEl.innerText = msg;
+    }
+
+    // Resend Countdown Timer
+    function startResendTimer() {
+      clearInterval(timerInterval);
+      countdown = 60;
+      const resendBtn = document.getElementById('resendBtn');
+      const timerSpan = document.getElementById('timer');
+      
+      resendBtn.classList.add('disabled');
+
+      timerInterval = setInterval(() => {
+        countdown--;
+        timerSpan.innerText = countdown;
+        if (countdown <= 0) {
+          clearInterval(timerInterval);
+          resendBtn.classList.remove('disabled');
+          resendBtn.innerHTML = 'إعادة الإرسال الآن 🔄';
+        }
+      }, 1000);
+    }
+
+    // Resend button trigger
+    function resendOTP() {
+      if (countdown <= 0) {
+        sendOtpEmail();
+      }
+    }
+
+    // Start timer on load
+    startResendTimer();
+  </script>
+</body>
+</html>
