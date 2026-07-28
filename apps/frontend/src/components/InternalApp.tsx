@@ -1524,7 +1524,7 @@ function ContractDocument({
         </div>
 
         <p className="contract-intro-p" style={{ fontSize: "0.9rem", lineHeight: "1.6", marginTop: "15px" }}>
-          ويشار إليهم مجتمعين بهذا العقد بالطرفين أو الطرفان وحيث اتفق الطرفان على أن يقوم الطرف الأول بتنفيذ وتوريد وتركيب شبكة إطفاء الحريق العادي والرش الآلي ونظام التهوية للموقع الخاص بالطرف الثاني الكائن في مدينة {contract.locationCity || "الرياض"} بحي {contract.locationDistrict || "................"} على قطعة رقم ({contract.locationPlot || "................"}) من المخطط التنظيمي رقم ({contract.locationPlan || "................"}) وعليه قد تقدم الطرف الأول بعرضه بجدول للكميات مرفق بعرض الأسعار رقم ({contract.quotationNumber || `QT-${contract.id + 650}`}) وقيمته ({formatMoney(contract.quotationValue || contract.value, contractCurrency)}) فقط {numberToArabicWords(contract.quotationValue || contract.value, contractCurrency)} شامل ضريبة القيمة المضافة. وبهذا فقد تم الاتفاق والتعاقد بين الطرفين على ما يلي:
+          ويشار إليهم مجتمعين بهذا العقد بالطرفين أو الطرفان وحيث اتفق الطرفان على أن يقوم الطرف الأول بتنفيذ وتوريد وتركيب شبكة إطفاء الحريق العادي والرش الآلي ونظام التهوية للموقع الخاص بالطرف الثاني الكائن بمدينة {contract.locationCity || "الرياض"}، حي {contract.locationDistrict || "{{District}}"}، على قطعة رقم ({contract.locationPlot || "{{PlotNumber}}"})، من المخطط التنظيمي رقم ({contract.locationPlan || "{{PlanNumber}}"}) وعليه قد تقدم الطرف الأول بعرضه بجدول للكميات مرفق بعرض الأسعار رقم ({contract.quotationNumber || `QT-${contract.id + 650}`}) وقيمته ({formatMoney(contract.quotationValue || contract.value, contractCurrency)}) فقط {numberToArabicWords(contract.quotationValue || contract.value, contractCurrency)} شامل ضريبة القيمة المضافة. وبهذا فقد تم الاتفاق والتعاقد بين الطرفين على ما يلي:
         </p>
 
         <h3 className="contract-section-title" style={{ marginTop: "15px" }}>البنود والمواصفات:</h3>
@@ -3315,8 +3315,8 @@ function QuotationDocument({
         </div>
 
         <h3 className="contract-section-title" style={{ marginTop: "15px", marginBottom: "8px" }}>جدول الكميات والمواد:</h3>
-        <div className="table-wrap" style={{ marginBlock: "10px", direction: "rtl" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+        <div className="table-wrap" style={{ marginBlock: "10px", direction: "rtl", pageBreakInside: "avoid", breakInside: "avoid" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", pageBreakInside: "avoid", breakInside: "avoid" }}>
             <thead>
               <tr style={{ background: "#f8fafc", borderBottom: "2px solid #cbd5e1" }}>
                 <th style={{ padding: "8px", border: "1px solid #cbd5e1", width: "40px", textAlign: "center" }}>الرقم</th>

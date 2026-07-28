@@ -273,28 +273,13 @@ export class QuotationsService {
         y += 40;
       }
       
-      // Signatures and Stamp
-      doc.moveTo(40, y).lineTo(572, y).strokeColor("#cbd5e1").lineWidth(1).stroke();
-      y += 15;
-      
-      doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(9.5);
-      doc.text(prepareArabicText("مقدم العرض (الطرف الأول)"), 40, y, { align: "right", width: 250 });
-      doc.text(prepareArabicText("اعتماد العميل (الطرف الثاني)"), 320, y, { align: "left", width: 250 });
-      
-      doc.fillColor("#475569").font("Amiri").fontSize(8.5);
-      doc.text(prepareArabicText("مؤسسة كنان لأنظمة الأمن والسلامة"), 40, y + 15, { align: "right", width: 250 });
-      doc.text(prepareArabicText(q.client.name), 320, y + 15, { align: "left", width: 250 });
-      
-      // Draw stamp and signature
+      // Note: Signatures and Client Approval section removed per user requirement.
       if (query?.stamp) {
-        drawBase64Image(doc, query.stamp, 180, y + 30, { height: 50 });
+        drawBase64Image(doc, query.stamp, 180, y, { height: 50 });
       }
       if (query?.signature) {
-        drawBase64Image(doc, query.signature, 80, y + 30, { height: 40 });
+        drawBase64Image(doc, query.signature, 80, y, { height: 40 });
       }
-      
-      doc.text(prepareArabicText("التوقيع والختم: ............................"), 40, y + 90, { align: "right", width: 250 });
-      doc.text(prepareArabicText("التوقيع بالاعتماد: ............................"), 320, y + 90, { align: "left", width: 250 });
 
       // Draw footer on all pages
       let pages = (doc as any)._pageBuffer || [];
