@@ -1303,26 +1303,48 @@ function PageWatermark() {
 }
 
 function DocumentHeader({ documentTitle, site }: { documentTitle?: string; site: SiteSettings }) {
+  const nameAr = site?.companyNameAr || "مؤسسة كنان لأنظمة الأمن والسلامة";
+  const nameEn = site?.companyNameEn || "Kanan Safety & Fire Protection Systems Co.";
+  const crNumber = site?.companyCRNumber || "7050404537";
+  const taxNumber = site?.companyTaxNumber || "313072607300003";
+
   return (
-    <header className="contract-page-header">
-      <img src="/kenan-logo.png" alt="KENAN Logo" className="page-header-logo" />
-      <div className="page-header-wave">
-        <svg viewBox="0 0 1000 120" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
-          {/* Navy Blue Base Swoosh Curve */}
-          <path d="M 210,0 C 440,82 730,118 1000,92 L 1000,0 Z" fill="#141b34" />
-          {/* White Separator Ribbon */}
-          <path d="M 250,0 C 470,72 750,102 1000,76 L 1000,0 Z" fill="#ffffff" />
-          {/* Main Crimson Red Wave Ribbon */}
-          <path d="M 280,0 C 490,64 770,90 1000,64 L 1000,0 Z" fill="#d91c24" />
-          {/* Navy Accent Line */}
-          <path d="M 360,0 C 540,44 790,56 1000,34 L 1000,0 Z" fill="#141b34" />
-          {/* White Separator Line */}
-          <path d="M 410,0 C 590,32 810,40 1000,20 L 1000,0 Z" fill="#ffffff" />
-          {/* Topmost Red Stripe */}
-          <path d="M 470,0 C 630,22 830,24 1000,10 L 1000,0 Z" fill="#d91c24" />
-        </svg>
+    <div className="doc-header-info-block" style={{ marginBottom: "15px", paddingTop: "0px", direction: "rtl" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+        {/* Right: Arabic Header Details */}
+        <div style={{ textAlign: "right", fontSize: "0.82rem", color: "#1e293b", lineHeight: "1.4" }}>
+          <strong style={{ fontSize: "0.92rem", color: "#0d1440", display: "block", marginBottom: "2px" }}>{nameAr}</strong>
+          <div>سجل تجاري: <span style={{ fontWeight: "700" }}>{crNumber}</span></div>
+          <div>الرقم الضريبي: <span style={{ fontWeight: "700" }}>{taxNumber}</span></div>
+        </div>
+
+        {/* Center: Document Title Badge */}
+        {documentTitle && (
+          <div style={{ textAlign: "center", alignSelf: "center" }}>
+            <span style={{ 
+              display: "inline-block", 
+              padding: "4px 18px", 
+              background: "#d91c24", 
+              color: "#ffffff", 
+              fontWeight: "800", 
+              fontSize: "1.05rem", 
+              borderRadius: "6px",
+              boxShadow: "0 2px 4px rgba(217, 28, 36, 0.2)"
+            }}>
+              {documentTitle}
+            </span>
+          </div>
+        )}
+
+        {/* Left: English Header Details */}
+        <div style={{ textAlign: "left", fontSize: "0.78rem", color: "#1e293b", lineHeight: "1.4", direction: "ltr" }}>
+          <strong style={{ fontSize: "0.86rem", color: "#0d1440", display: "block", marginBottom: "2px" }}>{nameEn}</strong>
+          <div>C.R. No: <span style={{ fontWeight: "700" }}>{crNumber}</span></div>
+          <div>VAT No: <span style={{ fontWeight: "700" }}>{taxNumber}</span></div>
+        </div>
       </div>
-    </header>
+      <div style={{ borderBottom: "1.5px solid #cbd5e1", marginTop: "10px", opacity: 0.7 }}></div>
+    </div>
   );
 }
 

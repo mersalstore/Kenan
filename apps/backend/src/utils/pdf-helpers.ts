@@ -170,16 +170,34 @@ export function drawPdfHeader(doc: any, title: string, query: any) {
     }
   }
   
-  // Document Title Badge below the header wave (~y = 108)
+  const nameAr = query?.nameAr || "مؤسسة كنان لأنظمة الأمن والسلامة";
+  const nameEn = query?.nameEn || "Kanan Safety & Fire Protection Systems Co.";
+  const crNumber = query?.crNumber || "7050404537";
+  const taxNumber = query?.taxNumber || "313072607300003";
+
+  // Right Side (Arabic Info) below logo/wave
+  doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(10);
+  doc.text(prepareArabicText(nameAr), 300, 132, { align: "right", width: 255 });
+  doc.fillColor("#475569").font("Amiri").fontSize(8.5);
+  doc.text(prepareArabicText(`سجل تجاري: ${crNumber}`), 300, 147, { align: "right", width: 255 });
+  doc.text(prepareArabicText(`الرقم الضريبي: ${taxNumber}`), 300, 160, { align: "right", width: 255 });
+
+  // Left Side (English Info) below logo/wave
+  doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(9);
+  doc.text(nameEn, 40, 132, { align: "left", width: 230 });
+  doc.fillColor("#475569").font("Amiri").fontSize(8.5);
+  doc.text(`C.R. Number: ${crNumber}`, 40, 147, { align: "left", width: 230 });
+  doc.text(`VAT Number: ${taxNumber}`, 40, 160, { align: "left", width: 230 });
+
+  // Document Title Badge
   if (title) {
-    doc.fillColor("#d91c24");
-    doc.font("Cairo-Bold").fontSize(13);
-    doc.text(prepareArabicText(title), 40, 108, { align: "center", width: 515.28 });
+    doc.fillColor("#d91c24").font("Cairo-Bold").fontSize(12);
+    doc.text(prepareArabicText(title), 40, 176, { align: "center", width: 515.28 });
   }
-  
+
   // Separator line below header title
-  doc.moveTo(40, 128).lineTo(555, 128).strokeColor("#e2e8f0").lineWidth(1).stroke();
-  
+  doc.moveTo(40, 194).lineTo(555, 194).strokeColor("#cbd5e1").lineWidth(1).stroke();
+
   // Reset fonts and colors for body
   doc.fillColor("#0f172a");
   doc.font("Amiri").fontSize(10);
