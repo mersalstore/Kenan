@@ -1002,15 +1002,7 @@ svg.lucide {
 }
 
 .contract-page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  height: 75px;
-  margin-bottom: 18px;
-  padding-bottom: 4px;
-  border-bottom: 2px solid #d91c24;
-  box-sizing: border-box;
+  display: none !important;
 }
 
 .page-header-logo {
