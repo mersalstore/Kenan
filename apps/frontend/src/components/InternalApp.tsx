@@ -1277,55 +1277,52 @@ function normalizeArabic(text: string): string {
     .replace(/[\u064B-\u065F]/g, "");
 }
 
-function DocumentHeader({ documentTitle, site }: { documentTitle?: string; site: SiteSettings }) {
-  const nameAr = site.companyNameAr || "مؤسسة كنان لأنظمة الأمن والسلامة";
-  const nameEn = site.companyNameEn || "Kanan Safety & Fire Protection Systems Co.";
-  const crNumber = site.companyCRNumber || "7050404537";
-  const taxNumber = site.companyTaxNumber || "313072607300003";
-
+function PageWatermark() {
   return (
-    <div className="official-doc-header" style={{ marginBottom: "25px", direction: "rtl", width: "100%" }}>
-      {/* Brand Accent Colored Bar */}
-      <div style={{ height: "6px", background: "linear-gradient(90deg, #e11d48 0%, #0d1440 100%)", borderRadius: "3px", marginBottom: "15px" }}></div>
-      
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
-        {/* Right Info (Arabic) */}
-        <div style={{ textAlign: "right", flex: 1 }}>
-          <h1 style={{ margin: 0, fontSize: "1.2rem", color: "#0d1440", fontWeight: "800" }}>
-            {nameAr}
-          </h1>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "4px", lineHeight: "1.4" }}>
-            <div>سجل تجاري: {crNumber}</div>
-            <div>الرقم الضريبي: {taxNumber}</div>
-            <div>العنوان: {site.contactAddress || "الرياض - حي المنار"}</div>
-          </div>
-        </div>
-
-        {/* Center Logo & Title */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingInline: "15px", flexShrink: 0 }}>
-          <img src="/kenan-logo.png" alt="KENAN Logo" style={{ height: "54px", objectFit: "contain" }} />
-          {documentTitle && (
-            <div style={{ marginTop: "8px", padding: "4px 16px", background: "#f1f5f9", borderRadius: "20px", border: "1px solid #cbd5e1", fontSize: "0.8rem", fontWeight: "800", color: "#e11d48", whiteSpace: "nowrap" }}>
-              {documentTitle}
-            </div>
-          )}
-        </div>
-
-        {/* Left Info (English) */}
-        <div style={{ textAlign: "left", flex: 1, direction: "ltr" }}>
-          <h2 style={{ margin: 0, fontSize: "1.05rem", color: "#0d1440", fontWeight: "800" }}>
-            {nameEn}
-          </h2>
-          <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "4px", lineHeight: "1.4" }}>
-            <div>C.R. Number: {crNumber}</div>
-            <div>VAT Number: {taxNumber}</div>
-            <div>Tel: {site.contactPhone || "+966574590198"}</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ borderBottom: "1.5px solid #cbd5e1", marginTop: "12px", opacity: 0.8 }}></div>
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "480px",
+        maxWidth: "80%",
+        opacity: 0.05,
+        filter: "grayscale(100%)",
+        pointerEvents: "none",
+        zIndex: 0,
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center"
+      }}
+    >
+      <img src="/kenan-logo.png" alt="" style={{ width: "100%", height: "auto", objectFit: "contain" }} />
     </div>
+  );
+}
+
+function DocumentHeader({ documentTitle, site }: { documentTitle?: string; site: SiteSettings }) {
+  return (
+    <header className="contract-page-header">
+      <img src="/kenan-logo.png" alt="KENAN Logo" className="page-header-logo" />
+      <div className="page-header-wave">
+        <svg viewBox="0 0 1000 120" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
+          {/* Navy Blue Base Swoosh Curve */}
+          <path d="M 210,0 C 440,82 730,118 1000,92 L 1000,0 Z" fill="#141b34" />
+          {/* White Separator Ribbon */}
+          <path d="M 250,0 C 470,72 750,102 1000,76 L 1000,0 Z" fill="#ffffff" />
+          {/* Main Crimson Red Wave Ribbon */}
+          <path d="M 280,0 C 490,64 770,90 1000,64 L 1000,0 Z" fill="#d91c24" />
+          {/* Navy Accent Line */}
+          <path d="M 360,0 C 540,44 790,56 1000,34 L 1000,0 Z" fill="#141b34" />
+          {/* White Separator Line */}
+          <path d="M 410,0 C 590,32 810,40 1000,20 L 1000,0 Z" fill="#ffffff" />
+          {/* Topmost Red Stripe */}
+          <path d="M 470,0 C 630,22 830,24 1000,10 L 1000,0 Z" fill="#d91c24" />
+        </svg>
+      </div>
+    </header>
   );
 }
 
@@ -1488,7 +1485,8 @@ function ContractDocument({
   return (
     <div className="contract-doc">
       {/* ==================== PAGE 1 ==================== */}
-      <div className="contract-page">
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
+        <PageWatermark />
         <DocumentHeader documentTitle="عقد اتفاق" site={site} />
 
         <h2 className="contract-page-title">عقد الاتفاق</h2>
@@ -1539,7 +1537,8 @@ function ContractDocument({
       </div>
 
       {/* ==================== PAGE 2 ==================== */}
-      <div className="contract-page">
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
+        <PageWatermark />
         <DocumentHeader documentTitle="عقد اتفاق" site={site} />
 
         <h3 className="contract-section-title">الشروط العامة</h3>
@@ -1565,7 +1564,8 @@ function ContractDocument({
       </div>
 
       {/* ==================== PAGE 3 ==================== */}
-      <div className="contract-page">
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
+        <PageWatermark />
         <DocumentHeader documentTitle="عقد اتفاق" site={site} />
 
         <h3 className="contract-section-title">الجزاءات والغرامات:</h3>
@@ -1608,7 +1608,8 @@ function ContractDocument({
       </div>
 
       {/* ==================== PAGE 4 ==================== */}
-      <div className="contract-page">
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
+        <PageWatermark />
         <DocumentHeader documentTitle="عقد اتفاق" site={site} />
 
         <h3 className="contract-section-title">تسوية الخلافات والقانون الواجب التطبيق:</h3>
@@ -3293,7 +3294,8 @@ function QuotationDocument({
 
   return (
     <div className="contract-doc">
-      <div className="contract-page">
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
+        <PageWatermark />
         <DocumentHeader documentTitle="عرض سعر" site={site} />
 
         {/* Metadata info */}

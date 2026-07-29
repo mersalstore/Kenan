@@ -1152,17 +1152,19 @@ function ContractDocument({
 
   const HeaderWave = () => (
     <div className="page-header-wave">
-      <svg viewBox="0 0 1000 110" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
-        {/* Top Left Corner Navy & Red Accents */}
-        <path d="M 0,0 L 140,0 C 70,35 0,65 0,0 Z" fill="#d91c24" />
-        <path d="M 0,0 L 185,0 C 95,45 0,80 0,25 Z" fill="#141b34" />
-
-        {/* Right Top Sweeping Red & Navy Curves matching PDF header */}
-        <path d="M 220,0 C 440,48 740,98 1000,92 L 1000,32 C 740,48 440,20 220,0 Z" fill="#141b34" />
-        <path d="M 260,0 C 460,42 750,84 1000,78 L 1000,48 C 750,54 460,25 260,0 Z" fill="#ffffff" />
-        <path d="M 290,0 C 480,36 760,74 1000,62 L 1000,0 Z" fill="#d91c24" />
-        <path d="M 370,0 C 540,28 770,42 1000,22 L 1000,12 C 770,30 540,18 370,0 Z" fill="#141b34" />
-        <path d="M 410,0 C 570,22 780,32 1000,14 L 1000,8 C 780,22 570,12 410,0 Z" fill="#ffffff" />
+      <svg viewBox="0 0 1000 120" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
+        {/* Navy Blue Base Swoosh Curve */}
+        <path d="M 210,0 C 440,82 730,118 1000,92 L 1000,0 Z" fill="#141b34" />
+        {/* White Separator Ribbon */}
+        <path d="M 250,0 C 470,72 750,102 1000,76 L 1000,0 Z" fill="#ffffff" />
+        {/* Main Crimson Red Wave Ribbon */}
+        <path d="M 280,0 C 490,64 770,90 1000,64 L 1000,0 Z" fill="#d91c24" />
+        {/* Navy Accent Line */}
+        <path d="M 360,0 C 540,44 790,56 1000,34 L 1000,0 Z" fill="#141b34" />
+        {/* White Separator Line */}
+        <path d="M 410,0 C 590,32 810,40 1000,20 L 1000,0 Z" fill="#ffffff" />
+        {/* Topmost Red Stripe */}
+        <path d="M 470,0 C 630,22 830,24 1000,10 L 1000,0 Z" fill="#d91c24" />
       </svg>
     </div>
   );
@@ -2420,17 +2422,19 @@ function QuotationDocument({
   const finalTotal = subtotal + vat;
   const HeaderWave = () => (
     <div className="page-header-wave">
-      <svg viewBox="0 0 1000 110" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
-        {/* Top Left Corner Navy & Red Accents */}
-        <path d="M 0,0 L 140,0 C 70,35 0,65 0,0 Z" fill="#d91c24" />
-        <path d="M 0,0 L 185,0 C 95,45 0,80 0,25 Z" fill="#141b34" />
-
-        {/* Right Top Sweeping Red & Navy Curves matching PDF header */}
-        <path d="M 220,0 C 440,48 740,98 1000,92 L 1000,32 C 740,48 440,20 220,0 Z" fill="#141b34" />
-        <path d="M 260,0 C 460,42 750,84 1000,78 L 1000,48 C 750,54 460,25 260,0 Z" fill="#ffffff" />
-        <path d="M 290,0 C 480,36 760,74 1000,62 L 1000,0 Z" fill="#d91c24" />
-        <path d="M 370,0 C 540,28 770,42 1000,22 L 1000,12 C 770,30 540,18 370,0 Z" fill="#141b34" />
-        <path d="M 410,0 C 570,22 780,32 1000,14 L 1000,8 C 780,22 570,12 410,0 Z" fill="#ffffff" />
+      <svg viewBox="0 0 1000 120" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
+        {/* Navy Blue Base Swoosh Curve */}
+        <path d="M 210,0 C 440,82 730,118 1000,92 L 1000,0 Z" fill="#141b34" />
+        {/* White Separator Ribbon */}
+        <path d="M 250,0 C 470,72 750,102 1000,76 L 1000,0 Z" fill="#ffffff" />
+        {/* Main Crimson Red Wave Ribbon */}
+        <path d="M 280,0 C 490,64 770,90 1000,64 L 1000,0 Z" fill="#d91c24" />
+        {/* Navy Accent Line */}
+        <path d="M 360,0 C 540,44 790,56 1000,34 L 1000,0 Z" fill="#141b34" />
+        {/* White Separator Line */}
+        <path d="M 410,0 C 590,32 810,40 1000,20 L 1000,0 Z" fill="#ffffff" />
+        {/* Topmost Red Stripe */}
+        <path d="M 470,0 C 630,22 830,24 1000,10 L 1000,0 Z" fill="#d91c24" />
       </svg>
     </div>
   );

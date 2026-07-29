@@ -192,6 +192,15 @@ export class QuotationsService {
       doc.text(prepareArabicText(`المدينة: ${q.client.city || "الرياض"}`), 320, 184, { align: "left", width: 250 });
 
       let y = 210;
+      const totalTableHeight = 20 + (q.items.length * 20) + 70; // Header row + items + totals block
+
+      // Prevent table splitting between pages: if full table doesn't fit on current page, push to next page
+      if (y + totalTableHeight > 680) {
+        drawPdfFooter(doc, 1, query);
+        doc.addPage();
+        drawPdfHeader(doc, "عرض سعر (Quotation)", query);
+        y = 140;
+      }
       
       // Draw Table Headers
       doc.rect(40, y, 532, 20).fill("#f1f5f9");
@@ -228,26 +237,6 @@ export class QuotationsService {
         // Draw thin bottom border
         doc.moveTo(40, y + 20).lineTo(572, y + 20).strokeColor("#e2e8f0").lineWidth(0.5).stroke();
         y += 20;
-
-        // Page break check if y goes near bottom
-        if (y > 640) {
-          drawPdfFooter(doc, 1, query);
-          doc.addPage();
-          drawPdfHeader(doc, "عرض سعر (Quotation)", query);
-          y = 140;
-          
-          // Redraw table headers on new page
-          doc.rect(40, y, 532, 20).fill("#f1f5f9");
-          doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(8.5);
-          doc.text(prepareArabicText("الرقم"), 40, y + 5, { width: 30, align: "center" });
-          doc.text(prepareArabicText("الصنف والمواد"), 70, y + 5, { width: 180, align: "right" });
-          doc.text(prepareArabicText("الوصف/الماركة"), 250, y + 5, { width: 100, align: "right" });
-          doc.text(prepareArabicText("الكمية"), 350, y + 5, { width: 40, align: "center" });
-          doc.text(prepareArabicText("السعر"), 390, y + 5, { width: 80, align: "left" });
-          doc.text(prepareArabicText("الإجمالي"), 470, y + 5, { width: 102, align: "left" });
-          y += 20;
-          doc.font("Amiri").fontSize(9).fillColor("#0f172a");
-        }
       });
 
       y += 10;

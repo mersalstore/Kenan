@@ -1646,8 +1646,42 @@ svg.lucide {
     white-space: normal !important; /* التفاف النص تلقائياً لمنع خروج الكلام عن الجدول */
   }
   
-  .official-doc-header {
-    margin-bottom: 15px !important;
+  .official-doc-header,
+  .contract-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    height: 75px;
+    margin-bottom: 18px !important;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #d91c24;
+    box-sizing: border-box;
+  }
+
+  .page-header-logo {
+    max-height: 68px;
+    width: auto;
+    object-fit: contain;
+    position: relative;
+    z-index: 2;
+    margin-left: 10px;
+  }
+
+  .page-header-wave {
+    position: absolute;
+    top: -12mm;
+    left: -15mm;
+    right: -15mm;
+    height: 32mm;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .page-header-wave svg {
+    width: 100%;
+    height: 100%;
   }
 
   body * {
