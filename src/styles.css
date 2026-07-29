@@ -984,12 +984,16 @@ svg.lucide {
 }
 
 .contract-page {
-  background: #ffffff;
+  background-color: #ffffff;
+  background-image: url('/letterhead_bg.png');
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
   width: 210mm;
   min-height: 297mm;
   height: auto;
   box-sizing: border-box;
-  padding: 15mm 15mm 25mm 15mm;
+  padding: 35mm 15mm 28mm 15mm;
   position: relative;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   display: flex;

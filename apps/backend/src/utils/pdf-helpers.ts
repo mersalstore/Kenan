@@ -122,6 +122,21 @@ export function drawBase64Image(doc: any, base64Str: string, x: number, y: numbe
   }
 }
 
+export function getLetterheadBgPath(): string | null {
+  const paths = [
+    path.join(process.cwd(), "apps/frontend/public/letterhead_bg.png"),
+    path.join(process.cwd(), "public/letterhead_bg.png"),
+    path.join(__dirname, "../../../../apps/frontend/public/letterhead_bg.png"),
+    path.join(__dirname, "../../../frontend/public/letterhead_bg.png"),
+  ];
+  for (const p of paths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+  return null;
+}
+
 export function getLogoPath(): string | null {
   const paths = [
     path.join(process.cwd(), "apps/frontend/public/kenan-logo.png"),
@@ -138,53 +153,32 @@ export function getLogoPath(): string | null {
 }
 
 export function drawPdfHeader(doc: any, title: string, query: any) {
-  const nameAr = query?.nameAr || "مؤسسة كنان لأنظمة الأمن والسلامة";
-  const nameEn = query?.nameEn || "Kanan Safety & Fire Protection Systems Co.";
-  const crNumber = query?.crNumber || "7050404537";
-  const taxNumber = query?.taxNumber || "313072607300003";
-  const address = query?.address || "الرياض - حي المنار";
-  const phone = query?.phone || "+966574590198";
-  
-  // 1. Accent Color Line (e11d48)
-  doc.rect(40, 20, 532, 6).fill("#e11d48");
-  
-  // 2. Logo
-  const logoPath = getLogoPath();
-  if (logoPath) {
-    doc.image(logoPath, 260, 36, { width: 80 });
+  // Draw Official Letterhead Background Image if available
+  const bgPath = getLetterheadBgPath();
+  if (bgPath && fs.existsSync(bgPath)) {
+    try {
+      doc.image(bgPath, 0, 0, { width: 595.28, height: 841.89 });
+    } catch (err) {
+      console.error("Failed to draw letterhead background:", err);
+    }
+  } else {
+    // Fallback: Accent Color Line & Logo
+    doc.rect(40, 20, 532, 6).fill("#e11d48");
+    const logoPath = getLogoPath();
+    if (logoPath) {
+      doc.image(logoPath, 260, 36, { width: 80 });
+    }
   }
   
-  // 3. Arabic Header Info (Right Aligned)
-  doc.fillColor("#0d1440"); // Navy
-  doc.font("Cairo-Bold").fontSize(11);
-  doc.text(prepareArabicText(nameAr), 300, 36, { align: "right", width: 272 });
-  
-  doc.fillColor("#64748b");
-  doc.font("Amiri").fontSize(8.5);
-  doc.text(prepareArabicText(`سجل تجاري: ${crNumber}`), 300, 52, { align: "right", width: 272 });
-  doc.text(prepareArabicText(`الرقم الضريبي: ${taxNumber}`), 300, 66, { align: "right", width: 272 });
-  doc.text(prepareArabicText(`العنوان: ${address}`), 300, 80, { align: "right", width: 272 });
-  
-  // 4. English Header Info (Left Aligned)
-  doc.fillColor("#0d1440"); // Navy
-  doc.font("Cairo-Bold").fontSize(9.5);
-  doc.text(nameEn, 40, 36, { align: "left", width: 220 });
-  
-  doc.fillColor("#64748b");
-  doc.font("Amiri").fontSize(8.5);
-  doc.text(`C.R. Number: ${crNumber}`, 40, 52, { align: "left", width: 220 });
-  doc.text(`VAT Number: ${taxNumber}`, 40, 66, { align: "left", width: 220 });
-  doc.text(`Tel: ${phone}`, 40, 80, { align: "left", width: 220 });
-  
-  // 5. Document Title Badge
+  // Document Title Badge below the header wave (~y = 108)
   if (title) {
-    doc.fillColor("#e11d48");
-    doc.font("Cairo-Bold").fontSize(12);
-    doc.text(prepareArabicText(title), 40, 105, { align: "center", width: 532 });
+    doc.fillColor("#d91c24");
+    doc.font("Cairo-Bold").fontSize(13);
+    doc.text(prepareArabicText(title), 40, 108, { align: "center", width: 515.28 });
   }
   
-  // 6. Bottom Separator Line
-  doc.moveTo(40, 128).lineTo(572, 128).strokeColor("#cbd5e1").lineWidth(1).stroke();
+  // Separator line below header title
+  doc.moveTo(40, 128).lineTo(555, 128).strokeColor("#e2e8f0").lineWidth(1).stroke();
   
   // Reset fonts and colors for body
   doc.fillColor("#0f172a");
@@ -192,15 +186,20 @@ export function drawPdfHeader(doc: any, title: string, query: any) {
 }
 
 export function drawPdfFooter(doc: any, pageNumber: number, query: any) {
-  const crNumber = query?.crNumber || "7050404537";
-  const email = query?.email || "info@kenan4saftey.com";
-  const phone = query?.phone || "+966574590198";
+  const bgPath = getLetterheadBgPath();
+  // If letterhead background exists, the red footer banner with CR/phone/email is already in the background image.
+  if (!bgPath || !fs.existsSync(bgPath)) {
+    const crNumber = query?.crNumber || "7050404537";
+    const email = query?.email || "info@kenan4saftey.com";
+    const phone = query?.phone || "+966574590198";
+    
+    doc.moveTo(40, 740).lineTo(572, 740).strokeColor("#cbd5e1").lineWidth(1).stroke();
+    doc.fillColor("#64748b").font("Amiri").fontSize(8);
+    doc.text(prepareArabicText(`سجل تجاري: ${crNumber} | جوال: ${phone} | بريد: ${email}`), 40, 748, { align: "center", width: 532 });
+  }
   
-  doc.moveTo(40, 740).lineTo(572, 740).strokeColor("#cbd5e1").lineWidth(1).stroke();
-  
-  doc.fillColor("#64748b");
-  doc.font("Amiri").fontSize(8);
-  
-  doc.text(prepareArabicText(`سجل تجاري: ${crNumber} | جوال: ${phone} | بريد: ${email}`), 40, 748, { align: "center", width: 532 });
-  doc.text(`Page ${pageNumber}`, 40, 760, { align: "center", width: 532 });
+  if (pageNumber > 1) {
+    doc.fillColor("#ffffff").font("Cairo-Bold").fontSize(8);
+    doc.text(`صفحة ${pageNumber}`, 500, 818, { align: "left", width: 50 });
+  }
 }

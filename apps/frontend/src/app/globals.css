@@ -1725,7 +1725,7 @@ svg.lucide {
     min-height: 297mm !important;
     max-height: 297mm !important;
     margin: 0 !important;
-    padding: 12mm 15mm 20mm 15mm !important;
+    padding: 35mm 15mm 28mm 15mm !important;
     box-shadow: none !important;
     page-break-after: always !important;
     break-after: page !important;
@@ -1733,6 +1733,10 @@ svg.lucide {
     break-inside: avoid !important;
     position: relative !important;
     box-sizing: border-box !important;
+    background-image: url('/letterhead_bg.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
