@@ -4019,7 +4019,18 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     event.currentTarget.reset();
     setNotice("تمت إضافة العميل بنجاح");
   };
-  const deleteClient = (id: number) => { setClients((cur) => cur.filter((c) => c.id !== id)); setNotice("تم حذف العميل بنجاح"); };
+  const deleteClient = (id: number) => {
+    setClients((cur) => {
+      const updated = cur.filter((c) => c.id !== id);
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("kenan.clients_v3", JSON.stringify(updated));
+        }
+      } catch {}
+      return updated;
+    });
+    setNotice("تم حذف العميل بنجاح");
+  };
   const updateClient = (client: Client) => { setClients((cur) => cur.map((c) => (c.id === client.id ? client : c))); setNotice("تم تحديث بيانات العميل"); };
 
   const addQuotation = (

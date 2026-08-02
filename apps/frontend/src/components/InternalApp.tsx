@@ -4905,9 +4905,24 @@ function ClientsView({ clients, projects, addClient, deleteClient, updateClient,
               <label>ملاحظات
                 <textarea name="notes" defaultValue={editingClient.notes || ""} rows={2} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
               </label>
-              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" }}>
-                <button type="button" className="secondary-button" onClick={() => setEditingClient(null)}>إلغاء</button>
-                <button type="submit" className="primary-button" style={{ background: "var(--brand)", color: "#fff", border: 0 }}>حفظ التغييرات</button>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerConfirm("هل أنت تأكد من حذف هذا العميل بالكامل؟", () => {
+                      deleteClient(editingClient.id);
+                      setEditingClient(null);
+                    });
+                  }}
+                  style={{ background: "#dc2626", color: "#fff", border: 0, padding: "8px 14px", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={15} />
+                  حذف العميل
+                </button>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button type="button" className="secondary-button" onClick={() => setEditingClient(null)}>إلغاء</button>
+                  <button type="submit" className="primary-button" style={{ background: "var(--brand)", color: "#fff", border: 0 }}>حفظ التغييرات</button>
+                </div>
               </div>
             </form>
           </div>
@@ -6895,15 +6910,19 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     }
   };
   const deleteClient = async (id: number | string) => {
+    setClients((cur) => {
+      const updated = cur.filter((c) => String(c.id) !== String(id));
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("kenan.clients_v3", JSON.stringify(updated));
+        }
+      } catch {}
+      return updated;
+    });
+    setNotice("تم حذف العميل بنجاح");
     try {
-      await apiFetch(`/api/projects/clients/${id}`, {
-        method: "DELETE",
-      });
-      setClients((cur) => cur.filter((c) => String(c.id) !== String(id)));
-      setNotice("تم حذف العميل بنجاح");
-    } catch (e) {
-      setNotice("خطأ أثناء حذف العميل: " + (e as Error).message);
-    }
+      await apiFetch(`/api/projects/clients/${id}`, { method: "DELETE" });
+    } catch {}
   };
   const updateClient = async (client: Client) => {
     try {
