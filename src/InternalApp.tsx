@@ -2727,10 +2727,8 @@ function QuotationsView({
         </div>
         <label>
           العملة
-          <select name="currency" defaultValue="EGP">
-            {currencyOptions.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
+          <select name="currency" defaultValue="SAR">
+            <option value="SAR">SAR (ريال سعودي)</option>
           </select>
         </label>
 
@@ -3092,16 +3090,16 @@ function formatDate(value?: string): string {
   return new Intl.DateTimeFormat("ar-EG", { day: "2-digit", month: "short", year: "numeric" }).format(d);
 }
 
-const numberFormat = new Intl.NumberFormat("ar-EG");
+const numberFormat = new Intl.NumberFormat("ar-SA");
 const currency = new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 });
-const currencyOptions = ["EGP", "SAR", "AED"];
+const currencyOptions = ["SAR"];
 const currencyByCode: Record<string, Intl.NumberFormat> = {
-  EGP: new Intl.NumberFormat("ar-EG", { style: "currency", currency: "EGP", maximumFractionDigits: 0 }),
   SAR: new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 }),
-  AED: new Intl.NumberFormat("ar-AE", { style: "currency", currency: "AED", maximumFractionDigits: 0 }),
+  EGP: new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 }),
+  AED: new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 }),
 };
-function formatMoney(value: number, code: string = "EGP"): string {
-  return (currencyByCode[code] ?? currencyByCode.EGP).format(value);
+function formatMoney(value: number, code: string = "SAR"): string {
+  return (currencyByCode[code] ?? currencyByCode.SAR).format(value);
 }
 
 function parseCsv(text: string): Array<Record<string, string>> {

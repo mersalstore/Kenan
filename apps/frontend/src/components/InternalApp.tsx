@@ -3659,10 +3659,8 @@ function QuotationsView({
 
         <label>
           العملة
-          <select name="currency" defaultValue="EGP">
-            {currencyOptions.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
+          <select name="currency" defaultValue="SAR">
+            <option value="SAR">SAR (ريال سعودي)</option>
           </select>
         </label>
 
@@ -3976,7 +3974,7 @@ function QuotationsView({
                 <label style={{ flex: 1, minWidth: 140 }}>التاريخ<input type="date" value={editMeta.date} onChange={(e) => setEditMeta((m) => ({ ...m, date: e.target.value }))} /></label>
                 <label style={{ flex: 1, minWidth: 140 }}>صالح حتى<input type="date" value={editMeta.validUntil} onChange={(e) => setEditMeta((m) => ({ ...m, validUntil: e.target.value }))} /></label>
                 <label style={{ width: 110 }}>الضريبة %<input type="number" min={0} max={100} value={editMeta.taxPercent} onChange={(e) => setEditMeta((m) => ({ ...m, taxPercent: Number(e.target.value) || 0 }))} /></label>
-                <label style={{ width: 110 }}>العملة<select value={editMeta.currency} onChange={(e) => setEditMeta((m) => ({ ...m, currency: e.target.value }))}><option value="SAR">SAR</option><option value="EGP">EGP</option><option value="AED">AED</option></select></label>
+                <label style={{ width: 130 }}>العملة<select value="SAR" onChange={(e) => setEditMeta((m) => ({ ...m, currency: e.target.value }))}><option value="SAR">SAR (ريال سعودي)</option></select></label>
               </div>
               <div className="table-wrap">
                 <table>
@@ -4094,13 +4092,13 @@ function formatDate(value?: string): string {
   return new Intl.DateTimeFormat("ar-EG", { day: "2-digit", month: "short", year: "numeric" }).format(d);
 }
 
-const numberFormat = new Intl.NumberFormat("ar-EG");
+const numberFormat = new Intl.NumberFormat("ar-SA");
 const currency = new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 });
-const currencyOptions = ["SAR", "EGP", "AED"];
+const currencyOptions = ["SAR"];
 const currencyByCode: Record<string, Intl.NumberFormat> = {
   SAR: new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 }),
-  EGP: new Intl.NumberFormat("ar-EG", { style: "currency", currency: "EGP", maximumFractionDigits: 0 }),
-  AED: new Intl.NumberFormat("ar-AE", { style: "currency", currency: "AED", maximumFractionDigits: 0 }),
+  EGP: new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 }),
+  AED: new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 }),
 };
 function formatMoney(value: number, code: string = "SAR"): string {
   return (currencyByCode[code] ?? currencyByCode.SAR).format(value);
