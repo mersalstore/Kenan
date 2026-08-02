@@ -6389,7 +6389,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   });
 
 
-  // URL section sync removed — dashboard has dedicated route /admin/hazem/dashboard
+  // URL section sync removed — each account type has its own dashboard route
 
 
   const [notice, setNotice] = useState("");

@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation";
+import { DashboardShell } from "../../components/DashboardShell";
 
-export default function DashboardPage() {
-  redirect("/");
+// لوحة الموظفين (مهندسو الموقع، مديرو المشاريع، المشتريات…)
+export default function StaffDashboardPage() {
+  return <DashboardShell area="staff" />;
 }

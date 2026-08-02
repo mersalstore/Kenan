@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAuthConfig, getStoredUser, type AuthUser } from "../components/auth";
 import { PublicSite, ContactPage } from "../components/PublicSite";
+import { homeRoute, navigate, LOGIN_ROUTE } from "../components/routes";
 
 export default function App() {
   const [config] = useState(() => getAuthConfig());
@@ -28,10 +29,10 @@ export default function App() {
       authLoading={false}
       mode="site"
       onBackToSite={() => {}}
-      onLoginClick={() => { window.location.href = "/admin/hazem/dashboard"; }}
+      onLoginClick={() => navigate(LOGIN_ROUTE)}
       onGoogleCredential={async () => {}}
       onEmailLogin={async () => {}}
-      onOpenDashboard={() => { window.location.href = "/admin/hazem/dashboard"; }}
+      onOpenDashboard={() => navigate(user ? homeRoute(user) : LOGIN_ROUTE)}
     />
   );
 }

@@ -52,7 +52,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
         localStorage.removeItem("kanan_refresh_token");
         localStorage.removeItem("kanan_user");
         if (typeof window !== "undefined") {
-          window.location.href = "/login";
+          window.location.href = "/login/";
         }
       }
     }
