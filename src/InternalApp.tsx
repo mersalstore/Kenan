@@ -2624,11 +2624,12 @@ function QuotationsView({
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const clientId = Number(data.get("clientId"));
+    const rawClientId = data.get("clientId");
+    const clientId = rawClientId ? String(rawClientId).trim() : "";
     const date = String(data.get("date") || new Date().toISOString().slice(0, 10));
     const validUntil = String(data.get("validUntil") || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
     const notes = String(data.get("notes") || "");
-    const currency = String(data.get("currency") || "EGP");
+    const currency = String(data.get("currency") || "SAR");
 
     const subtotal = formItems.reduce((acc, it) => acc + it.total, 0);
     const value = Math.round(subtotal * 1.15); // with 15% VAT

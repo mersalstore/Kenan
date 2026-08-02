@@ -3452,7 +3452,7 @@ function QuotationsView({
   const [activeId, setActiveId] = useState<number | string | null>(null);
   const [isEditingQuotationText, setIsEditingQuotationText] = useState(false);
   const activeQuotation = quotations.find((item) => item.id === activeId) ?? null;
-  const activeClient = activeQuotation ? clients.find((c) => c.id === activeQuotation.clientId) : undefined;
+  const activeClient = activeQuotation ? clients.find((c) => String(c.id) === String(activeQuotation.clientId)) : undefined;
 
   // تعديل عرض سعر (مسموح قبل التعميد فقط)
   const [editing, setEditing] = useState<Quotation | null>(null);
@@ -3527,7 +3527,8 @@ function QuotationsView({
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const clientId = Number(data.get("clientId"));
+    const rawClientId = data.get("clientId");
+    const clientId = rawClientId ? String(rawClientId).trim() : "";
     const date = String(data.get("date") || new Date().toISOString().slice(0, 10));
     const validUntil = String(data.get("validUntil") || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
     const notes = String(data.get("notes") || "");
@@ -3892,7 +3893,7 @@ function QuotationsView({
             </thead>
             <tbody>
               {quotations.map((q) => {
-                const client = clients.find((c) => c.id === q.clientId);
+                const client = clients.find((c) => String(c.id) === String(q.clientId));
                 const isSelected = selectedIds.includes(q.id);
                 return (
                   <tr key={q.id} style={{ background: isSelected ? "rgba(225, 29, 72, 0.04)" : undefined }}>
