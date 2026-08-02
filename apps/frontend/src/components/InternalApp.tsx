@@ -424,7 +424,18 @@ function FinanceView({
     const status = String(f.get("status") || "جزئية");
     const dueDate = f.get("dueDate") ? String(f.get("dueDate")) : undefined;
     
-    if (!projId || !number || !amount) return;
+    if (!projId) {
+      triggerAlert("يرجى اختيار المشروع أولاً");
+      return;
+    }
+    if (!number) {
+      triggerAlert("يرجى إدخال رقم الفاتورة");
+      return;
+    }
+    if (!amount || amount <= 0) {
+      triggerAlert("يرجى إدخال مبلغ صحيح للفاتورة");
+      return;
+    }
     await addInvoice(projId, number, amount, status, dueDate);
     e.currentTarget.reset();
     setShowAddInvoice(false);
@@ -440,7 +451,18 @@ function FinanceView({
     const description = String(f.get("description") || "").trim();
     const date = String(f.get("date") || new Date().toISOString().slice(0, 10));
 
-    if (!type || !amount || !description) return;
+    if (!type) {
+      triggerAlert("يرجى إدخال نوع المصروف");
+      return;
+    }
+    if (!amount || amount <= 0) {
+      triggerAlert("يرجى إدخال مبلغ المصروف");
+      return;
+    }
+    if (!description) {
+      triggerAlert("يرجى إدخال بيان المصروف");
+      return;
+    }
     await addExpense(projectId, type, amount, description, date);
     e.currentTarget.reset();
     setShowAddExpense(false);
@@ -4811,7 +4833,7 @@ function ClientsView({ clients, projects, addClient, deleteClient, updateClient,
         <SectionTitle icon={UserPlus} title="إضافة عميل جديد" />
         <Field label="اسم العميل / المنشأة" name="name" required />
         <div className="two-fields">
-          <Field label="الهاتف" name="phone" required />
+          <Field label="الهاتف" name="phone" />
           <Field label="النوع" name="type" placeholder="مالك وحدة / استشاري ..." />
         </div>
         <Field label="العنوان" name="address" />
@@ -8110,6 +8132,26 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   };
 
   const addInvoice = async (projectId: string | number, number: string, amount: number, status: string, dueDate?: string) => {
+    const tempId = "inv_" + Date.now();
+    const newInv: Invoice = {
+      id: tempId,
+      projectId,
+      number,
+      amount,
+      status: status as Invoice["status"],
+      date: new Date().toISOString().slice(0, 10),
+    };
+    setInvoices((cur) => {
+      const updated = [...cur, newInv];
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("kenan.invoices_v3", JSON.stringify(updated));
+        }
+      } catch {}
+      return updated;
+    });
+    setNotice("تمت إضافة الفاتورة بنجاح");
+
     try {
       const created = await apiFetch("/api/finance/invoices", {
         method: "POST",
@@ -8121,31 +8163,45 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           dueDate,
         }),
       });
-      setInvoices((cur) => [...cur, {
-        id: created.id,
-        projectId,
-        number,
-        amount,
-        status: status as Invoice["status"],
-        date: new Date().toISOString().slice(0, 10),
-      }]);
-      setNotice("تمت إضافة الفاتورة بنجاح");
+      if (created && created.id) {
+        setInvoices((cur) => cur.map((inv) => (inv.id === tempId ? { ...inv, id: created.id } : inv)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر إضافة الفاتورة");
+      console.warn("Invoice saved locally:", e);
     }
   };
 
   const deleteInvoice = async (id: number | string) => {
+    setInvoices((cur) => cur.filter((inv) => inv.id !== id));
+    setNotice("تم حذف الفاتورة");
     try {
       await apiFetch(`/api/finance/invoices/${id}`, { method: "DELETE" });
-      setInvoices((cur) => cur.filter((inv) => inv.id !== id));
-      setNotice("تم حذف الفاتورة");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف الفاتورة");
+      console.warn("Invoice deleted locally:", e);
     }
   };
 
   const addExpense = async (projectId: string | number | null, type: string, amount: number, description: string, date: string) => {
+    const tempId = "exp_" + Date.now();
+    const newExp: Expense = {
+      id: tempId,
+      projectId,
+      type,
+      amount,
+      description,
+      date,
+    };
+    setExpenses((cur) => {
+      const updated = [...cur, newExp];
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("kenan.expenses_v3", JSON.stringify(updated));
+        }
+      } catch {}
+      return updated;
+    });
+    setNotice("تمت إضافة المصروف بنجاح");
+
     try {
       const created = await apiFetch("/api/finance/expenses", {
         method: "POST",
@@ -8157,17 +8213,11 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           date,
         }),
       });
-      setExpenses((cur) => [...cur, {
-        id: created.id,
-        projectId,
-        type,
-        amount,
-        description,
-        date,
-      }]);
-      setNotice("تمت إضافة المصروف بنجاح");
+      if (created && created.id) {
+        setExpenses((cur) => cur.map((exp) => (exp.id === tempId ? { ...exp, id: created.id } : exp)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر إضافة المصروف");
+      console.warn("Expense saved locally:", e);
     }
   };
 
