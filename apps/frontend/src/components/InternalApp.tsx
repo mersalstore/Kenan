@@ -1359,7 +1359,7 @@ function DocumentHeader({ documentTitle, site }: { documentTitle?: string; site?
   if (!documentTitle) return null;
 
   return (
-    <div className="doc-header-info-block" style={{ position: "absolute", top: "38mm", left: 0, right: 0, padding: "0 40px", direction: "rtl", zIndex: 2, display: "flex", justifyContent: "center" }}>
+    <div className="doc-header-info-block" style={{ position: "absolute", top: "34mm", left: 0, right: 0, padding: "0 40px", direction: "rtl", zIndex: 2, display: "flex", justifyContent: "center" }}>
       <span style={{ 
         display: "inline-block", 
         padding: "6px 26px", 
@@ -1449,7 +1449,10 @@ function ClaimDocument({
           المبلغ المطلوب كتابةً: فقط {valueWords} شامل ضريبة القيمة المضافة.
         </p>
 
-        <table className="contract-sign-table" style={{ marginTop: "25px", direction: "rtl", width: "100%" }}>
+        {/* المسافات مضغوطة عمداً: بالقيم السابقة (هامش توقيع 60px وجدول 25px)
+            كان المستند يتجاوز ارتفاع A4 بنحو 11مم، فيجلس صف التوقيع فوق الشريط
+            الأحمر في أسفل الترويسة عند الطباعة. */}
+        <table className="contract-sign-table" style={{ marginTop: "12px", direction: "rtl", width: "100%" }}>
           <thead>
             <tr>
               <th style={{ textAlign: "right", padding: "6px" }}>مقدم الطلب (الطرف الأول)</th>
@@ -1459,20 +1462,20 @@ function ClaimDocument({
           <tbody>
             <tr>
               <td>
-                <div className="sign-cell" style={{ minHeight: "120px", padding: "8px" }}>
+                <div className="sign-cell" style={{ minHeight: "90px", padding: "8px" }}>
                   <span style={{ fontWeight: "800", display: "block" }}>{site.companyNameAr || "مؤسسة كنان لأنظمة الأمن والسلامة"}</span>
                   <span style={{ fontSize: "0.85rem", display: "block" }}>يمثلها: المهندس طارق مختار علي</span>
                   {stamp && <img src={stamp} alt="ختم الطرف الأول" className="stamp-img" style={{ maxHeight: "60px", marginBlock: "4px" }} />}
                   {signature && <img src={signature} alt="توقيع الطرف الأول" className="stamp-img" style={{ maxHeight: "60px", marginBlock: "4px" }} />}
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "60px", display: "block" }}>الختم والتوقيع: ............................</span>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "24px", display: "block" }}>الختم والتوقيع: ............................</span>
                 </div>
               </td>
               <td>
-                <div className="sign-cell" style={{ minHeight: "120px", padding: "8px" }}>
+                <div className="sign-cell" style={{ minHeight: "90px", padding: "8px" }}>
                   <span style={{ fontWeight: "800", display: "block" }}>{contract.secondPartyName || client?.name || "................"}</span>
                   <span style={{ fontSize: "0.85rem", display: "block" }}>يمثلها: {contract.secondPartyRepresentative || client?.name || "................"}</span>
                   <span style={{ fontSize: "0.85rem", display: "block" }}>الصفة: {contract.secondPartyRole || "المالك"}</span>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "60px", display: "block" }}>التوقيع بالاعتماد: ............................</span>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "24px", display: "block" }}>التوقيع بالاعتماد: ............................</span>
                 </div>
               </td>
             </tr>
@@ -1480,7 +1483,7 @@ function ClaimDocument({
         </table>
 
         {/* Bank Details box formatted exactly like client screenshots */}
-        <div style={{ marginTop: "20px", padding: "12px 15px", border: "1px solid #cbd5e1", borderRadius: "8px", background: "#f8fafc", direction: "rtl" }}>
+        <div style={{ marginTop: "12px", padding: "10px 15px", border: "1px solid #cbd5e1", borderRadius: "8px", background: "#f8fafc", direction: "rtl" }}>
           <strong style={{ fontSize: "0.9rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "6px", marginBottom: "8px" }}>
             الحساب البنكي والضريبي للمؤسسة:
           </strong>
@@ -1728,10 +1731,11 @@ function ContractDocument({
 }
 
 function ContractFooter({ site }: { site?: SiteSettings }) {
-  return (
-    <footer className="contract-footer" style={{ marginTop: "30px", paddingBottom: "90px", position: "relative", zIndex: 2 }}>
-    </footer>
-  );
+  void site;
+  // عنصر فارغ كان يحجز ~32مم في نهاية كل مستند لإبعاد المحتوى عن الشريط
+  // الأحمر في الترويسة. أصبح padding-bottom على .contract-page يقوم بذلك،
+  // فبقاء الحجز هنا يعني حجزاً مزدوجاً يدفع المحتوى خارج حدود A4.
+  return <footer className="contract-footer" style={{ position: "relative", zIndex: 2 }} />;
 }
 
 function ReportsView({

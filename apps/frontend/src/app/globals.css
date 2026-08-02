@@ -141,8 +141,10 @@
 @media (max-width:900px){.forms-duo{grid-template-columns:1fr}}
 /* شعار أوضح وأكبر في رأس المستندات (معاينة وطباعة) */
 .page-header-logo{height:118px!important;max-width:300px!important}
-.contract-page{padding-top:78mm!important}
-@media print{.contract-page{padding-top:78mm!important}.page-header-logo{height:34mm!important;max-width:92mm!important}}
+/* حشو .contract-page محدَّد في القاعدة الحاكمة قرب نهاية هذا الملف (ابحث عن
+   "On-Screen Modal Preview Styling") — فهي تستخدم padding المختصر مع !important
+   وتأتي لاحقاً، فأي padding-top هنا لا أثر له. عدّل هناك لا هنا. */
+@media print{.page-header-logo{height:34mm!important;max-width:92mm!important}}
 
 /* تحسين تباعد وهوامش الصور لتكون بعيدة عن الحواف وبعضها البعض */
 
@@ -1693,7 +1695,10 @@ svg.lucide {
   height: 297mm !important;
   max-height: 297mm !important;
   margin: 0 auto !important;
-  padding: 75mm 15mm 40mm 15mm !important;
+  /* أعلى 48مم: أسفل شعار الترويسة (~31مم) وشريط عنوان المستند (34مم).
+     أسفل 27مم: يحجز الشريط الأحمر الذي يبدأ عند ~276مم.
+     كانت 75مم/40مم فتدفع المحتوى خارج الورقة ويجلس التوقيع فوق الشريط. */
+  padding: 48mm 15mm 27mm 15mm !important;
   position: relative !important;
   box-sizing: border-box !important;
   background-color: #ffffff !important;
@@ -1818,7 +1823,8 @@ svg.lucide {
     min-height: 297mm !important;
     max-height: 297mm !important;
     margin: 0 !important;
-    padding: 75mm 15mm 40mm 15mm !important;
+    /* مطابقة لقاعدة الشاشة أعلاه — الطباعة والمعاينة يجب أن تتطابقا تماماً */
+    padding: 48mm 15mm 27mm 15mm !important;
     box-shadow: none !important;
     page-break-after: always !important;
     break-after: page !important;
