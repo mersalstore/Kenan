@@ -1227,59 +1227,6 @@ function LoginPage({
               إمكانية إنشاء حساب جديد فوراً للعملاء
             </li>
           </ul>
-
-          <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-            <span style={{ fontSize: "0.85rem", color: "#94a3b8", display: "block", marginBottom: "10px" }}>
-              💡 اختصارات التجربة السريعة:
-            </span>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              <button
-                type="button"
-                onClick={() => quickFill("kenansafety.sec@gmail.com", "8dREB5qR7wmrWTiL")}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  background: "rgba(225,29,72,0.15)",
-                  border: "1px solid rgba(225,29,72,0.3)",
-                  color: "#fecdd3",
-                  cursor: "pointer",
-                }}
-              >
-                👑 الإدارة (kenansafety.sec@gmail.com)
-              </button>
-              <button
-                type="button"
-                onClick={() => quickFill("engineer@kenan.com", "123456")}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  background: "rgba(14,165,233,0.15)",
-                  border: "1px solid rgba(14,165,233,0.3)",
-                  color: "#bae6fd",
-                  cursor: "pointer",
-                }}
-              >
-                👷‍♂️ مهندس الموقع (engineer@kenan.com)
-              </button>
-              <button
-                type="button"
-                onClick={() => quickFill("01001234567", "123456")}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  background: "rgba(34,197,94,0.15)",
-                  border: "1px solid rgba(34,197,94,0.3)",
-                  color: "#bbf7d0",
-                  cursor: "pointer",
-                }}
-              >
-                👤 العميل (01001234567)
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="google-login-box">
