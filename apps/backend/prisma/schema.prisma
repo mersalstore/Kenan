@@ -1,10 +1,9 @@
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
 }
 
 generator client {
-  provider   = "prisma-client-js"
-  engineType = "library"
+  provider = "prisma-client-js"
 }
 
 // 1. المستخدمين والموظفين
@@ -391,7 +390,7 @@ model Contract {
   locationPlan              String?
   quotationNumber           String?
   quotationValue            Decimal? 
-  specs                     String[] // الـ 13 بند والمواصفات
+  specs                     String? @db.Text // الـ 13 بند والمواصفات (JSON array stored as text)
   createdAt                 DateTime @default(now())
 
   // العلاقات
@@ -710,8 +709,8 @@ model AuditLog {
   action     String // "CREATE" | "UPDATE" | "DELETE"
   entityType String // اسم الجدول مثل "Project", "Quotation"
   entityId   String
-  oldValue   Json? // القيم القديمة قبل التعديل
-  newValue   Json? // القيم الجديدة بعد التعديل
+  oldValue   String? @db.Text // القيم القديمة قبل التعديل
+  newValue   String? @db.Text // القيم الجديدة بعد التعديل
 
   @@map("audit_logs")
 }

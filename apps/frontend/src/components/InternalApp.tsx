@@ -6895,48 +6895,36 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const type = String(form.get("type") ?? "عميل");
     const notes = String(form.get("notes") ?? "");
 
-    setClients((cur) => {
-      const clientData: Client = {
-        id: nextId(cur),
-        name,
-        phone,
-        address,
-        type,
-        notes,
-      };
-      const updated = [...cur, clientData];
-      try {
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("kenan.clients_v3", JSON.stringify(updated));
-        }
-      } catch {}
-      return updated;
-    });
+    // إضافة مؤقتة فورية حتى لا تنتظر الشاشة رد السيرفر
+    const tempId = `temp-${Date.now()}`;
+    setClients((cur) => [...cur, { id: tempId, name, phone, address, type, notes } as unknown as Client]);
     event.currentTarget.reset();
-    setNotice("تمت إضافة العميل بنجاح");
+
     try {
-      await apiFetch("/api/projects/clients", {
+      const saved = await apiFetch("/api/projects/clients", {
         method: "POST",
         body: JSON.stringify({ name, phone, address, type, notes }),
       });
+      // استبدال السجل المؤقت بالسجل الحقيقي القادم من قاعدة البيانات
+      setClients((cur) => cur.map((c) => (String(c.id) === tempId ? saved : c)));
+      setNotice("تمت إضافة العميل وحفظه على السيرفر");
     } catch (e) {
-      console.warn("Client saved locally:", e);
+      // إزالة السجل المؤقت — لا نترك بيانات توهم المستخدم أنها محفوظة للجميع
+      setClients((cur) => cur.filter((c) => String(c.id) !== tempId));
+      triggerAlert("لم يتم حفظ العميل على السيرفر: " + (e as Error).message);
     }
   };
   const deleteClient = async (id: number | string) => {
-    setClients((cur) => {
-      const updated = cur.filter((c) => String(c.id) !== String(id));
-      try {
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("kenan.clients_v3", JSON.stringify(updated));
-        }
-      } catch {}
-      return updated;
-    });
-    setNotice("تم حذف العميل بنجاح");
+    const removed = clients.find((c) => String(c.id) === String(id));
+    setClients((cur) => cur.filter((c) => String(c.id) !== String(id)));
     try {
       await apiFetch(`/api/projects/clients/${id}`, { method: "DELETE" });
-    } catch {}
+      setNotice("تم حذف العميل من السيرفر");
+    } catch (e) {
+      // إرجاع العميل للقائمة لأن الحذف لم يتم فعلياً على السيرفر
+      if (removed) setClients((cur) => [...cur, removed]);
+      triggerAlert("لم يتم حذف العميل من السيرفر: " + (e as Error).message);
+    }
   };
   const updateClient = async (client: Client) => {
     try {
@@ -8141,16 +8129,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       status: status as Invoice["status"],
       date: new Date().toISOString().slice(0, 10),
     };
-    setInvoices((cur) => {
-      const updated = [...cur, newInv];
-      try {
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("kenan.invoices_v3", JSON.stringify(updated));
-        }
-      } catch {}
-      return updated;
-    });
-    setNotice("تمت إضافة الفاتورة بنجاح");
+    setInvoices((cur) => [...cur, newInv]);
 
     try {
       const created = await apiFetch("/api/finance/invoices", {
@@ -8166,18 +8145,22 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       if (created && created.id) {
         setInvoices((cur) => cur.map((inv) => (inv.id === tempId ? { ...inv, id: created.id } : inv)));
       }
+      setNotice("تمت إضافة الفاتورة وحفظها على السيرفر");
     } catch (e) {
-      console.warn("Invoice saved locally:", e);
+      setInvoices((cur) => cur.filter((inv) => inv.id !== tempId));
+      triggerAlert("لم يتم حفظ الفاتورة على السيرفر: " + (e as Error).message);
     }
   };
 
   const deleteInvoice = async (id: number | string) => {
+    const removed = invoices.find((inv) => inv.id === id);
     setInvoices((cur) => cur.filter((inv) => inv.id !== id));
-    setNotice("تم حذف الفاتورة");
     try {
       await apiFetch(`/api/finance/invoices/${id}`, { method: "DELETE" });
+      setNotice("تم حذف الفاتورة من السيرفر");
     } catch (e) {
-      console.warn("Invoice deleted locally:", e);
+      if (removed) setInvoices((cur) => [...cur, removed]);
+      triggerAlert("لم يتم حذف الفاتورة من السيرفر: " + (e as Error).message);
     }
   };
 
@@ -8191,16 +8174,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       description,
       date,
     };
-    setExpenses((cur) => {
-      const updated = [...cur, newExp];
-      try {
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("kenan.expenses_v3", JSON.stringify(updated));
-        }
-      } catch {}
-      return updated;
-    });
-    setNotice("تمت إضافة المصروف بنجاح");
+    setExpenses((cur) => [...cur, newExp]);
 
     try {
       const created = await apiFetch("/api/finance/expenses", {
@@ -8216,8 +8190,10 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       if (created && created.id) {
         setExpenses((cur) => cur.map((exp) => (exp.id === tempId ? { ...exp, id: created.id } : exp)));
       }
+      setNotice("تمت إضافة المصروف وحفظه على السيرفر");
     } catch (e) {
-      console.warn("Expense saved locally:", e);
+      setExpenses((cur) => cur.filter((exp) => exp.id !== tempId));
+      triggerAlert("لم يتم حفظ المصروف على السيرفر: " + (e as Error).message);
     }
   };
 

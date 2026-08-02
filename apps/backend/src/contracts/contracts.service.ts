@@ -11,12 +11,20 @@ export class ContractsService {
     private readonly auditService: AuditService,
   ) {}
 
+  // Helper: parse specs JSON string → array
+  private parseSpecs(contract: any) {
+    if (!contract) return contract;
+    try { contract.specs = contract.specs ? JSON.parse(contract.specs) : []; } catch { contract.specs = []; }
+    return contract;
+  }
+
   // 1. Find all contracts
   async findAll() {
-    return this.prisma.contract.findMany({
+    const contracts = await this.prisma.contract.findMany({
       include: { client: true, project: true, payments: true },
       orderBy: { createdAt: "desc" },
     });
+    return contracts.map((c) => this.parseSpecs(c));
   }
 
   // 2. Find one contract
@@ -30,7 +38,7 @@ export class ContractsService {
       throw new NotFoundException("العقد غير موجود");
     }
 
-    return contract;
+    return this.parseSpecs(contract);
   }
 
   // 3. Create Contract
@@ -55,7 +63,7 @@ export class ContractsService {
         locationPlan: dto.locationPlan,
         quotationNumber: dto.quotationNumber,
         quotationValue: dto.quotationValue,
-        specs: dto.specs || [],
+        specs: dto.specs ? JSON.stringify(dto.specs) : JSON.stringify([]),
         payments: {
           create: dto.payments?.map((p) => ({
             label: p.label,
@@ -94,7 +102,7 @@ export class ContractsService {
         locationPlan: dto.locationPlan,
         quotationNumber: dto.quotationNumber,
         quotationValue: dto.quotationValue,
-        specs: dto.specs,
+        specs: dto.specs !== undefined ? JSON.stringify(dto.specs) : undefined,
         payments: dto.payments ? {
           deleteMany: {},
           create: dto.payments.map((p) => ({
