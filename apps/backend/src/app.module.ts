@@ -15,6 +15,7 @@ import { InventoryModule } from "./inventory/inventory.module";
 import { HrModule } from "./hr/hr.module";
 import { MaintenanceModule } from "./maintenance/maintenance.module";
 import { FinanceModule } from "./finance/finance.module";
+import { AdminBootstrapService } from "./bootstrap/admin-bootstrap.service";
 
 @Module({
   imports: [
@@ -34,6 +35,6 @@ import { FinanceModule } from "./finance/finance.module";
     FinanceModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, AdminBootstrapService],
 })
 export class AppModule {}
