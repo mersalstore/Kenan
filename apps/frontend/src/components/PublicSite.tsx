@@ -1303,15 +1303,16 @@ function LoginPage({
     }
   };
 
+  const [registerNotice, setRegisterNotice] = useState("");
+
   const submitRegistration = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (regPhoneOrEmail.trim()) {
-      try {
-        registerClientAccount(regName.trim() || "عميل جديد", regPhoneOrEmail.trim());
-        window.location.reload();
-      } catch (err) {
-        onEmailLogin(regPhoneOrEmail.trim(), regPassword || "123456");
-      }
+    if (!regPhoneOrEmail.trim()) return;
+    try {
+      registerClientAccount(regName.trim() || "عميل جديد", regPhoneOrEmail.trim());
+      window.location.reload();
+    } catch (err) {
+      setRegisterNotice(err instanceof Error ? err.message : "تعذّر إنشاء الحساب");
     }
   };
 
@@ -1496,6 +1497,7 @@ function LoginPage({
 
           {authLoading && <span className="auth-status">جاري التحقق من الحساب...</span>}
           {authError && <div className="auth-error">{authError}</div>}
+          {registerNotice && <div className="auth-error">{registerNotice}</div>}
           {isLocalhost && (
             <div className="dev-origin-note" style={{ marginBottom: "8px" }}>
               عنوان التجربة المحلية: <code>{window.location.origin}</code>
