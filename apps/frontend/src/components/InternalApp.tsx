@@ -4214,7 +4214,7 @@ const navItems = [
   { id: "leaves", label: "الإجازات", icon: CalendarOff },
   { id: "payroll", label: "الرواتب", icon: WalletCards },
   { id: "inventory", label: "المخزن والمواد", icon: Warehouse },
-  { id: "finance", label: "الحسابات", icon: WalletCards },
+  { id: "finance", label: "الحسابات والدفعات المالية", icon: WalletCards },
   { id: "contracts", label: "العقود", icon: FileText },
   { id: "maintenance", label: "الصيانة", icon: Wrench },
   { id: "quotations", label: "عروض الأسعار", icon: ReceiptText },
@@ -8545,9 +8545,9 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
 
           {/* Accounts */}
           {canAccess("finance") && (
-            <button className={activeSection === "finance" ? "active" : ""} onClick={() => setActiveSection("finance")} title="الحسابات">
+            <button className={activeSection === "finance" ? "active" : ""} onClick={() => setActiveSection("finance")} title="الحسابات والدفعات المالية">
               <WalletCards size={19} />
-              <span>الحسابات</span>
+              <span>الحسابات والدفعات</span>
             </button>
           )}
 
