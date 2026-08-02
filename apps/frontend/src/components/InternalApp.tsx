@@ -8706,7 +8706,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
 
         {renderSection()}
 
-        {showRawToast && notice && (
+        {showRawToast && notice && !notice.includes("Failed to fetch") && !notice.includes("fetch") && (
           <div className="toast">{notice}</div>
         )}
       </main>

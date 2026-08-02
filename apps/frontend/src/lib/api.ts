@@ -14,7 +14,12 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(url, { ...options, headers });
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch (netErr) {
+    throw new Error("تعذر الاتصال بالسيرفر المحترّف (الوضع المحلي متوفر)");
+  }
 
   if (response.status === 401) {
     // Attempt Token Refresh
