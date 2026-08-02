@@ -24,6 +24,8 @@ function createIcon(name: string) {
 
 // Map each lucide icon used in Kanan ERP to its Google Material Symbol name
 export const AlertTriangle = createIcon("warning");
+export const ZoomIn = createIcon("zoom_in");
+export const Maximize2 = createIcon("zoom_out_map");
 export const Banknote = createIcon("payments");
 export const BarChart3 = createIcon("bar_chart");
 export const Bell = createIcon("notifications");
@@ -89,3 +91,4 @@ export const Wind = createIcon("air");
 export const LayoutDashboard = createIcon("dashboard");
 export const Edit = createIcon("edit");
 export const Save = createIcon("save");
+export const Menu = createIcon("menu");

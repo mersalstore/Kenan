@@ -68,13 +68,24 @@ export class QuotationsController {
     return this.quotationsService.delete(id, req.user);
   }
 
-  // PDF Export
+  // PDF Export (Supports both GET and POST)
+  @Get(":id/pdf")
+  async exportPdfGet(@Param("id") id: string, @Query() query: any, @Res() res: Response) {
+    const buffer = await this.quotationsService.generatePdf(id, query);
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename=quotation-${id}.pdf`,
+      "Content-Length": buffer.length,
+    });
+    res.end(buffer);
+  }
+
   @Post(":id/pdf")
-  async exportPdf(@Param("id") id: string, @Body() body: any, @Res() res: Response) {
+  async exportPdfPost(@Param("id") id: string, @Body() body: any, @Res() res: Response) {
     const buffer = await this.quotationsService.generatePdf(id, body);
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=quotation-${id}.pdf`,
+      "Content-Disposition": `inline; filename=quotation-${id}.pdf`,
       "Content-Length": buffer.length,
     });
     res.end(buffer);

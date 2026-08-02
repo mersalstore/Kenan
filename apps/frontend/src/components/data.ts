@@ -209,7 +209,7 @@ export const seedShowcase: ShowcaseItem[] = [
 export const seedStaff: StaffAccount[] = [
   {
     id: 1,
-    name: "م. كريم عادل",
+    name: "م. كريم عادل (مهندس الموقع)",
     email: "engineer@kenan.com",
     password: "123456",
     role: "مهندس مشروع",
@@ -217,19 +217,35 @@ export const seedStaff: StaffAccount[] = [
   },
   {
     id: 2,
-    name: "محاسب الشركة",
-    email: "accountant@kenan.com",
+    name: "مدير المشاريع",
+    email: "pm@kenan.com",
     password: "123456",
-    role: "محاسب",
-    sections: ["dashboard", "finance", "contracts", "quotations", "reports", "contractors"],
+    role: "مدير مشاريع",
+    sections: ["dashboard", "projects", "stages", "systems", "deficiencies", "dailyReports", "supplyOrders", "workers", "teams", "contractors", "attendance", "reports", "alerts"],
   },
   {
     id: 3,
-    name: "موظف الاستقبال",
+    name: "محاسب الشركة ومسؤول المشتريات",
+    email: "accountant@kenan.com",
+    password: "123456",
+    role: "محاسب",
+    sections: ["dashboard", "finance", "contracts", "quotations", "supplyOrders", "inventory", "reports", "contractors", "payroll"],
+  },
+  {
+    id: 4,
+    name: "موظف الاستقبال والمبيعات",
     email: "reception@kenan.com",
     password: "123456",
     role: "موظف استقبال",
-    sections: ["dashboard", "clients"],
+    sections: ["dashboard", "clients", "quotations", "showcase"],
+  },
+  {
+    id: 5,
+    name: "فني المواقع والتركيبات",
+    email: "technician@kenan.com",
+    password: "123456",
+    role: "عامل/فني",
+    sections: ["dashboard", "projects", "systems", "maintenance", "deficiencies"],
   },
 ];
 

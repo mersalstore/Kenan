@@ -23,10 +23,13 @@ import {
   Sparkles,
   Truck,
   UserRoundCheck,
+  UserCog,
   Wrench,
   X,
   Wind,
   AlertTriangle,
+  ZoomIn,
+  Menu,
 } from "./icons";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { AuthConfig, AuthUser } from "./auth";
@@ -79,6 +82,82 @@ function loadSite(): SiteSettings {
   } catch {
     return seedSite;
   }
+}
+
+type FeaturedService = {
+  id: number;
+  title: string;
+  subtitle: string;
+  image: string;
+  tag: string;
+};
+
+const defaultFeaturedServices: FeaturedService[] = [
+  {
+    id: 1,
+    title: "أنظمة سلامة حديثة لحماية منشأتك بالكامل",
+    subtitle: "توريد وتركيب جميع أنواع طفايات ومضخات الحريق، شبكات الرش الآلي، وأنظمة غازات الإخماد وكشافات الطوارئ.",
+    image: "/images/featured-service-1.jpg",
+    tag: "سلامة وإطفاء",
+  },
+  {
+    id: 2,
+    title: "خدمات كنان المتكاملة للأنظمة الأمنية والمنشآت",
+    subtitle: "أعمال التصميم والإشراف الفني، مراجعة المخططات، اعتمادات الدفاع المدني واستخراج شهادات السلامة الرسمية.",
+    image: "/images/featured-service-2.jpg",
+    tag: "اعتماد وتصاريح",
+  },
+  {
+    id: 3,
+    title: "حلول أنظمة كنان للأمن والسلامة المتكاملة",
+    subtitle: "أنظمة مكافحة الحريق المتطورة، كواشف الدخان والإنذار المبكر، شبكات الكاميرات والتحكم بالدخول والصيانة الدورية.",
+    image: "/images/featured-service-3.jpg",
+    tag: "حلول متكاملة",
+  },
+];
+
+function loadFeaturedServices(): FeaturedService[] {
+  try {
+    const raw = window.localStorage.getItem("kenan.featured_services_v2");
+    return raw ? (JSON.parse(raw) as FeaturedService[]) : defaultFeaturedServices;
+  } catch {
+    return defaultFeaturedServices;
+  }
+}
+
+function compressImageFile(file: File, maxDim = 1200, quality = 0.82): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(String(e.target?.result));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => resolve(String(e.target?.result));
+      img.src = String(e.target?.result);
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
 }
 
 type PublicSiteProps = {
@@ -255,12 +334,22 @@ export function PublicSite({
   onEmailLogin,
   onOpenDashboard,
 }: PublicSiteProps) {
-  const [showcase] = useState<ShowcaseItem[]>(() => loadShowcase());
-  const [site] = useState<SiteSettings>(() => loadSite());
+  const [showcase, setShowcase] = useState<ShowcaseItem[]>(() => loadShowcase());
+  const [site, setSite] = useState<SiteSettings>(() => loadSite());
+  const [featuredServices, setFeaturedServices] = useState<FeaturedService[]>(() => loadFeaturedServices());
+  const [editingServiceIndex, setEditingServiceIndex] = useState<number | null>(null);
+  const [editServiceImage, setEditServiceImage] = useState<string>("");
   const [activeItem, setActiveItem] = useState<ShowcaseItem | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"about" | "process" | "why">("about");
   const [showWhatsApp, setShowWhatsApp] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setSite(loadSite());
+    setFeaturedServices(loadFeaturedServices());
+    setShowcase(loadShowcase());
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname === "/contact") {
@@ -273,10 +362,8 @@ export function PublicSite({
       let isHeroActive = window.scrollY < 550;
       if (heroSec) {
         const heroRect = heroSec.getBoundingClientRect();
-        if (heroRect.bottom > 150) {
+        if (heroRect.bottom > 100) {
           isHeroActive = true;
-        } else {
-          isHeroActive = false;
         }
       }
 
@@ -329,16 +416,16 @@ export function PublicSite({
   return (
     <div className="public-site">
       <header className="site-header">
-        <a className="site-brand" href="#home" aria-label="KENAN">
-          <img src="/kenan-logo.png" alt="KENAN" />
-        </a>
-        <nav className="site-nav" aria-label="روابط الموقع">
-          <a href="#services">الخدمات</a>
-          <a href="#projects">مشاريعنا</a>
-          <a href="#about">من نحن</a>
-          <a href="#showcase">عملاؤنا</a>
-          <a href="#contact">تواصل</a>
-        </nav>
+        {/* زر الشرطات الثلاثة للموبايل (أقصى اليمين) */}
+        <button
+          className="mobile-menu-toggle"
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
+          aria-label="القائمة"
+        >
+          {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+
+        {/* زر لوحة التحكم / تسجيل الدخول */}
         {user ? (
           <button className="site-login-button" onClick={onOpenDashboard}>
             لوحة التحكم
@@ -350,21 +437,52 @@ export function PublicSite({
             <ArrowLeft size={17} />
           </button>
         )}
+
+        {/* روابط الديسكتوب */}
+        <nav className="site-nav" aria-label="روابط الموقع">
+          <a href="#services">الخدمات</a>
+          <a href="#projects">مشاريعنا</a>
+          <a href="#about">من نحن</a>
+          <a href="#showcase">عملاؤنا</a>
+          <a href="#contact">تواصل</a>
+        </nav>
+
+        {/* اللوجو في أقصى الشمال */}
+        <a className="site-brand" href="#home" aria-label="KENAN">
+          <img src="/kenan-logo.png" alt="KENAN" />
+        </a>
       </header>
 
+      {/* قائمة الموبايل المنسدلة (Mobile Menu Drawer) */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu-drawer" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-menu-content" onClick={(e) => e.stopPropagation()}>
+            <nav className="mobile-nav-links">
+              <a href="#services" onClick={() => setMobileMenuOpen(false)}>الخدمات</a>
+              <a href="#projects" onClick={() => setMobileMenuOpen(false)}>مشاريعنا</a>
+              <a href="#about" onClick={() => setMobileMenuOpen(false)}>من نحن</a>
+              <a href="#showcase" onClick={() => setMobileMenuOpen(false)}>عملاؤنا</a>
+              <a href="#contact" onClick={() => setMobileMenuOpen(false)}>تواصل</a>
+            </nav>
+          </div>
+        </div>
+      )}
+
       <main>
-        <section className="landing-hero" id="home">
-          <div className="landing-copy">
+        <section className="landing-hero" id="home" style={{ display: "flex", justifyContent: "center", alignItems: "center", textAlign: "center", minHeight: "520px", padding: "60px 20px" }}>
+          <div className="landing-copy" style={{ maxWidth: "850px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
             <span className="company-kicker">
               <ShieldCheck size={18} />
               أنظمة أمن وسلامة للمنشآت التجارية والسكنية
             </span>
-            <h1>ننفّذ ونشغّل أنظمة الحماية من أول معاينة إلى آخر تقرير صيانة.</h1>
-            <p>
+            <h1 style={{ fontSize: "clamp(2rem, 4.5vw, 3.2rem)", lineHeight: "1.25", fontWeight: "800", color: "#ffffff", marginBottom: "18px" }}>
+              ننفّذ ونشغّل أنظمة الحماية من أول معاينة إلى آخر تقرير صيانة.
+            </h1>
+            <p style={{ fontSize: "1.1rem", lineHeight: "1.7", color: "#cbd5e1", maxWidth: "720px", marginBottom: "28px" }}>
               في كنان نجمع توريد وتركيب أنظمة الأمن والسلامة مع نظام إدارة متكامل يربط لك المشاريع
               والمواد والفنيين والفواتير ومراحل التسليم في مكان واحد.
             </p>
-            <div className="hero-actions">
+            <div className="hero-actions" style={{ justifyContent: "center", gap: "16px" }}>
               <a className="primary-site-button pulse-glow-btn" href={`https://wa.me/${site.contactWhatsApp || "966574590198"}?text=${encodeURIComponent(site.contactWhatsAppMsg || "أريد معاينة مجانية لموقعي")}`} target="_blank" rel="noreferrer">
                 اطلب معاينة مجانية لموقعك
                 <Phone size={17} />
@@ -374,44 +492,11 @@ export function PublicSite({
                 <ChevronLeft size={17} />
               </a>
             </div>
-            <div className="hero-cta-hint">
-              <span>⚡ معاينة مجانية وتقييم شامل متوفّر الحين لكل المشاريع في الرياض</span>
-            </div>
-            <div className="proof-strip">
+            <div className="proof-strip" style={{ marginTop: "32px", justifyContent: "center" }}>
               <span>كاميرات</span>
               <span>إنذار حريق</span>
               <span>شبكات</span>
               <span>صيانة 24/7</span>
-            </div>
-          </div>
-
-          <div className="hero-visual" aria-label="صورة من مشروع كنان">
-            <div className="hero-img-wrap">
-              <img src="/images/hero-install.jpg" alt="فريق تركيب أنظمة الأمن" />
-              <div className="hero-img-overlay" />
-            </div>
-            <div className="hero-stats-bar">
-              <div className="hero-stat">
-                <strong>+150</strong>
-                <span>مشروع مُسلَّم</span>
-              </div>
-              <div className="hero-stat-divider" />
-              <div className="hero-stat">
-                <strong>24/7</strong>
-                <span>دعم وصيانة</span>
-              </div>
-              <div className="hero-stat-divider" />
-              <div className="hero-stat">
-                <strong>100%</strong>
-                <span>توثيق وضمان</span>
-              </div>
-            </div>
-            <div className="handover-card">
-              <BadgeCheck size={20} />
-              <div>
-                <strong>تسليم موثق</strong>
-                <span>صور، ملفات، توقيع عميل، وسجل أعمال لكل مرحلة.</span>
-              </div>
             </div>
           </div>
         </section>
@@ -444,25 +529,88 @@ export function PublicSite({
           </div>
         </section>
 
-        {/* Project Gallery Section */}
+        {/* 3 Featured Services Section */}
         <section className="projects-gallery-section" id="projects">
           <div className="section-heading centered">
-            <span>مشاريعنا</span>
-            <h2>نماذج من أعمالنا المنفّذة.</h2>
+            <span>خدماتنا المتميزة</span>
+            <h2>توضيح أهم الخدمات والحلول التي نقدمها.</h2>
             <p>
-              من كاميرات المراقبة إلى الشبكات وأنظمة الإنذار — نُنفّذ كل مرحلة باحترافية موثّقة ونُسلّم بمعايير واضحة.
+              نقدم 3 خدمات متكاملة تضمن لك الأمان والامتثال لاشتراطات الدفاع المدني السعودي من أول معاينة حتى التسليم النهائي.
             </p>
           </div>
-          <div className="projects-grid">
-            {projectGallery.map((project, idx) => (
-              <article className={`project-card project-card--${project.tagColor}`} key={idx}>
-                <div className="project-card-img">
-                  <img src={project.image} alt={project.title} loading="lazy" />
-                  <span className={`project-tag project-tag--${project.tagColor}`}>{project.tag}</span>
+          <div className="projects-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", maxWidth: "1200px", margin: "0 auto", gap: "24px" }}>
+            {featuredServices.map((service, idx) => (
+              <article className="project-card" key={service.id} style={{ position: "relative", overflow: "hidden", borderRadius: "20px", display: "flex", flexDirection: "column" }}>
+                <div
+                  className="project-card-img"
+                  onClick={() => setLightbox(service.image)}
+                  title="اضغط للتكبير والعرض الكامل"
+                  style={{
+                    width: "100%",
+                    background: "#f1f5f9",
+                    padding: "8px",
+                    position: "relative",
+                    cursor: "pointer",
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: "260px"
+                  }}
+                >
+                  <img
+                    src={service.image}
+                    alt={service.title}
+                    loading="lazy"
+                    style={{
+                      width: "100%",
+                      maxHeight: "340px",
+                      objectFit: "contain",
+                      borderRadius: "12px",
+                      display: "block",
+                      transition: "transform 0.3s ease"
+                    }}
+                  />
+                  <span className="project-tag project-tag--brand" style={{ position: "absolute", top: "14px", right: "14px", zIndex: 3 }}>{service.tag}</span>
+                  
+                  {/* Zoom Icon Button in Corner */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightbox(service.image);
+                    }}
+                    title="تكبير البوستر"
+                    style={{
+                      position: "absolute",
+                      top: "14px",
+                      left: "14px",
+                      zIndex: 4,
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "50%",
+                      background: "rgba(15, 23, 42, 0.75)",
+                      backdropFilter: "blur(6px)",
+                      color: "#ffffff",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <ZoomIn size={18} />
+                  </button>
                 </div>
-                <div className="project-card-body">
-                  <h3>{project.title}</h3>
-                  <p>{project.subtitle}</p>
+
+                <div className="project-card-body" style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--navy)", marginBottom: "8px" }}>{service.title}</h3>
+                    <p style={{ fontSize: "0.9rem", color: "var(--muted)", lineHeight: "1.6" }}>{service.subtitle}</p>
+                  </div>
+                  
                 </div>
               </article>
             ))}
@@ -636,164 +784,81 @@ export function PublicSite({
         </section>
 
 
-        <section className="site-section contact-full-section" id="contact">
-          <div className="section-heading centered">
-            <span>تواصل معنا</span>
-            <h2>اطلب معاينة مجانية، ونوافيك بعرض فني ومالي خلال 24 ساعة.</h2>
-            <p>مهندسونا جاهزون لدراسة موقعك وتقديم حل مطابق لاشتراطات الدفاع المدني.</p>
-          </div>
-
-          <div className="contact-full-grid">
-            {/* Left: Contact Form */}
-            <div className="contact-form-card">
-              <h3 className="contact-form-title">
-                <ClipboardCheck size={20} />
-                اطلب معاينة مجانية
-              </h3>
-              <form
-                className="contact-request-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const fd = new FormData(e.currentTarget);
-                  const name = fd.get("name") as string;
-                  const phone = fd.get("phone") as string;
-                  const city = fd.get("city") as string;
-                  const service = fd.get("service") as string;
-                  const msg = fd.get("message") as string;
-                  const text = `طلب معاينة مجانية\n\nالاسم: ${name}\nالجوال: ${phone}\nالمدينة: ${city}\nالخدمة المطلوبة: ${service}\n${msg ? "ملاحظات: " + msg : ""}`;
-                  window.open(
-                    `https://wa.me/${site.contactWhatsApp || "966574590198"}?text=${encodeURIComponent(text)}`,
-                    "_blank"
-                  );
-                }}
-              >
-                <div className="contact-form-row">
-                  <label className="contact-form-field">
-                    <span>الاسم الكريم</span>
-                    <input name="name" type="text" placeholder="محمد العتيبي" required />
-                  </label>
-                  <label className="contact-form-field">
-                    <span>رقم الجوال</span>
-                    <input name="phone" type="tel" placeholder="05xxxxxxxx" required dir="ltr" />
-                  </label>
-                </div>
-                <div className="contact-form-row">
-                  <label className="contact-form-field">
-                    <span>المدينة</span>
-                    <select name="city" required>
-                      <option value="">اختر المدينة...</option>
-                      <option>الرياض</option>
-                      <option>جدة</option>
-                      <option>مكة المكرمة</option>
-                      <option>المدينة المنورة</option>
-                      <option>الدمام</option>
-                      <option>الخبر</option>
-                      <option>تبوك</option>
-                      <option>أخرى</option>
-                    </select>
-                  </label>
-                  <label className="contact-form-field">
-                    <span>الخدمة المطلوبة</span>
-                    <select name="service" required>
-                      <option value="">اختر الخدمة...</option>
-                      <option>كاميرات مراقبة (CCTV)</option>
-                      <option>نظام إنذار وإطفاء حريق</option>
-                      <option>شبكات ونقاط بيانات</option>
-                      <option>تهوية واستخراج دخان</option>
-                      <option>صيانة وعقد سنوي</option>
-                      <option>حزمة متكاملة</option>
-                    </select>
-                  </label>
-                </div>
-                <label className="contact-form-field">
-                  <span>ملاحظات إضافية (اختياري)</span>
-                  <textarea name="message" rows={3} placeholder="اذكر نوع المبنى أو أي تفاصيل مفيدة..." />
-                </label>
-                <button type="submit" className="contact-submit-btn whatsapp-style-btn">
-                  <span className="wa-btn-text">راسلنا على واتساب</span>
-                  <div className="wa-circle-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.458 5.704 1.459h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z" />
-                    </svg>
-                  </div>
-                </button>
-              </form>
+        {/* Horizontal Rectangular Contact Banner Section */}
+        <section className="site-section contact-banner-section" id="contact" style={{ padding: "40px 20px" }}>
+          <div style={{
+            background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+            border: "1.5px solid rgba(225, 29, 72, 0.3)",
+            borderRadius: "24px",
+            padding: "36px 40px",
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "24px",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            position: "relative",
+            overflow: "hidden"
+          }}>
+            {/* Background Glow */}
+            <div style={{ position: "absolute", top: "-50%", right: "-10%", width: "300px", height: "300px", background: "rgba(225, 29, 72, 0.15)", filter: "blur(60px)", borderRadius: "50%", pointerEvents: "none" }} />
+            
+            <div style={{ flex: 1, minWidth: "280px", zIndex: 2 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(225, 29, 72, 0.15)", color: "#f43f5e", padding: "6px 14px", borderRadius: "99px", fontSize: "0.82rem", fontWeight: "800", marginBottom: "12px" }}>
+                <Sparkles size={16} />
+                تواصل معنا الآن
+              </span>
+              <h2 style={{ color: "#ffffff", fontSize: "clamp(1.4rem, 2.5vw, 1.8rem)", fontWeight: "800", margin: "0 0 10px 0", lineHeight: "1.35" }}>
+                اطلب معاينة مجانية، ونوافيك بعرض فني ومالي خلال 24 ساعة.
+              </h2>
+              <p style={{ color: "#94a3b8", fontSize: "0.98rem", margin: 0, lineHeight: "1.6", maxWidth: "650px" }}>
+                مهندسونا جاهزون لدراسة موقعك وتأمين منشأتك وفق أحدث اشتراطات الدفاع المدني السعودي. اضغط أدناه للانتقال لمركز التواصل المباشر.
+              </p>
             </div>
 
-            {/* Right: Contact Details */}
-            <div className="contact-details-card">
-              <h3 className="contact-form-title">
-                <Phone size={20} />
-                بياناتنا
-              </h3>
-
-              <div className="contact-detail-items">
-                <a href={`tel:${site.contactPhone || "+966574590198"}`} className="contact-detail-item">
-                  <div className="contact-detail-icon phone-icon">
-                    <Phone size={18} style={{ color: "#ffffff", stroke: "#ffffff" }} />
-                  </div>
-                  <div>
-                    <span>اتصال مباشر</span>
-                    <strong dir="ltr">{site.contactPhone || "+966574590198"}</strong>
-                  </div>
-                </a>
-
-                <a
-                  href={`https://wa.me/${site.contactWhatsApp || "966574590198"}?text=${encodeURIComponent(site.contactWhatsAppMsg || "أريد معاينة مجانية لموقعي")}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="contact-detail-item whatsapp-item"
-                >
-                  <div className="contact-detail-icon wa-icon">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="#ffffff">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.458 5.704 1.459h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <span>واتساب مباشر</span>
-                    <strong dir="ltr">+{site.contactWhatsApp || "966574590198"}</strong>
-                  </div>
-                </a>
-
-                <a href={`mailto:${site.contactEmail || "info@kenan4saftey.com"}`} className="contact-detail-item">
-                  <div className="contact-detail-icon mail-icon">
-                    <Mail size={18} style={{ color: "#ffffff", stroke: "#ffffff" }} />
-                  </div>
-                  <div>
-                    <span>البريد الإلكتروني</span>
-                    <strong>{site.contactEmail || "info@kenan4saftey.com"}</strong>
-                  </div>
-                </a>
-
-                <div className="contact-detail-item">
-                  <div className="contact-detail-icon map-icon">
-                    <MapPin size={18} style={{ color: "#ffffff", stroke: "#ffffff" }} />
-                  </div>
-                  <div>
-                    <span>الموقع</span>
-                    <strong>{site.contactAddress || "الرياض - حي الفيحاء - شارع المطر"}</strong>
-                  </div>
-                </div>
-
-                <a href="/registration.pdf" target="_blank" rel="noopener noreferrer" className="contact-detail-item">
-                  <div className="contact-detail-icon reg-icon">
-                    <ClipboardCheck size={18} style={{ color: "#ffffff", stroke: "#ffffff" }} />
-                  </div>
-                  <div>
-                    <span>السجل التجاري</span>
-                    <strong>7050404537 — تحميل PDF</strong>
-                  </div>
-                </a>
-              </div>
-
-              <div className="contact-hours-box">
-                <Clock size={16} />
-                <div>
-                  <strong>ساعات العمل</strong>
-                  <span>الأحد — الخميس: 8 ص — 6 م</span>
-                  <span>الجمعة والسبت: للطوارئ فقط</span>
-                </div>
-              </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: "220px", zIndex: 2 }}>
+              <a
+                href="/contact"
+                className="primary-site-button"
+                style={{
+                  padding: "14px 28px",
+                  fontSize: "1rem",
+                  fontWeight: "800",
+                  borderRadius: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  textDecoration: "none"
+                }}
+              >
+                تواصل معنا ورسالة مباشرة
+                <ArrowLeft size={18} />
+              </a>
+              <a
+                href={`https://wa.me/${site.contactWhatsApp || "966574590198"}?text=${encodeURIComponent(site.contactWhatsAppMsg || "أريد معاينة مجانية لموقعي")}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  padding: "12px 24px",
+                  fontSize: "0.95rem",
+                  fontWeight: "700",
+                  color: "#ffffff",
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  textDecoration: "none",
+                  transition: "all 0.3s ease"
+                }}
+              >
+                <Phone size={16} />
+                واتساب مباشر 💬
+              </a>
             </div>
           </div>
         </section>
@@ -1220,90 +1285,249 @@ function LoginPage({
   onEmailLogin: (email: string, password: string) => void;
 }) {
   const isLocalhost = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
+  const [activeTab, setActiveTab] = useState<"staff" | "client">("staff");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const submitEmail = (event: FormEvent<HTMLFormElement>) => {
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientPass, setClientPass] = useState("");
+
+  const submitStaffEmail = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (email.trim() && password) onEmailLogin(email.trim(), password);
+  };
+
+  const submitClientLogin = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (clientPhone.trim()) {
+      onEmailLogin(clientPhone.trim(), clientPass || "123456");
+    }
+  };
+
+  const quickClientLogin = (phone: string) => {
+    setClientPhone(phone);
+    onEmailLogin(phone, "123456");
   };
 
   return (
     <div className="login-page">
       <button className="back-site-button" onClick={onBackToSite}>
         <ChevronLeft size={17} />
-        الرجوع للموقع
+        الرجوع للموقع الرئيسي
       </button>
+
       <section className="login-panel">
         <div className="login-intro">
           <img src="/kenan-logo.png" alt="KENAN" />
-          <span>Staff access</span>
-          <h1>دخول نظام KENAN</h1>
+          <span>بوابة الدخول الموحدة</span>
+          <h1>نظام KENAN للأمن والسلامة</h1>
           <p>
-            الإدارة تدخل بحساب Google المعتمد، والموظفون يدخلون بالبريد وكلمة المرور التي ينشئها الأدمن، وكل موظف يرى
-            الأقسام المسموح له بها فقط.
+            مرحباً بك في منصة كنان الموحدة. تتيح لك المنظومة متابعة الأعمال الميدانية، المشاريع، العقود، والتقارير الفنية بسهولة وأمان.
           </p>
+
+          <div style={{ display: "flex", gap: "10px", marginTop: "20px", marginBottom: "20px" }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab("staff")}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                borderRadius: "12px",
+                border: activeTab === "staff" ? "2px solid #e11d48" : "1px solid rgba(255,255,255,0.15)",
+                background: activeTab === "staff" ? "rgba(225, 29, 72, 0.15)" : "rgba(0,0,0,0.3)",
+                color: "#ffffff",
+                fontWeight: "700",
+                fontSize: "0.95rem",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+            >
+              <UserCog size={18} />
+              دخول الموظفين والإدارة
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("client")}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                borderRadius: "12px",
+                border: activeTab === "client" ? "2px solid #0284c7" : "1px solid rgba(255,255,255,0.15)",
+                background: activeTab === "client" ? "rgba(2, 132, 199, 0.15)" : "rgba(0,0,0,0.3)",
+                color: "#ffffff",
+                fontWeight: "700",
+                fontSize: "0.95rem",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+            >
+              <Building2 size={18} />
+              بوابة العملاء
+            </button>
+          </div>
+
           <ul>
             <li>
               <CheckCircle2 size={18} />
-              الإدارة عبر Google
+              تسجيل دخول آمن وسريع لكل المستخدمين
             </li>
             <li>
               <CheckCircle2 size={18} />
-              الموظفون بالبريد وكلمة المرور
+              صلاحيات مخصصة لكل دور وظيفي
             </li>
             <li>
               <CheckCircle2 size={18} />
-              صلاحيات محددة لكل حساب
+              بوابة خاصة للعملاء لمتابعة مشاريعهم وعقودهم
             </li>
           </ul>
         </div>
+
         <div className="google-login-box">
-          <Sparkles size={23} />
-          <h2>تسجيل الدخول</h2>
+          {activeTab === "staff" ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                <Sparkles size={22} style={{ color: "#e11d48" }} />
+                <h2 style={{ margin: 0 }}>دخول الإدارة والموظفين</h2>
+              </div>
+              <p style={{ color: "#94a3b8", fontSize: "0.88rem", marginBottom: "20px" }}>
+                أدخل بريدك الإلكتروني وكلمة المرور المسجلة لدى النظام
+              </p>
 
-          <form className="email-login-form" onSubmit={submitEmail}>
-            <label>
-              البريد الإلكتروني
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="name@kenan.com"
-                autoComplete="username"
-              />
-            </label>
-            <label>
-              كلمة المرور
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="••••••"
-                autoComplete="current-password"
-              />
-            </label>
-            <button className="primary-site-button" type="submit" disabled={authLoading}>
-              <LockKeyhole size={17} />
-              دخول الموظفين
-            </button>
-          </form>
+              <form className="email-login-form" onSubmit={submitStaffEmail}>
+                <label>
+                  البريد الإلكتروني
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="kenansafety.sec@gmail.com أو engineer@kenan.com"
+                    autoComplete="username"
+                    required
+                  />
+                </label>
+                <label>
+                  كلمة المرور
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    required
+                  />
+                </label>
+                <button className="primary-site-button" type="submit" disabled={authLoading}>
+                  <LockKeyhole size={17} />
+                  تسجيل الدخول
+                </button>
+              </form>
 
-          <div className="login-divider">
-            <span>أو دخول الإدارة</span>
-          </div>
+              <div className="login-divider">
+                <span>أو الدخول المباشر كـ Admin</span>
+              </div>
 
-          {config?.googleReady ? (
-            <GoogleButton clientId={config.clientId} disabled={authLoading} onCredential={onGoogleCredential} />
+              {config?.googleReady ? (
+                <GoogleButton clientId={config.clientId} disabled={authLoading} onCredential={onGoogleCredential} />
+              ) : (
+                <div className="auth-warning">دخول Google متاح لحساب kenansafety.sec@gmail.com</div>
+              )}
+            </>
           ) : (
-            <div className="auth-warning">لم يتم العثور على Google client ID في الإعدادات.</div>
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                <Building2 size={22} style={{ color: "#0284c7" }} />
+                <h2 style={{ margin: 0 }}>بوابة العملاء</h2>
+              </div>
+              <p style={{ color: "#94a3b8", fontSize: "0.88rem", marginBottom: "20px" }}>
+                تابع حالة مشاريعك، وعروض الأسعار، والعقود المسجلة باسمك
+              </p>
+
+              <form className="email-login-form" onSubmit={submitClientLogin}>
+                <label>
+                  رقم الجوال أو البريد الإلكتروني للعميل
+                  <input
+                    type="text"
+                    value={clientPhone}
+                    onChange={(event) => setClientPhone(event.target.value)}
+                    placeholder="مثال: 01001234567 أو client@kenan.com"
+                    autoComplete="username"
+                    required
+                  />
+                </label>
+                <label>
+                  كلمة المرور (اختياري)
+                  <input
+                    type="password"
+                    value={clientPass}
+                    onChange={(event) => setClientPass(event.target.value)}
+                    placeholder="123456 (افتراضي)"
+                    autoComplete="current-password"
+                  />
+                </label>
+                <button
+                  className="primary-site-button"
+                  type="submit"
+                  disabled={authLoading}
+                  style={{ background: "linear-gradient(135deg, #0284c7, #2563eb)" }}
+                >
+                  <Building2 size={17} />
+                  دخول بوابة العملاء
+                </button>
+              </form>
+
+              <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                <span style={{ fontSize: "0.85rem", color: "#94a3b8", display: "block", marginBottom: "10px" }}>
+                  💡 للتجربة كـ عميل مسجل:
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => quickClientLogin("01001234567")}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      fontSize: "0.82rem",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      color: "#e2e8f0",
+                      cursor: "pointer",
+                    }}
+                  >
+                    👤 أحمد الشامي (01001234567)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => quickClientLogin("01119876543")}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      fontSize: "0.82rem",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      color: "#e2e8f0",
+                      cursor: "pointer",
+                    }}
+                  >
+                    🏢 شركة المدار (01119876543)
+                  </button>
+                </div>
+              </div>
+            </>
           )}
+
           {authLoading && <span className="auth-status">جاري التحقق من الحساب...</span>}
           {authError && <div className="auth-error">{authError}</div>}
           {isLocalhost && (
             <div className="dev-origin-note" style={{ marginBottom: "8px" }}>
-              للتجربة محليًا أضف هذا العنوان في Google OAuth Authorized JavaScript origins:
-              <code>{window.location.origin}</code>
+              عنوان التجربة المحلية: <code>{window.location.origin}</code>
             </div>
           )}
         </div>

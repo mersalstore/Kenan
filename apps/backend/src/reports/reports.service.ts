@@ -79,7 +79,7 @@ export class ReportsService {
     const fontPaths = await ensureFontsExist();
  
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 40 });
+      const doc = new PDFDocument({ margin: 40, bufferPages: true });
       const buffers: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => buffers.push(chunk));
       doc.on("end", () => resolve(Buffer.concat(buffers)));
@@ -94,62 +94,62 @@ export class ReportsService {
  
       // Project Info Block
       doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(10);
-      doc.text(prepareArabicText("معلومات المشروع:"), 40, 142, { align: "right", width: 250 });
+      doc.text(prepareArabicText("معلومات المشروع:"), 300, 150, { align: "right", width: 255 });
       doc.fillColor("#475569").font("Amiri").fontSize(9);
-      doc.text(prepareArabicText(`اسم المشروع: ${project.name}`), 40, 158, { align: "right", width: 250 });
-      doc.text(prepareArabicText(`المشرف: ${project.engineer?.name || "غير معيّن"}`), 40, 171, { align: "right", width: 250 });
-      doc.text(prepareArabicText(`حالة المشروع: ${project.status}`), 40, 184, { align: "right", width: 250 });
-      doc.text(prepareArabicText(`التقدم الفعلي: ${project.progress}%`), 40, 197, { align: "right", width: 250 });
+      doc.text(prepareArabicText(`اسم المشروع: ${project.name}`), 300, 166, { align: "right", width: 255 });
+      doc.text(prepareArabicText(`المشرف: ${project.engineer?.name || "غير معيّن"}`), 300, 179, { align: "right", width: 255 });
+      doc.text(prepareArabicText(`حالة المشروع: ${project.status}`), 300, 192, { align: "right", width: 255 });
+      doc.text(prepareArabicText(`التقدم الفعلي: ${project.progress}%`), 300, 205, { align: "right", width: 255 });
  
       // Timeline info opposite
       doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(10);
-      doc.text("Project Timeline:", 320, 142, { align: "left", width: 250 });
+      doc.text("Project Timeline:", 40, 150, { align: "left", width: 250 });
       doc.fillColor("#475569").font("Amiri").fontSize(9);
-      doc.text(`Start Date: ${project.startDate.toISOString().slice(0, 10)}`, 320, 158, { align: "left", width: 250 });
-      doc.text(`End Date: ${project.endDate.toISOString().slice(0, 10)}`, 320, 171, { align: "left", width: 250 });
-      doc.text(prepareArabicText(`نوع الأعمال: ${project.type}`), 320, 184, { align: "left", width: 250 });
+      doc.text(`Start Date: ${project.startDate.toISOString().slice(0, 10)}`, 40, 166, { align: "left", width: 250 });
+      doc.text(`End Date: ${project.endDate.toISOString().slice(0, 10)}`, 40, 179, { align: "left", width: 250 });
+      doc.text(prepareArabicText(`نوع الأعمال: ${project.type}`), 40, 192, { align: "left", width: 250 });
  
-      let y = 220;
+      let y = 228;
       
       // Financial Summary Box
-      doc.rect(40, y, 532, 20).fill("#f1f5f9");
+      doc.rect(40, y, 515.28, 20).fill("#f1f5f9");
       doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(9.5);
-      doc.text(prepareArabicText("الخلاصة المالية للموقع:"), 40, y + 4, { align: "right", width: 520 });
+      doc.text(prepareArabicText("الخلاصة المالية للموقع:"), 40, y + 4, { align: "right", width: 505 });
       
       y += 24;
       doc.font("Amiri").fontSize(9).fillColor("#0f172a");
-      doc.text(prepareArabicText(`قيمة العقد الإجمالية (الموازنة): ${project.budget} ر.س`), 40, y, { align: "right", width: 520 });
-      doc.text(prepareArabicText(`إجمالي المبالغ المفوترة (الإيرادات): ${summary.totalInvoiced} ر.س`), 40, y + 15, { align: "right", width: 520 });
-      doc.text(prepareArabicText(`إجمالي التكاليف والمصروفات: ${summary.totalExpenses} ر.س`), 40, y + 30, { align: "right", width: 520 });
+      doc.text(prepareArabicText(`قيمة العقد الإجمالية (الموازنة): ${project.budget} ر.س`), 40, y, { align: "right", width: 505 });
+      doc.text(prepareArabicText(`إجمالي المبالغ المفوترة (الإيرادات): ${summary.totalInvoiced} ر.س`), 40, y + 15, { align: "right", width: 505 });
+      doc.text(prepareArabicText(`إجمالي التكاليف والمصروفات: ${summary.totalExpenses} ر.س`), 40, y + 30, { align: "right", width: 505 });
       doc.fillColor("#10b981").font("Cairo-Bold");
-      doc.text(prepareArabicText(`صافي الربح التشغيلي للمشروع: ${summary.projectProfit} ر.س`), 40, y + 48, { align: "right", width: 520 });
+      doc.text(prepareArabicText(`صافي الربح التشغيلي للمشروع: ${summary.projectProfit} ر.س`), 40, y + 48, { align: "right", width: 505 });
  
       y += 75;
       
       // Assigned Workers Box
-      doc.rect(40, y, 532, 20).fill("#f1f5f9");
+      doc.rect(40, y, 515.28, 20).fill("#f1f5f9");
       doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(9.5);
-      doc.text(prepareArabicText("الكادر الفني والعمالة المعينة بالموقع:"), 40, y + 4, { align: "right", width: 520 });
+      doc.text(prepareArabicText("الكادر الفني والعمالة المعينة بالموقع:"), 40, y + 4, { align: "right", width: 505 });
       
       y += 24;
       doc.font("Amiri").fontSize(9).fillColor("#0f172a");
       if (project.assignments.length === 0) {
-        doc.text(prepareArabicText("لا يوجد كادر فني معين بالموقع حالياً."), 40, y, { align: "right", width: 520 });
+        doc.text(prepareArabicText("لا يوجد كادر فني معين بالموقع حالياً."), 40, y, { align: "right", width: 505 });
       } else {
         project.assignments.forEach((a, idx) => {
           const entityName = a.worker
             ? `موظف: ${a.worker.name} (${a.worker.specialty})`
             : `مقاول باطن: ${a.contractor?.name} (${a.contractor?.specialty})`;
-          doc.text(prepareArabicText(`${idx + 1}. ${entityName} — الدور بالموقع: ${a.roleOnSite}`), 40, y, { align: "right", width: 520 });
+          doc.text(prepareArabicText(`${idx + 1}. ${entityName} — الدور بالموقع: ${a.roleOnSite}`), 40, y, { align: "right", width: 505 });
           y += 16;
         });
       }
  
       // Draw footer on all pages
-      let pages = (doc as any)._pageBuffer || [];
-      for (let i = 0; i < pages.length; i++) {
+      const range = doc.bufferedPageRange();
+      for (let i = range.start; i < range.start + range.count; i++) {
         doc.switchToPage(i);
-        drawPdfFooter(doc, i + 1, query);
+        drawPdfFooter(doc, i + 1, range.count, query);
       }
  
       doc.end();

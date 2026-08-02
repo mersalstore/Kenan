@@ -162,7 +162,7 @@ export class QuotationsService {
     const fontPaths = await ensureFontsExist();
     
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 40 });
+      const doc = new PDFDocument({ margin: 40, bufferPages: true });
       const buffers: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => buffers.push(chunk));
       doc.on("end", () => resolve(Buffer.concat(buffers)));
@@ -177,40 +177,39 @@ export class QuotationsService {
 
       // Meta Info Block
       doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(10);
-      doc.text(prepareArabicText("معلومات العرض:"), 40, 142, { align: "right", width: 250 });
+      doc.text(prepareArabicText("معلومات العرض:"), 300, 150, { align: "right", width: 255 });
       doc.fillColor("#475569").font("Amiri").fontSize(9);
-      doc.text(prepareArabicText(`رقم العرض: ${q.number}`), 40, 158, { align: "right", width: 250 });
-      doc.text(prepareArabicText(`التاريخ: ${q.date.toISOString().slice(0, 10)}`), 40, 171, { align: "right", width: 250 });
-      doc.text(prepareArabicText(`صالح لغاية: ${q.validUntil.toISOString().slice(0, 10)}`), 40, 184, { align: "right", width: 250 });
+      doc.text(prepareArabicText(`رقم العرض: ${q.number}`), 300, 166, { align: "right", width: 255 });
+      doc.text(prepareArabicText(`التاريخ: ${q.date.toISOString().slice(0, 10)}`), 300, 179, { align: "right", width: 255 });
+      doc.text(prepareArabicText(`صالح لغاية: ${q.validUntil.toISOString().slice(0, 10)}`), 300, 192, { align: "right", width: 255 });
 
       // Client info opposite
       doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(10);
-      doc.text("Client / Customer:", 320, 142, { align: "left", width: 250 });
+      doc.text(prepareArabicText("معلومات العميل / Client:"), 40, 150, { align: "left", width: 250 });
       doc.fillColor("#475569").font("Amiri").fontSize(9);
-      doc.text(prepareArabicText(`العميل: ${q.client.name}`), 320, 158, { align: "left", width: 250 });
-      doc.text(`Email/Tel: ${q.client.phone || "—"}`, 320, 171, { align: "left", width: 250 });
-      doc.text(prepareArabicText(`المدينة: ${q.client.city || "الرياض"}`), 320, 184, { align: "left", width: 250 });
+      doc.text(prepareArabicText(`العميل: ${q.client.name}`), 40, 166, { align: "left", width: 250 });
+      doc.text(`Email/Tel: ${q.client.phone || "—"}`, 40, 179, { align: "left", width: 250 });
+      doc.text(prepareArabicText(`المدينة: ${q.client.city || "الرياض"}`), 40, 192, { align: "left", width: 250 });
 
-      let y = 210;
+      let y = 218;
       const totalTableHeight = 20 + (q.items.length * 20) + 70; // Header row + items + totals block
 
       // Prevent table splitting between pages: if full table doesn't fit on current page, push to next page
-      if (y + totalTableHeight > 680) {
-        drawPdfFooter(doc, 1, query);
+      if (y + totalTableHeight > 710) {
         doc.addPage();
         drawPdfHeader(doc, "عرض سعر (Quotation)", query);
-        y = 140;
+        y = 150;
       }
       
       // Draw Table Headers
-      doc.rect(40, y, 532, 20).fill("#f1f5f9");
+      doc.rect(40, y, 515.28, 20).fill("#f1f5f9");
       doc.fillColor("#0d1440").font("Cairo-Bold").fontSize(8.5);
       doc.text(prepareArabicText("الرقم"), 40, y + 5, { width: 30, align: "center" });
       doc.text(prepareArabicText("الصنف والمواد"), 70, y + 5, { width: 180, align: "right" });
-      doc.text(prepareArabicText("الوصف/الماركة"), 250, y + 5, { width: 100, align: "right" });
-      doc.text(prepareArabicText("الكمية"), 350, y + 5, { width: 40, align: "center" });
-      doc.text(prepareArabicText("السعر"), 390, y + 5, { width: 80, align: "left" });
-      doc.text(prepareArabicText("الإجمالي"), 470, y + 5, { width: 102, align: "left" });
+      doc.text(prepareArabicText("الوصف/الماركة"), 250, y + 5, { width: 105, align: "right" });
+      doc.text(prepareArabicText("الكمية"), 355, y + 5, { width: 40, align: "center" });
+      doc.text(prepareArabicText("السعر"), 395, y + 5, { width: 75, align: "left" });
+      doc.text(prepareArabicText("الإجمالي"), 470, y + 5, { width: 85, align: "left" });
 
       y += 20;
       doc.font("Amiri").fontSize(9).fillColor("#0f172a");
@@ -222,20 +221,20 @@ export class QuotationsService {
         
         // Draw row background for alternating rows
         if (idx % 2 === 1) {
-          doc.rect(40, y, 532, 20).fill("#f8fafc");
+          doc.rect(40, y, 515.28, 20).fill("#f8fafc");
           doc.fillColor("#0f172a");
         }
         
         // Draw text
         doc.text(`${idx + 1}`, 40, y + 5, { width: 30, align: "center" });
         doc.text(prepareArabicText(item.name), 70, y + 5, { width: 180, align: "right" });
-        doc.text(prepareArabicText(item.brand || "—"), 250, y + 5, { width: 100, align: "right" });
-        doc.text(`${item.qty}`, 350, y + 5, { width: 40, align: "center" });
-        doc.text(`${Number(item.price).toFixed(2)}`, 390, y + 5, { width: 80, align: "left" });
-        doc.text(`${itemTotal.toFixed(2)}`, 470, y + 5, { width: 102, align: "left" });
+        doc.text(prepareArabicText(item.brand || "—"), 250, y + 5, { width: 105, align: "right" });
+        doc.text(`${item.qty}`, 355, y + 5, { width: 40, align: "center" });
+        doc.text(`${Number(item.price).toFixed(2)}`, 395, y + 5, { width: 75, align: "left" });
+        doc.text(`${itemTotal.toFixed(2)}`, 470, y + 5, { width: 85, align: "left" });
 
         // Draw thin bottom border
-        doc.moveTo(40, y + 20).lineTo(572, y + 20).strokeColor("#e2e8f0").lineWidth(0.5).stroke();
+        doc.moveTo(40, y + 20).lineTo(555.28, y + 20).strokeColor("#e2e8f0").lineWidth(0.5).stroke();
         y += 20;
       });
 
@@ -244,25 +243,24 @@ export class QuotationsService {
       const finalTotal = subtotal + taxAmount;
 
       // Totals Box
-      doc.rect(370, y, 202, 60).fill("#f8fafc");
-      doc.rect(370, y, 202, 60).strokeColor("#cbd5e1").lineWidth(1).stroke();
+      doc.rect(355, y, 200, 60).fill("#f8fafc");
+      doc.rect(355, y, 200, 60).strokeColor("#cbd5e1").lineWidth(1).stroke();
       
       doc.fillColor("#475569").font("Cairo-Bold").fontSize(8);
-      doc.text(prepareArabicText(`المجموع الفرعي: ${subtotal.toFixed(2)} ${q.currency}`), 380, y + 6, { align: "right", width: 182 });
-      doc.text(prepareArabicText(`الضريبة (${q.taxPercent}%): ${taxAmount.toFixed(2)} ${q.currency}`), 380, y + 22, { align: "right", width: 182 });
+      doc.text(prepareArabicText(`المجموع الفرعي: ${subtotal.toFixed(2)} ${q.currency}`), 365, y + 6, { align: "right", width: 180 });
+      doc.text(prepareArabicText(`الضريبة (${q.taxPercent}%): ${taxAmount.toFixed(2)} ${q.currency}`), 365, y + 22, { align: "right", width: 180 });
       doc.fillColor("#e11d48").fontSize(9);
-      doc.text(prepareArabicText(`الإجمالي شامل الضريبة: ${finalTotal.toFixed(2)} ${q.currency}`), 380, y + 40, { align: "right", width: 182 });
+      doc.text(prepareArabicText(`الإجمالي شامل الضريبة: ${finalTotal.toFixed(2)} ${q.currency}`), 365, y + 40, { align: "right", width: 180 });
 
       y += 80;
       
       // Notes
       if (q.notes) {
         doc.fillColor("#0f172a").font("Cairo-Bold").fontSize(9).text(prepareArabicText("ملاحظات إضافية:"), 40, y, { align: "right" });
-        doc.font("Amiri").fontSize(8.5).text(prepareArabicText(q.notes), 40, y + 14, { align: "right", width: 532 });
+        doc.font("Amiri").fontSize(8.5).text(prepareArabicText(q.notes), 40, y + 14, { align: "right", width: 515.28 });
         y += 40;
       }
       
-      // Note: Signatures and Client Approval section removed per user requirement.
       if (query?.stamp) {
         drawBase64Image(doc, query.stamp, 180, y, { height: 50 });
       }
@@ -271,10 +269,10 @@ export class QuotationsService {
       }
 
       // Draw footer on all pages
-      let pages = (doc as any)._pageBuffer || [];
-      for (let i = 0; i < pages.length; i++) {
+      const range = doc.bufferedPageRange();
+      for (let i = range.start; i < range.start + range.count; i++) {
         doc.switchToPage(i);
-        drawPdfFooter(doc, i + 1, query);
+        drawPdfFooter(doc, i + 1, range.count, query);
       }
       
       doc.end();

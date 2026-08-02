@@ -1,0 +1,5 @@
+Contact: mailto:info@kenan4saftey.com
+Preferred-Languages: ar, en
+Canonical: https://kenan4saftey.com/.well-known/security.txt
+Policy: https://kenan4saftey.com/security-policy
+Expires: 2027-02-04T00:00:00.000Z

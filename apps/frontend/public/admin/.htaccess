@@ -1,0 +1,3 @@
+# Allow web application routing for admin
+Options -Indexes
+

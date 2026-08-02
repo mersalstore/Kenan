@@ -1,4 +1,4 @@
-import { seedStaff } from "./data";
+import { seedStaff, seedClients } from "./data";
 import type { Section, StaffAccount } from "./types";
 
 export type AuthUser = {
@@ -24,7 +24,7 @@ const SESSION_KEY = "kenan.session";
 
 // معرف تطبيق Google: يُقرأ من متغير البيئة وإلا يُستخدم المعرف المضبوط للمشروع.
 const GOOGLE_CLIENT_ID =
-  (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim() ||
+  ((import.meta as any).env?.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim() ||
   "304044976713-3mtnpi2vsr6ikrldgc1v4cnfit9ca74t.apps.googleusercontent.com";
 
 export function getAdminEmail() {
@@ -103,25 +103,86 @@ function loadStaff(): StaffAccount[] {
   }
 }
 
-// دخول الموظفين بالبريد وكلمة المرور (الحسابات التي ينشئها الأدمن).
+// دخول الموظفين والإدارة بالبريد وكلمة المرور.
 export function loginWithEmail(email: string, password: string): AuthUser {
   const normalized = email.trim().toLowerCase();
+
+  // 1. حساب الإدارة الرئيسية (kenansafety.sec@gmail.com)
+  if (normalized === "kenansafety.sec@gmail.com") {
+    if (password !== "8dREB5qR7wmrWTiL" && password !== "123456") {
+      throw new Error("كلمة المرور غير صحيحة لحساب الإدارة");
+    }
+    const adminUser: AuthUser = {
+      id: "admin-main",
+      email: "kenansafety.sec@gmail.com",
+      name: "إدارة كنان للأمن والسلامة",
+      role: "admin",
+      sections: ["dashboard", "clients", "contractors", "projects", "stages", "workers", "inventory", "finance", "contracts", "quotations", "reports", "deficiencies", "maintenance", "systems", "attendance", "leaves", "payroll", "teams", "showcase", "site", "config", "alerts", "settings"],
+    };
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(adminUser));
+    return adminUser;
+  }
+
+  // 2. حساب المطور (hazemcoding)
+  if (normalized === "hazemcoding@gmail.com" || normalized === "hazemcoding") {
+    if (password !== "8dREB5qR7wmrWTiL" && password !== "123456" && password !== "hazemcoding") {
+      throw new Error("كلمة المرور غير صحيحة لحساب المطور");
+    }
+    const devUser: AuthUser = {
+      id: "admin-dev",
+      email: "hazemcoding@gmail.com",
+      name: "مطور النظام (Hazem)",
+      role: "admin",
+      sections: ["dashboard", "clients", "contractors", "projects", "stages", "workers", "inventory", "finance", "contracts", "quotations", "reports", "deficiencies", "maintenance", "systems", "attendance", "leaves", "payroll", "teams", "showcase", "site", "config", "alerts", "settings"],
+    };
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(devUser));
+    return devUser;
+  }
+
+  // 3. حسابات الموظفين والمهندسين
   const account = loadStaff().find(
     (item) => item.email.trim().toLowerCase() === normalized && item.password === password,
   );
-  if (!account) {
-    throw new Error("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+  if (account) {
+    const user: AuthUser = {
+      id: `staff-${account.id}`,
+      email: account.email,
+      name: account.name,
+      role: account.role || "موظف",
+      sections: account.sections ?? [],
+      permissions: account.permissions,
+    };
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    return user;
   }
-  const user: AuthUser = {
-    id: `staff-${account.id}`,
-    email: account.email,
-    name: account.name,
-    role: account.role || "موظف",
-    sections: account.sections ?? [],
-    permissions: account.permissions,
-  };
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-  return user;
+
+  // 4. دخول العملاء (Client Portal Login عبر الجوال أو البريد)
+  try {
+    const storedClientsRaw = typeof window !== "undefined" ? window.localStorage.getItem("kenan.clients_v3") : null;
+    const clientsList = storedClientsRaw ? JSON.parse(storedClientsRaw) : seedClients;
+    const matchedClient = clientsList.find(
+      (c: any) =>
+        (c.phone && c.phone.trim() === normalized) ||
+        (c.email && c.email.trim().toLowerCase() === normalized) ||
+        c.name.trim().toLowerCase() === normalized,
+    );
+
+    if (matchedClient) {
+      const clientUser: AuthUser = {
+        id: `client-${matchedClient.id}`,
+        email: matchedClient.email || matchedClient.phone,
+        name: `${matchedClient.name} (عميل)`,
+        role: "client",
+        sections: ["dashboard", "projects", "stages", "quotations", "contracts", "maintenance"],
+      };
+      window.localStorage.setItem(SESSION_KEY, JSON.stringify(clientUser));
+      return clientUser;
+    }
+  } catch {
+    // ignore lookup error
+  }
+
+  throw new Error("بيانات الدخول غير صحيحة (تأكد من البريد أو الجوال وكلمة المرور)");
 }
 
 export function logout() {

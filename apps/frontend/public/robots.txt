@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /private/
+Disallow: /.well-known/
+
+Sitemap: https://kenan4saftey.com/sitemap.xml

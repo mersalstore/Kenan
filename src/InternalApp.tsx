@@ -2576,7 +2576,7 @@ function QuotationsView({
   quotations: Quotation[];
   clients: Client[];
   inventory: InventoryItem[];
-  addQuotation: (clientId: number, date: string, validUntil: string, items: QuotationItem[], value: number, notes?: string, currency?: string) => void;
+  addQuotation: (clientId: number, date: string, validUntil: string, items: QuotationItem[], value: number, notes?: string, currency?: string, extraDetails?: any) => void;
   deleteQuotation: (id: number) => void;
   updateStatus: (id: number, status: "مسودة" | "مرسل" | "معتمد" | "ملغي") => void;
   stamp: string;
