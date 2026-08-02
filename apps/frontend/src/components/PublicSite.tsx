@@ -32,7 +32,7 @@ import {
   Menu,
 } from "./icons";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { AuthConfig, AuthUser } from "./auth";
+import { registerClientAccount, type AuthConfig, type AuthUser } from "./auth";
 import { seedShowcase, seedSite } from "./data";
 import type { ShowcaseItem, SiteSettings } from "./types";
 
@@ -1285,28 +1285,40 @@ function LoginPage({
   onEmailLogin: (email: string, password: string) => void;
 }) {
   const isLocalhost = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
-  const [activeTab, setActiveTab] = useState<"staff" | "client">("staff");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formMode, setFormMode] = useState<"login" | "register">("login");
+  
+  // Login form state
+  const [loginInput, setLoginInput] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
-  const [clientPhone, setClientPhone] = useState("");
-  const [clientPass, setClientPass] = useState("");
+  // Register form state
+  const [regName, setRegName] = useState("");
+  const [regPhoneOrEmail, setRegPhoneOrEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
 
-  const submitStaffEmail = (event: FormEvent<HTMLFormElement>) => {
+  const submitLogin = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (email.trim() && password) onEmailLogin(email.trim(), password);
-  };
-
-  const submitClientLogin = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (clientPhone.trim()) {
-      onEmailLogin(clientPhone.trim(), clientPass || "123456");
+    if (loginInput.trim()) {
+      onEmailLogin(loginInput.trim(), loginPassword || "123456");
     }
   };
 
-  const quickClientLogin = (phone: string) => {
-    setClientPhone(phone);
-    onEmailLogin(phone, "123456");
+  const submitRegistration = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (regPhoneOrEmail.trim()) {
+      try {
+        registerClientAccount(regName.trim() || "عميل جديد", regPhoneOrEmail.trim());
+        window.location.reload();
+      } catch (err) {
+        onEmailLogin(regPhoneOrEmail.trim(), regPassword || "123456");
+      }
+    }
+  };
+
+  const quickFill = (userStr: string, passStr: string) => {
+    setLoginInput(userStr);
+    setLoginPassword(passStr);
+    onEmailLogin(userStr, passStr);
   };
 
   return (
@@ -1322,93 +1334,97 @@ function LoginPage({
           <span>بوابة الدخول الموحدة</span>
           <h1>نظام KENAN للأمن والسلامة</h1>
           <p>
-            مرحباً بك في منصة كنان الموحدة. تتيح لك المنظومة متابعة الأعمال الميدانية، المشاريع، العقود، والتقارير الفنية بسهولة وأمان.
+            تسجيل دخول موحد وذكـي لكافة المستخدمين. يتعرّف النظام تلقائياً على حسابك ويوجهك مباشرة إلى لوحة التحكم الخاصة بك (إدارة، مهندس، موظف، أو عميل).
           </p>
-
-          <div style={{ display: "flex", gap: "10px", marginTop: "20px", marginBottom: "20px" }}>
-            <button
-              type="button"
-              onClick={() => setActiveTab("staff")}
-              style={{
-                flex: 1,
-                padding: "12px 16px",
-                borderRadius: "12px",
-                border: activeTab === "staff" ? "2px solid #e11d48" : "1px solid rgba(255,255,255,0.15)",
-                background: activeTab === "staff" ? "rgba(225, 29, 72, 0.15)" : "rgba(0,0,0,0.3)",
-                color: "#ffffff",
-                fontWeight: "700",
-                fontSize: "0.95rem",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-            >
-              <UserCog size={18} />
-              دخول الموظفين والإدارة
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("client")}
-              style={{
-                flex: 1,
-                padding: "12px 16px",
-                borderRadius: "12px",
-                border: activeTab === "client" ? "2px solid #0284c7" : "1px solid rgba(255,255,255,0.15)",
-                background: activeTab === "client" ? "rgba(2, 132, 199, 0.15)" : "rgba(0,0,0,0.3)",
-                color: "#ffffff",
-                fontWeight: "700",
-                fontSize: "0.95rem",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-            >
-              <Building2 size={18} />
-              بوابة العملاء
-            </button>
-          </div>
 
           <ul>
             <li>
               <CheckCircle2 size={18} />
-              تسجيل دخول آمن وسريع لكل المستخدمين
+              تعرّف تلقائي وذكـي على دور كل مستخدم
             </li>
             <li>
               <CheckCircle2 size={18} />
-              صلاحيات مخصصة لكل دور وظيفي
+              دخول آمن بالبريد أو رقم الجوال
             </li>
             <li>
               <CheckCircle2 size={18} />
-              بوابة خاصة للعملاء لمتابعة مشاريعهم وعقودهم
+              إمكانية إنشاء حساب جديد فوراً للعملاء
             </li>
           </ul>
+
+          <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+            <span style={{ fontSize: "0.85rem", color: "#94a3b8", display: "block", marginBottom: "10px" }}>
+              💡 اختصارات التجربة السريعة:
+            </span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              <button
+                type="button"
+                onClick={() => quickFill("kenansafety.sec@gmail.com", "8dREB5qR7wmrWTiL")}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  background: "rgba(225,29,72,0.15)",
+                  border: "1px solid rgba(225,29,72,0.3)",
+                  color: "#fecdd3",
+                  cursor: "pointer",
+                }}
+              >
+                👑 الإدارة (kenansafety.sec@gmail.com)
+              </button>
+              <button
+                type="button"
+                onClick={() => quickFill("engineer@kenan.com", "123456")}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  background: "rgba(14,165,233,0.15)",
+                  border: "1px solid rgba(14,165,233,0.3)",
+                  color: "#bae6fd",
+                  cursor: "pointer",
+                }}
+              >
+                👷‍♂️ مهندس الموقع (engineer@kenan.com)
+              </button>
+              <button
+                type="button"
+                onClick={() => quickFill("01001234567", "123456")}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  background: "rgba(34,197,94,0.15)",
+                  border: "1px solid rgba(34,197,94,0.3)",
+                  color: "#bbf7d0",
+                  cursor: "pointer",
+                }}
+              >
+                👤 العميل (01001234567)
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="google-login-box">
-          {activeTab === "staff" ? (
+          {formMode === "login" ? (
             <>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                 <Sparkles size={22} style={{ color: "#e11d48" }} />
-                <h2 style={{ margin: 0 }}>دخول الإدارة والموظفين</h2>
+                <h2 style={{ margin: 0 }}>تسجيل الدخول</h2>
               </div>
               <p style={{ color: "#94a3b8", fontSize: "0.88rem", marginBottom: "20px" }}>
-                أدخل بريدك الإلكتروني وكلمة المرور المسجلة لدى النظام
+                أدخل بيانات حسابك (البريد الإلكتروني أو رقم الجوال)
               </p>
 
-              <form className="email-login-form" onSubmit={submitStaffEmail}>
+              <form className="email-login-form" onSubmit={submitLogin}>
                 <label>
-                  البريد الإلكتروني
+                  البريد الإلكتروني أو رقم الجوال
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="kenansafety.sec@gmail.com أو engineer@kenan.com"
+                    type="text"
+                    value={loginInput}
+                    onChange={(event) => setLoginInput(event.target.value)}
+                    placeholder="مثال: name@kenan.com أو 01001234567"
                     autoComplete="username"
                     required
                   />
@@ -1417,8 +1433,8 @@ function LoginPage({
                   كلمة المرور
                   <input
                     type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    value={loginPassword}
+                    onChange={(event) => setLoginPassword(event.target.value)}
                     placeholder="••••••••"
                     autoComplete="current-password"
                     required
@@ -1431,45 +1447,72 @@ function LoginPage({
               </form>
 
               <div className="login-divider">
-                <span>أو الدخول المباشر كـ Admin</span>
+                <span>أو الدخول المباشر بـ Google</span>
               </div>
 
               {config?.googleReady ? (
                 <GoogleButton clientId={config.clientId} disabled={authLoading} onCredential={onGoogleCredential} />
               ) : (
-                <div className="auth-warning">دخول Google متاح لحساب kenansafety.sec@gmail.com</div>
+                <div className="auth-warning">دخول Google متاح للحسابات المعتمدة</div>
               )}
+
+              <div style={{ marginTop: "24px", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "16px" }}>
+                <span style={{ fontSize: "0.9rem", color: "#94a3b8" }}>عميل جديد في كنان؟ </span>
+                <button
+                  type="button"
+                  onClick={() => setFormMode("register")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#38bdf8",
+                    fontWeight: "700",
+                    fontSize: "0.9rem",
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                  }}
+                >
+                  إنشاء حساب عميل جديد
+                </button>
+              </div>
             </>
           ) : (
             <>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                <Building2 size={22} style={{ color: "#0284c7" }} />
-                <h2 style={{ margin: 0 }}>بوابة العملاء</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <Building2 size={22} style={{ color: "#38bdf8" }} />
+                <h2 style={{ margin: 0 }}>إنشاء حساب عميل جديد</h2>
               </div>
               <p style={{ color: "#94a3b8", fontSize: "0.88rem", marginBottom: "20px" }}>
-                تابع حالة مشاريعك، وعروض الأسعار، والعقود المسجلة باسمك
+                سجل حساب جديد لتصلك عروض الأسعار وتتابع مشاريعك فوراً
               </p>
 
-              <form className="email-login-form" onSubmit={submitClientLogin}>
+              <form className="email-login-form" onSubmit={submitRegistration}>
                 <label>
-                  رقم الجوال أو البريد الإلكتروني للعميل
+                  الاسم الكامل أو اسم المنشأة
                   <input
                     type="text"
-                    value={clientPhone}
-                    onChange={(event) => setClientPhone(event.target.value)}
-                    placeholder="مثال: 01001234567 أو client@kenan.com"
-                    autoComplete="username"
+                    value={regName}
+                    onChange={(event) => setRegName(event.target.value)}
+                    placeholder="مثال: أحمد الشامي / شركة المدار"
                     required
                   />
                 </label>
                 <label>
-                  كلمة المرور (اختياري)
+                  رقم الجوال أو البريد الإلكتروني
+                  <input
+                    type="text"
+                    value={regPhoneOrEmail}
+                    onChange={(event) => setRegPhoneOrEmail(event.target.value)}
+                    placeholder="01001234567 أو name@domain.com"
+                    required
+                  />
+                </label>
+                <label>
+                  كلمة المرور
                   <input
                     type="password"
-                    value={clientPass}
-                    onChange={(event) => setClientPass(event.target.value)}
-                    placeholder="123456 (افتراضي)"
-                    autoComplete="current-password"
+                    value={regPassword}
+                    onChange={(event) => setRegPassword(event.target.value)}
+                    placeholder="اختر كلمة مرور حسابك"
                   />
                 </label>
                 <button
@@ -1479,46 +1522,27 @@ function LoginPage({
                   style={{ background: "linear-gradient(135deg, #0284c7, #2563eb)" }}
                 >
                   <Building2 size={17} />
-                  دخول بوابة العملاء
+                  إنشاء حساب عميل والدخول
                 </button>
               </form>
 
-              <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                <span style={{ fontSize: "0.85rem", color: "#94a3b8", display: "block", marginBottom: "10px" }}>
-                  💡 للتجربة كـ عميل مسجل:
-                </span>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  <button
-                    type="button"
-                    onClick={() => quickClientLogin("01001234567")}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "8px",
-                      fontSize: "0.82rem",
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      color: "#e2e8f0",
-                      cursor: "pointer",
-                    }}
-                  >
-                    👤 أحمد الشامي (01001234567)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => quickClientLogin("01119876543")}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "8px",
-                      fontSize: "0.82rem",
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      color: "#e2e8f0",
-                      cursor: "pointer",
-                    }}
-                  >
-                    🏢 شركة المدار (01119876543)
-                  </button>
-                </div>
+              <div style={{ marginTop: "24px", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "16px" }}>
+                <span style={{ fontSize: "0.9rem", color: "#94a3b8" }}>لديك حساب بالفعل؟ </span>
+                <button
+                  type="button"
+                  onClick={() => setFormMode("login")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#e11d48",
+                    fontWeight: "700",
+                    fontSize: "0.9rem",
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                  }}
+                >
+                  الرجوع لتسجيل الدخول
+                </button>
               </div>
             </>
           )}

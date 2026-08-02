@@ -185,6 +185,46 @@ export function loginWithEmail(email: string, password: string): AuthUser {
   throw new Error("بيانات الدخول غير صحيحة (تأكد من البريد أو الجوال وكلمة المرور)");
 }
 
+export function registerClientAccount(name: string, phoneOrEmail: string): AuthUser {
+  const normalized = phoneOrEmail.trim().toLowerCase();
+  let clientsList = seedClients;
+  try {
+    const raw = typeof window !== "undefined" ? window.localStorage.getItem("kenan.clients_v3") : null;
+    if (raw) clientsList = JSON.parse(raw);
+  } catch {}
+
+  const nextId = clientsList.length > 0 ? Math.max(...clientsList.map((c: any) => c.id)) + 1 : 1;
+  const isEmail = normalized.includes("@");
+  const newClient = {
+    id: nextId,
+    name: name.trim() || "عميل جديد",
+    phone: isEmail ? "0500000000" : normalized,
+    email: isEmail ? normalized : "",
+    address: "المملكة العربية السعودية",
+    type: "مالك وحدة",
+    notes: "حساب مسجل حديثاً عبر بوابة الموقع",
+  };
+
+  const updatedClients = [...clientsList, newClient];
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("kenan.clients_v3", JSON.stringify(updatedClients));
+    }
+  } catch {}
+
+  const clientUser: AuthUser = {
+    id: `client-${newClient.id}`,
+    email: newClient.email || newClient.phone,
+    name: `${newClient.name} (عميل)`,
+    role: "client",
+    sections: ["dashboard", "projects", "stages", "quotations", "contracts", "maintenance"],
+  };
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(clientUser));
+  }
+  return clientUser;
+}
+
 export function logout() {
   window.localStorage.removeItem(SESSION_KEY);
 }

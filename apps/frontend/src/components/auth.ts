@@ -144,6 +144,22 @@ export async function loginWithEmail(email: string, password: string): Promise<A
   }
 }
 
+export function registerClientAccount(name: string, phoneOrEmail: string): AuthUser {
+  const normalized = phoneOrEmail.trim().toLowerCase();
+  const isEmail = normalized.includes("@");
+  const clientUser: AuthUser = {
+    id: `client-new-${Date.now()}`,
+    email: normalized,
+    name: `${name.trim() || "عميل جديد"} (عميل)`,
+    role: "client",
+    sections: ["dashboard", "projects", "stages", "quotations", "contracts", "maintenance"],
+  };
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(clientUser));
+  }
+  return clientUser;
+}
+
 export async function logout() {
   try {
     const refreshToken = typeof window !== "undefined" ? window.localStorage.getItem("kanan_refresh_token") : null;
