@@ -1157,7 +1157,7 @@ function ContractsView({
                         onChange={(event) => editContractPayment(term.id, "percent", event.target.value)}
                       />
                     </label>
-                    <button type="button" className="secondary-button" style={{ minWidth: "auto", padding: "4px 8px", marginTop: "16px", height: "35px", display: "flex", alignItems: "center", gap: "4px", background: "rgba(30, 41, 59, 0.05)", border: "1px solid #cbd5e1", color: "#1e293b", fontSize: "0.75rem" }} title="عرض المطالبة المالية" onClick={() => onSelectClaim(term, activeContract!)}>
+                    <button type="button" className="secondary-button" style={{ minWidth: "auto", padding: "4px 8px", marginTop: "16px", height: "35px", display: "flex", alignItems: "center", gap: "4px", background: "rgba(30, 41, 59, 0.05)", border: "1px solid #cbd5e1", color: "#1e293b", fontSize: "0.75rem" }} title="عرض المطالبة المالية" onClick={() => { setActiveId(null); onSelectClaim(term, activeContract!); }}>
                       <FileText size={14} />
                       مطالبة
                     </button>
@@ -6865,23 +6865,40 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const form = new FormData(event.currentTarget);
     const name = String(form.get("name") ?? "").trim();
     const phone = String(form.get("phone") ?? "").trim();
-    if (!name || !phone) return;
+    if (!name) {
+      triggerAlert("يرجى إدخال اسم العميل");
+      return;
+    }
+    const address = String(form.get("address") ?? "");
+    const type = String(form.get("type") ?? "عميل");
+    const notes = String(form.get("notes") ?? "");
+
+    setClients((cur) => {
+      const clientData: Client = {
+        id: nextId(cur),
+        name,
+        phone,
+        address,
+        type,
+        notes,
+      };
+      const updated = [...cur, clientData];
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("kenan.clients_v3", JSON.stringify(updated));
+        }
+      } catch {}
+      return updated;
+    });
+    event.currentTarget.reset();
+    setNotice("تمت إضافة العميل بنجاح");
     try {
-      const newClient = await apiFetch("/api/projects/clients", {
+      await apiFetch("/api/projects/clients", {
         method: "POST",
-        body: JSON.stringify({
-          name,
-          phone,
-          address: String(form.get("address") ?? ""),
-          type: String(form.get("type") ?? "عميل"),
-          notes: String(form.get("notes") ?? ""),
-        }),
+        body: JSON.stringify({ name, phone, address, type, notes }),
       });
-      setClients((cur) => [...cur, newClient]);
-      event.currentTarget.reset();
-      setNotice("تمت إضافة العميل بنجاح");
     } catch (e) {
-      setNotice("خطأ أثناء إضافة العميل: " + (e as Error).message);
+      console.warn("Client saved locally:", e);
     }
   };
   const deleteClient = async (id: number | string) => {
@@ -8287,7 +8304,10 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
             updateContract={updateContract}
             onCsvImport={(t: string) => handleCsvImport("contracts", t)}
             site={site}
-            onSelectClaim={(term, contract) => { setActiveClaimTerm(term); setActiveClaimContract(contract); }}
+            onSelectClaim={(term, contract) => {
+              setActiveClaimTerm(term);
+              setActiveClaimContract(contract);
+            }}
           />
         );
       case "quotations":
@@ -8759,7 +8779,15 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       )}
 
       {activeClaimTerm && activeClaimContract && (
-        <div className="contract-modal" role="dialog" aria-modal="true" onClick={() => { setActiveClaimTerm(null); setActiveClaimContract(null); }}>
+        <div className="contract-modal claim-modal-active" role="dialog" aria-modal="true" onClick={() => { setActiveClaimTerm(null); setActiveClaimContract(null); }}>
+          <style>{`
+            @media print {
+              body * { visibility: hidden !important; }
+              .claim-modal-active, .claim-modal-active * { visibility: visible !important; }
+              .claim-modal-active { position: absolute !important; inset: 0 !important; width: 100% !important; background: #ffffff !important; z-index: 999999 !important; padding: 0 !important; margin: 0 !important; }
+              .contract-modal-toolbar, .contract-modal-close { display: none !important; }
+            }
+          `}</style>
           <div className="contract-modal-inner" onClick={(event) => event.stopPropagation()} style={{ maxWidth: "800px" }}>
             <div className="contract-modal-toolbar">
               <button className="primary-button" onClick={() => window.print()}>
