@@ -1333,47 +1333,23 @@ function PageWatermark() {
 }
 
 function DocumentHeader({ documentTitle, site }: { documentTitle?: string; site?: SiteSettings }) {
-  const nameAr = site?.companyNameAr || "مؤسسة كنان لأنظمة الأمن والسلامة";
-  const nameEn = site?.companyNameEn || "Kanan Safety & Fire Protection Systems Co.";
-  const crNumber = site?.companyCRNumber || "7050404537";
-  const taxNumber = site?.companyTaxNumber || "313072607300003";
+  void site;
+  if (!documentTitle) return null;
 
   return (
-    <div className="doc-header-info-block" style={{ position: "absolute", top: "38mm", left: 0, right: 0, padding: "0 40px 0 40px", direction: "rtl", zIndex: 2 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-        {/* Right: Arabic Header Details */}
-        <div style={{ textAlign: "right", fontSize: "0.85rem", color: "#000000", lineHeight: "1.5", fontWeight: "600" }}>
-          <strong style={{ fontSize: "0.95rem", color: "#000000", display: "block", marginBottom: "2px", fontWeight: "800" }}>{nameAr}</strong>
-          <div style={{ color: "#000000" }}>سجل تجاري: <span style={{ fontWeight: "800", color: "#000000" }}>{crNumber}</span></div>
-          <div style={{ color: "#000000" }}>الرقم الضريبي: <span style={{ fontWeight: "800", color: "#000000" }}>{taxNumber}</span></div>
-        </div>
-
-        {/* Center: Document Title Badge */}
-        {documentTitle && (
-          <div style={{ textAlign: "center", alignSelf: "center" }}>
-            <span style={{ 
-              display: "inline-block", 
-              padding: "5px 22px", 
-              background: "#d91c24", 
-              color: "#ffffff", 
-              fontWeight: "800", 
-              fontSize: "1.1rem", 
-              borderRadius: "6px",
-              boxShadow: "0 2px 5px rgba(217, 28, 36, 0.25)"
-            }}>
-              {documentTitle}
-            </span>
-          </div>
-        )}
-
-        {/* Left: English Header Details */}
-        <div style={{ textAlign: "left", fontSize: "0.8rem", color: "#000000", lineHeight: "1.5", direction: "ltr", fontWeight: "600" }}>
-          <strong style={{ fontSize: "0.9rem", color: "#000000", display: "block", marginBottom: "2px", fontWeight: "800" }}>{nameEn}</strong>
-          <div style={{ color: "#000000" }}>C.R. No: <span style={{ fontWeight: "800", color: "#000000" }}>{crNumber}</span></div>
-          <div style={{ color: "#000000" }}>VAT No: <span style={{ fontWeight: "800", color: "#000000" }}>{taxNumber}</span></div>
-        </div>
-      </div>
-      <div style={{ borderBottom: "1.5px solid #000000", marginTop: "8px", opacity: 0.8 }}></div>
+    <div className="doc-header-info-block" style={{ position: "absolute", top: "38mm", left: 0, right: 0, padding: "0 40px", direction: "rtl", zIndex: 2, display: "flex", justifyContent: "center" }}>
+      <span style={{ 
+        display: "inline-block", 
+        padding: "6px 26px", 
+        background: "#d91c24", 
+        color: "#ffffff", 
+        fontWeight: "800", 
+        fontSize: "1.15rem", 
+        borderRadius: "6px",
+        boxShadow: "0 2px 5px rgba(217, 28, 36, 0.25)"
+      }}>
+        {documentTitle}
+      </span>
     </div>
   );
 }

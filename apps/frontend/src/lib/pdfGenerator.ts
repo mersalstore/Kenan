@@ -40,24 +40,11 @@ export async function generateClientQuotationPdf(quotation: any, siteInfo: any) 
       <div style="position: relative; z-index: 10; padding: 155px 45px 80px 45px; box-sizing: border-box; color: #000000;">
         
         <!-- Header Info Block -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; font-size: 12px; line-height: 1.5; color: #000000;">
-          <div style="text-align: right; color: #000000;">
-            <strong style="font-size: 14px; color: #000000; display: block; margin-bottom: 2px;">${siteInfo?.companyNameAr || "مؤسسة كنان لأنظمة الأمن والسلامة"}</strong>
-            <div style="color: #000000;">سجل تجاري: <span style="font-weight: 800; color: #000000;">${siteInfo?.companyCRNumber || "7050404537"}</span></div>
-            <div style="color: #000000;">الرقم الضريبي: <span style="font-weight: 800; color: #000000;">${siteInfo?.companyTaxNumber || "313072607300003"}</span></div>
-          </div>
-          <div style="text-align: center; align-self: center;">
-            <span style="display: inline-block; padding: 5px 22px; background: #d91c24; color: #ffffff; font-weight: 800; font-size: 15px; border-radius: 6px; boxShadow: 0 2px 4px rgba(217, 28, 36, 0.2);">
-              عرض سعر (Quotation)
-            </span>
-          </div>
-          <div style="text-align: left; direction: ltr; color: #000000;">
-            <strong style="font-size: 13px; color: #000000; display: block; margin-bottom: 2px;">${siteInfo?.companyNameEn || "Kanan Safety & Fire Protection Systems Co."}</strong>
-            <div style="color: #000000;">C.R. No: <span style="font-weight: 800; color: #000000;">${siteInfo?.companyCRNumber || "7050404537"}</span></div>
-            <div style="color: #000000;">VAT No: <span style="font-weight: 800; color: #000000;">${siteInfo?.companyTaxNumber || "313072607300003"}</span></div>
-          </div>
+        <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+          <span style="display: inline-block; padding: 6px 26px; background: #d91c24; color: #ffffff; font-weight: 800; font-size: 16px; border-radius: 6px; box-shadow: 0 2px 4px rgba(217, 28, 36, 0.2);">
+            عرض سعر (Quotation)
+          </span>
         </div>
-        <div style="border-bottom: 1.5px solid #000000; margin-bottom: 20px; opacity: 0.8;"></div>
 
         <!-- Info Grid -->
         <div style="display: flex; justify-content: space-between; margin-bottom: 25px; background: rgba(255, 255, 255, 0.95); border-radius: 8px; padding: 14px; border: 1.5px solid #000000; color: #000000;">
