@@ -19,12 +19,21 @@ export class AppController {
   async health() {
     // هل وصل ملف الإعدادات للسيرفر أصلاً؟ (بدون كشف أي بيانات اعتماد)
     const configured = Boolean(process.env.DATABASE_URL);
+    let host = 'unset';
+    try {
+      host = new URL(process.env.DATABASE_URL ?? '').hostname;
+    } catch {}
 
     try {
       await this.prisma.$queryRaw`SELECT 1`;
-      return { status: 'ok', database: 'connected', configured };
+      return { status: 'ok', database: 'connected', configured, host };
     } catch (error) {
-      return { status: 'degraded', configured, database: (error as Error).message };
+      return {
+        status: 'degraded',
+        configured,
+        host,
+        database: (error as Error).message,
+      };
     }
   }
 }
