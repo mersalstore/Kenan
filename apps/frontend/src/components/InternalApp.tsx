@@ -1528,6 +1528,17 @@ function ContractDocument({
   const paymentAmount = (percent: string) => formatMoney((Number(contract.value) * (Number(percent) || 0)) / 100, contractCurrency);
   const resolvedSpecs = contract.specs && contract.specs.length > 0 ? contract.specs : defaultSpecs;
 
+  // صفحة العقد الأولى ثابتة على A4 مع overflow:hidden، فما يتجاوزها يُقصّ بصمت.
+  // قياس السعة عملياً: 16 بنداً بالمقاس الحالي، 18 و20 بعد تصغيرين متدرجين.
+  // بعد 20 لا ينفع التصغير، فنُظهر تحذيراً بدل أن تختفي شروط من عقد موقَّع.
+  const SPEC_CAPACITY = 20;
+  const specStyle =
+    resolvedSpecs.length <= 16
+      ? { fontSize: "0.74rem", lineHeight: "1.35" }
+      : resolvedSpecs.length <= 18
+        ? { fontSize: "0.68rem", lineHeight: "1.28" }
+        : { fontSize: "0.62rem", lineHeight: "1.22" };
+
   const defaultPayments = [
     { id: 1, label: "عند التعميد", percent: "30" },
     { id: 2, label: "عند الانتهاء من تمديد شبكة الإطفاء وتأسيس نقاط الإنذار للقبو الأول", percent: "15" },
@@ -1583,11 +1594,18 @@ function ContractDocument({
 
         <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px" }}>البنود والمواصفات:</h3>
         <p style={{ fontSize: "0.78rem", margin: "0 0 6px 0" }}>بحسب العرض الفني المقدم من الطرف الأول والمعتمد من قبل الطرف الثاني والموضح تفاصيله أدناه:</p>
-        <ol className="spec-list" style={{ fontSize: "0.74rem", lineHeight: "1.35" }}>
+        <ol className="spec-list" style={specStyle}>
           {resolvedSpecs.map((spec, index) => (
             <li key={index} style={{ marginBottom: "2px" }}>{spec}</li>
           ))}
         </ol>
+
+        {resolvedSpecs.length > SPEC_CAPACITY && (
+          <p style={{ marginTop: "6px", padding: "6px 10px", border: "1px solid #dc2626", borderRadius: "6px", background: "#fef2f2", color: "#991b1b", fontSize: "0.72rem", fontWeight: "700" }}>
+            تنبيه: عدد البنود ({resolvedSpecs.length}) يتجاوز ما تتّسع له الصفحة ({SPEC_CAPACITY} بنداً).
+            البنود الأخيرة لن تظهر في النسخة المطبوعة — اختصر البنود أو ادمج المتشابه منها قبل الطباعة.
+          </p>
+        )}
 
         <ContractFooter site={site} />
       </div>
@@ -3314,7 +3332,9 @@ function QuotationDocument({
   site: SiteSettings;
   isEditingText?: boolean;
 }) {
-  const quotationCurrency = quotation.currency || "EGP";
+  // عملة النظام هي الريال السعودي حصراً؛ كان الاحتياطي هنا "EGP" فيطبع عرض
+  // سعر بالجنيه المصري متى غاب حقل العملة عن السجل.
+  const quotationCurrency = quotation.currency || "SAR";
   const valueWords = numberToArabicWords(quotation.value, quotationCurrency);
   const formattedDate = formatArabicDate(quotation.date);
   const formattedValidUntil = formatArabicDate(quotation.validUntil);
@@ -3322,6 +3342,13 @@ function QuotationDocument({
   const subtotal = quotation.items.reduce((acc, it) => acc + it.total, 0);
   const vat = Math.round(subtotal * (quotation.taxPercent / 100));
   const finalTotal = subtotal + vat;
+
+  // عرض السعر صفحة واحدة ثابتة على A4 مع overflow:hidden، فالبنود الزائدة
+  // تُقصّ بصمت. قياس السعة: 20 بنداً بالمقاس الحالي، 22 و24 بعد تصغيرين.
+  const QUOTE_CAPACITY = 24;
+  const itemCount = quotation.items.length;
+  const itemFontSize = itemCount <= 20 ? "0.74rem" : itemCount <= 22 ? "0.68rem" : "0.62rem";
+  const itemCellPadding = itemCount <= 20 ? "3px 6px" : itemCount <= 22 ? "2px 5px" : "1px 4px";
 
   return (
     <div className="contract-doc" contentEditable={isEditingText} suppressContentEditableWarning={true} style={isEditingText ? { outline: "2px dashed #2563eb", borderRadius: "8px", padding: "4px" } : {}}>
@@ -3349,7 +3376,7 @@ function QuotationDocument({
 
         <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "4px", fontSize: "0.86rem" }}>جدول الكميات والمواد:</h3>
         <div className="table-wrap" style={{ marginBlock: "6px", direction: "rtl", pageBreakInside: "avoid", breakInside: "avoid" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.74rem", pageBreakInside: "avoid", breakInside: "avoid" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: itemFontSize, pageBreakInside: "avoid", breakInside: "avoid" }}>
             <thead>
               <tr style={{ background: "#f8fafc", borderBottom: "2px solid #cbd5e1" }}>
                 <th style={{ padding: "4px 6px", border: "1px solid #cbd5e1", width: "35px", textAlign: "center" }}>الرقم</th>
@@ -3363,12 +3390,12 @@ function QuotationDocument({
             <tbody>
               {quotation.items.map((item, index) => (
                 <tr key={index} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                  <td style={{ padding: "3px 6px", border: "1px solid #cbd5e1", textAlign: "center" }}>{index + 1}</td>
-                  <td style={{ padding: "3px 6px", border: "1px solid #cbd5e1", textAlign: "right" }}>{item.name}</td>
-                  <td style={{ padding: "3px 6px", border: "1px solid #cbd5e1", textAlign: "right" }}>{item.brand || "—"}</td>
-                  <td style={{ padding: "3px 6px", border: "1px solid #cbd5e1", textAlign: "center" }}>{item.qty}</td>
-                  <td style={{ padding: "3px 6px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(item.price, quotationCurrency)}</td>
-                  <td style={{ padding: "3px 6px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(item.total, quotationCurrency)}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "center" }}>{index + 1}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "right" }}>{item.name}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "right" }}>{item.brand || "—"}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "center" }}>{item.qty}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(item.price, quotationCurrency)}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(item.total, quotationCurrency)}</td>
                 </tr>
               ))}
               {quotation.items.length === 0 && (
@@ -3378,6 +3405,13 @@ function QuotationDocument({
               )}
             </tbody>
           </table>
+
+          {itemCount > QUOTE_CAPACITY && (
+            <p style={{ marginTop: "6px", padding: "6px 10px", border: "1px solid #dc2626", borderRadius: "6px", background: "#fef2f2", color: "#991b1b", fontSize: "0.72rem", fontWeight: "700" }}>
+              تنبيه: عدد البنود ({itemCount}) يتجاوز ما تتّسع له الصفحة ({QUOTE_CAPACITY} بنداً).
+              البنود الأخيرة لن تظهر في النسخة المطبوعة — قسّم العرض أو ادمج البنود المتشابهة.
+            </p>
+          )}
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginBlock: "6px" }}>
@@ -7344,10 +7378,10 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           .catch((e) => triggerAlert("تعذر استيراد المخزن: " + (e as Error).message));
         return;
       } else if (section === "quotations") {
-        setQuotations((cur) => { let baseId = nextId(cur); const imported = rows.map((r, i) => ({ id: baseId + i, number: r["رقم العرض"] || r["number"] || `QT-${baseId + i}`, clientId: Number(r["رقم العميل"] || r["clientId"] || 1), date: r["التاريخ"] || r["date"] || new Date().toISOString().slice(0, 10), validUntil: r["صالح لغاية"] || r["validUntil"] || new Date().toISOString().slice(0, 10), status: (r["الحالة"] || r["status"] || "مسودة") as Quotation["status"], items: [], value: Number(r["القيمة"] || r["value"] || 0), taxPercent: Number(r["نسبة الضريبة"] || 15), currency: r["العملة"] || "EGP" })); return [...cur, ...imported]; });
+        setQuotations((cur) => { let baseId = nextId(cur); const imported = rows.map((r, i) => ({ id: baseId + i, number: r["رقم العرض"] || r["number"] || `QT-${baseId + i}`, clientId: Number(r["رقم العميل"] || r["clientId"] || 1), date: r["التاريخ"] || r["date"] || new Date().toISOString().slice(0, 10), validUntil: r["صالح لغاية"] || r["validUntil"] || new Date().toISOString().slice(0, 10), status: (r["الحالة"] || r["status"] || "مسودة") as Quotation["status"], items: [], value: Number(r["القيمة"] || r["value"] || 0), taxPercent: Number(r["نسبة الضريبة"] || 15), currency: r["العملة"] || "SAR" })); return [...cur, ...imported]; });
         setNotice("تم استيراد عروض الأسعار");
       } else if (section === "contracts") {
-        setContracts((cur) => { let baseId = nextId(cur); const imported = rows.map((r, i) => ({ id: baseId + i, projectId: Number(r["رقم المشروع"] || r["projectId"] || 1), value: Number(r["القيمة"] || r["value"] || 0), currency: r["العملة"] || "EGP", startDate: r["تاريخ البداية"] || new Date().toISOString().slice(0, 10), endDate: r["تاريخ النهاية"] || new Date().toISOString().slice(0, 10), warranty: r["الضمان"] || "سنتين", clauses: r["البنود"] || "" })); return [...cur, ...imported]; });
+        setContracts((cur) => { let baseId = nextId(cur); const imported = rows.map((r, i) => ({ id: baseId + i, projectId: Number(r["رقم المشروع"] || r["projectId"] || 1), value: Number(r["القيمة"] || r["value"] || 0), currency: r["العملة"] || "SAR", startDate: r["تاريخ البداية"] || new Date().toISOString().slice(0, 10), endDate: r["تاريخ النهاية"] || new Date().toISOString().slice(0, 10), warranty: r["الضمان"] || "سنتين", clauses: r["البنود"] || "" })); return [...cur, ...imported]; });
         setNotice("تم استيراد العقود");
       } else if (section === "workers") {
         const workerRows = rows
