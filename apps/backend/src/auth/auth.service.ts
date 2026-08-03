@@ -4,6 +4,7 @@ import { JwtService } from "@nestjs/jwt";
 import { OAuth2Client } from "google-auth-library";
 import * as bcrypt from "bcrypt";
 import { LoginDto, GoogleLoginDto } from "../shared";
+import { jwtSecret } from "./jwt-secret";
 
 @Injectable()
 export class AuthService {
@@ -119,7 +120,7 @@ export class AuthService {
     const payload = { sub: userId, email, role, name };
     
     const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET || "super-secret-kanan-jwt-key-2026",
+      secret: jwtSecret(),
       expiresIn: (process.env.JWT_EXPIRATION || "15m") as any,
     });
 

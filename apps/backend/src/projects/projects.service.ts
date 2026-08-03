@@ -586,9 +586,10 @@ export class ProjectsService {
     const client = await this.prisma.client.create({
       data: {
         name: dto.name,
-        phone: dto.phone,
-        address: dto.address,
-        type: dto.type,
+        // الأعمدة NOT NULL في قاعدة البيانات بينما الحقول اختيارية في الشاشة
+        phone: dto.phone ?? "",
+        address: dto.address ?? "",
+        type: dto.type || "عميل",
         notes: dto.notes,
         sector: dto.sector,
         email: dto.email,

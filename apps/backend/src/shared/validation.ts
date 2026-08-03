@@ -638,17 +638,20 @@ export class CreateClientDto {
   @IsNotEmpty({ message: "اسم العميل مطلوب" })
   name!: string;
 
+  // الهاتف والعنوان اختياريان: شاشة إضافة العميل تطلب الاسم فقط، وكان
+  // اشتراطهما هنا يرفض كل عميل يُضاف بدونهما برسالة "رقم الهاتف مطلوب".
+  // الأعمدة في قاعدة البيانات غير قابلة للإفراغ، لذلك تُخزَّن نصاً فارغاً.
   @IsString()
-  @IsNotEmpty({ message: "رقم الهاتف مطلوب" })
-  phone!: string;
+  @IsOptional()
+  phone?: string;
 
   @IsString()
-  @IsNotEmpty({ message: "العنوان مطلوب" })
-  address!: string;
+  @IsOptional()
+  address?: string;
 
   @IsString()
-  @IsNotEmpty({ message: "نوع العميل مطلوب" })
-  type!: string;
+  @IsOptional()
+  type?: string;
 
   @IsString()
   @IsOptional()
