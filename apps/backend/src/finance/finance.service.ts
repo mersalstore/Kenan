@@ -8,6 +8,11 @@ import {
   UpdateExpenseDto,
 } from "../shared";
 
+/** تقريب لخانتين عشريتين — المبالغ الضريبية لا تحتمل فروق الفاصلة العائمة */
+function round2(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 @Injectable()
 export class FinanceService {
   constructor(
@@ -18,22 +23,59 @@ export class FinanceService {
   // ===== الفواتير (Invoices) =====
   async findInvoices() {
     return this.prisma.invoice.findMany({
-      include: { project: true },
+      include: {
+        project: true,
+        client: true,
+        items: { orderBy: { sortOrder: "asc" } },
+      },
       orderBy: { createdAt: "desc" },
     });
   }
 
   async createInvoice(dto: CreateInvoiceDto, user: any) {
+    // الضريبة تُحسب على السيرفر ولا تُؤخذ كما أرسلتها الشاشة: الفاتورة مستند
+    // ضريبي، ولا يصح أن يعتمد وعاؤها على قيمة قابلة للتعديل من المتصفح.
+    const items = dto.items ?? [];
+    const hasItems = items.length > 0;
+
+    const subtotal = hasItems
+      ? items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0)
+      : (dto.subtotal ?? dto.amount);
+
+    const vatPercent = dto.vatPercent ?? 15;
+    const vatAmount = round2((subtotal * vatPercent) / 100);
+    const total = round2(subtotal + vatAmount);
+
     const invoice = await this.prisma.invoice.create({
       data: {
         projectId: dto.projectId,
         number: dto.number,
-        amount: dto.amount,
+        // مع وجود بنود يكون الإجمالي محسوباً؛ وبدونها نحترم المبلغ المُدخل
+        amount: hasItems ? total : dto.amount,
         status: dto.status || "PARTIAL",
         dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
         paidAt: dto.paidAt ? new Date(dto.paidAt) : null,
+        clientId: dto.clientId || null,
+        issueDate: dto.issueDate ? new Date(dto.issueDate) : new Date(),
+        subtotal: round2(subtotal),
+        vatPercent,
+        vatAmount,
+        notes: dto.notes,
+        items: hasItems
+          ? {
+              create: items.map((it, index) => ({
+                description: it.description,
+                quantity: it.quantity,
+                unitPrice: it.unitPrice,
+                total: round2(it.quantity * it.unitPrice),
+                sortOrder: index,
+              })),
+            }
+          : undefined,
       },
+      include: { items: { orderBy: { sortOrder: "asc" } }, client: true, project: true },
     });
+
     await this.auditService.log(user.sub, "CREATE", "Invoice", invoice.id, null, invoice);
     return invoice;
   }

@@ -98,6 +98,7 @@ import type {
   SystemType,
 } from "./types";
 import { apiFetch } from "../lib/api";
+import { zatcaQrPayload } from "../lib/zatca-qr";
 import { generateClientQuotationPdf, generateClientProjectReportPdf } from "../lib/pdfGenerator";
 
 function DispatchVoucher({
@@ -375,6 +376,7 @@ function FinanceView({
   deleteInvoice,
   addExpense,
   deleteExpense,
+  onPrintInvoice,
 }: {
   invoices: Invoice[];
   expenses: Expense[];
@@ -385,6 +387,7 @@ function FinanceView({
   deleteInvoice: (id: string | number) => Promise<void>;
   addExpense: (projectId: string | number | null, type: string, amount: number, description: string, date: string) => Promise<void>;
   deleteExpense: (id: string | number) => Promise<void>;
+  onPrintInvoice: (invoice: Invoice) => void;
 }) {
   type FinanceRow = {
     kind: "invoice" | "expense";
@@ -612,6 +615,7 @@ function FinanceView({
                 <th>المبلغ</th>
                 <th>الحالة</th>
                 <th>التاريخ</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -627,6 +631,24 @@ function FinanceView({
                   <td style={{ fontWeight: 700, color: r.kind === "invoice" ? "#16a34a" : "var(--brand)" }}>{currency.format(r.amount)}</td>
                   <td><Badge value={r.status} /></td>
                   <td>{formatDate(r.date)}</td>
+                  <td>
+                    {r.kind === "invoice" && (
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        title="عرض الفاتورة الضريبية وطباعتها"
+                        style={{ minWidth: "auto", padding: "4px 10px", height: "32px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          const inv = invoices.find((i) => String(i.id) === String(r.id));
+                          if (inv) onPrintInvoice(inv);
+                        }}
+                      >
+                        <Printer size={14} />
+                        فاتورة
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1372,6 +1394,217 @@ function DocumentHeader({ documentTitle, site }: { documentTitle?: string; site?
       }}>
         {documentTitle}
       </span>
+    </div>
+  );
+}
+
+/**
+ * الفاتورة الضريبية — صفحة A4 واحدة بنفس ترويسة باقي المستندات.
+ *
+ * قياس السعة على نسخة طبق الأصل: 14 بنداً بالمقاس الحالي. البنود الزائدة
+ * كانت ستُقصّ بصمت بسبب overflow:hidden، لذلك يصغُر الخط مرتين ثم يظهر
+ * تحذير — نفس معالجة العقد وعرض السعر.
+ */
+function InvoiceDocument({
+  invoice,
+  project,
+  client,
+  site,
+  stamp,
+  signature,
+}: {
+  invoice: Invoice;
+  project?: Project;
+  client?: Client;
+  site: SiteSettings;
+  stamp: string;
+  signature: string;
+}) {
+  const currency = "SAR";
+  const items = invoice.items ?? [];
+  const subtotal = invoice.subtotal ?? items.reduce((s, it) => s + it.total, 0);
+  const vatPercent = invoice.vatPercent ?? 15;
+  const vatAmount = invoice.vatAmount ?? Math.round(subtotal * vatPercent) / 100;
+  const total = invoice.amount || subtotal + vatAmount;
+  const issuedAt = invoice.date ? new Date(invoice.date) : new Date();
+
+  const sellerName = site.companyNameAr || "مؤسسة كنان لأنظمة الأمن والسلامة";
+  const sellerTax = site.companyTaxNumber || "313072607300003";
+
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  useEffect(() => {
+    let cancelled = false;
+    // التحميل عند الطلب: مكتبة QR لا داعي لتحميلها مع بقية الشاشات
+    import("qrcode")
+      .then(async (QR) => {
+        const payload = zatcaQrPayload({
+          sellerName,
+          sellerTaxNumber: sellerTax,
+          issuedAt,
+          totalWithVat: total,
+          vatAmount,
+        });
+        const url = await QR.toDataURL(payload, { margin: 0, width: 220 });
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        /* بلا رمز أفضل من كسر المستند كله */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sellerName, sellerTax, total, vatAmount, invoice.date]);
+
+  const ITEM_CAPACITY = 14;
+  const itemFont = items.length <= 10 ? "0.78rem" : items.length <= 12 ? "0.72rem" : "0.66rem";
+  const itemPad = items.length <= 10 ? "5px" : items.length <= 12 ? "4px" : "3px";
+
+  const cell = { padding: itemPad, border: "1px solid #cbd5e1", fontSize: itemFont } as const;
+
+  return (
+    <div className="contract-doc">
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
+        <PageWatermark />
+        <DocumentHeader documentTitle="فاتورة ضريبية" site={site} />
+
+        <h2 style={{ textAlign: "center", fontSize: "1.15rem", color: "#1e293b", marginBlock: "4px 9px", fontWeight: "800" }}>
+          فاتورة ضريبية — Tax Invoice
+        </h2>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "12px", fontSize: "0.78rem", background: "#f8fafc", padding: "9px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", direction: "rtl" }}>
+          <div><strong>رقم الفاتورة:</strong> {invoice.number}</div>
+          <div style={{ textAlign: "left" }}><strong>تاريخ الإصدار:</strong> {formatDate(invoice.date)}</div>
+          <div><strong>المشروع:</strong> {project?.name || "—"}</div>
+          <div style={{ textAlign: "left" }}><strong>تاريخ الاستحقاق:</strong> {invoice.dueDate ? formatDate(invoice.dueDate) : "—"}</div>
+          <div><strong>الحالة:</strong> {invoice.status}</div>
+          <div style={{ textAlign: "left" }}><strong>طريقة السداد:</strong> تحويل بنكي</div>
+        </div>
+
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "10px", direction: "rtl" }}>
+          <thead>
+            <tr style={{ background: "#f1f5f9" }}>
+              <th style={{ ...cell, textAlign: "right", width: "50%" }}>البائع (المورّد)</th>
+              <th style={{ ...cell, textAlign: "right" }}>المشتري (العميل)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ ...cell, textAlign: "right" }}>
+                <strong>{sellerName}</strong><br />
+                الرقم الضريبي: {sellerTax}
+                {site.companyCRNumber ? ` — س.ت: ${site.companyCRNumber}` : ""}<br />
+                {site.contactAddress || "الرياض — المملكة العربية السعودية"}
+              </td>
+              <td style={{ ...cell, textAlign: "right" }}>
+                <strong>{client?.name || "—"}</strong><br />
+                الرقم الضريبي: {client?.taxId || "—"}
+                {client?.commercialRegister ? ` — س.ت: ${client.commercialRegister}` : ""}<br />
+                {client?.address || "—"}{client?.phone ? ` — ${client.phone}` : ""}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table style={{ width: "100%", borderCollapse: "collapse", direction: "rtl" }}>
+          <thead>
+            <tr style={{ background: "#f1f5f9" }}>
+              <th style={{ ...cell, textAlign: "center", width: "34px" }}>#</th>
+              <th style={{ ...cell, textAlign: "right" }}>البيان / الوصف</th>
+              <th style={{ ...cell, textAlign: "center", width: "55px" }}>الكمية</th>
+              <th style={{ ...cell, textAlign: "left", width: "92px" }}>سعر الوحدة</th>
+              <th style={{ ...cell, textAlign: "left", width: "96px" }}>الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, index) => (
+              <tr key={index}>
+                <td style={{ ...cell, textAlign: "center" }}>{index + 1}</td>
+                <td style={{ ...cell, textAlign: "right" }}>{item.description}</td>
+                <td style={{ ...cell, textAlign: "center" }}>{item.quantity}</td>
+                <td style={{ ...cell, textAlign: "left" }}>{formatMoney(item.unitPrice, currency)}</td>
+                <td style={{ ...cell, textAlign: "left" }}>{formatMoney(item.total, currency)}</td>
+              </tr>
+            ))}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ ...cell, textAlign: "center", color: "#64748b" }}>
+                  فاتورة بمبلغ إجمالي بلا بنود تفصيلية.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        {items.length > ITEM_CAPACITY && (
+          <p style={{ marginTop: "6px", padding: "6px 10px", border: "1px solid #dc2626", borderRadius: "6px", background: "#fef2f2", color: "#991b1b", fontSize: "0.72rem", fontWeight: "700" }}>
+            تنبيه: عدد البنود ({items.length}) يتجاوز ما تتّسع له الصفحة ({ITEM_CAPACITY} بنداً).
+            البنود الأخيرة لن تظهر في النسخة المطبوعة — قسّم الفاتورة أو ادمج البنود المتشابهة.
+          </p>
+        )}
+
+        <div style={{ display: "flex", gap: "12px", alignItems: "flex-start", marginTop: "10px", direction: "rtl" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "flex-start", flex: 1 }}>
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt="رمز الفاتورة الضريبية" style={{ width: "24mm", height: "24mm", flex: "none", border: "1px solid #e2e8f0", borderRadius: "6px" }} />
+            ) : (
+              <div style={{ width: "24mm", height: "24mm", flex: "none", border: "1px dashed #94a3b8", borderRadius: "6px", display: "grid", placeItems: "center", fontSize: "0.62rem", color: "#64748b", textAlign: "center" }}>
+                رمز QR
+              </div>
+            )}
+            <div style={{ flex: 1, padding: "9px 12px", border: "1px solid #cbd5e1", borderRadius: "8px", background: "#f8fafc" }}>
+              <strong style={{ fontSize: "0.82rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "5px", marginBottom: "6px" }}>
+                الحساب البنكي والضريبي للمؤسسة:
+              </strong>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 15px", fontSize: "0.78rem", color: "#334155" }}>
+                <div><strong>اسم البنك:</strong> مصرف الراجحي</div>
+                <div style={{ textAlign: "left" }}><strong>الرقم الضريبي:</strong> {sellerTax}</div>
+                <div style={{ gridColumn: "span 2" }}><strong>الآيبان:</strong> <code style={{ fontStyle: "normal" }}>SA9080000448608016265902</code></div>
+              </div>
+            </div>
+          </div>
+
+          <table style={{ width: "82mm", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+            <tbody>
+              <tr><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1" }}>الإجمالي قبل الضريبة</td><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(subtotal, currency)}</td></tr>
+              <tr><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1" }}>وعاء ضريبة القيمة المضافة</td><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(subtotal, currency)}</td></tr>
+              <tr><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1" }}>ضريبة القيمة المضافة ({vatPercent}%)</td><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(vatAmount, currency)}</td></tr>
+              <tr><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1", background: "#fff5f5", fontWeight: "800", color: "#e11d48" }}>الإجمالي المستحق</td><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1", background: "#fff5f5", fontWeight: "800", color: "#e11d48", textAlign: "left" }}>{formatMoney(total, currency)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p style={{ fontWeight: "600", fontSize: "0.8rem", marginBlock: "8px", textAlign: "right", direction: "rtl" }}>
+          الإجمالي كتابةً: فقط {numberToArabicWords(total, currency)} لا غير، شامل ضريبة القيمة المضافة.
+        </p>
+
+        <table className="contract-sign-table" style={{ marginTop: "6px", direction: "rtl", width: "100%" }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "right", padding: "4px 6px", fontSize: "0.8rem" }}>المُصدِر</th>
+              <th style={{ textAlign: "right", padding: "4px 6px", fontSize: "0.8rem" }}>استلام العميل</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div className="sign-cell" style={{ padding: "7px", fontSize: "0.78rem" }}>
+                  <span style={{ fontWeight: "800", display: "block" }}>{sellerName}</span>
+                  <span>يمثلها: المهندس طارق مختار علي</span>
+                  {stamp && <img src={stamp} alt="ختم المؤسسة" className="stamp-img" style={{ maxHeight: "50px", marginBlock: "4px" }} />}
+                  {signature && <img src={signature} alt="توقيع المؤسسة" className="stamp-img" style={{ maxHeight: "50px", marginBlock: "4px" }} />}
+                  <span style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "10px", display: "block" }}>الختم والتوقيع: ............................</span>
+                </div>
+              </td>
+              <td>
+                <div className="sign-cell" style={{ padding: "7px", fontSize: "0.78rem" }}>
+                  <span style={{ fontWeight: "800", display: "block" }}>{client?.name || "................"}</span>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "10px", display: "block" }}>التوقيع بالاستلام: ............................</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -6348,6 +6581,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   const [alertModal, setAlertModal] = useState<{ open: boolean; message: string }>({ open: false, message: "" });
   const [activeClaimTerm, setActiveClaimTerm] = useState<PaymentTerm | null>(null);
   const [activeClaimContract, setActiveClaimContract] = useState<Contract | null>(null);
+  const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
 
   const isSiteEngineer = user.role?.toUpperCase() === "SITE_ENGINEER" || user.role === "مهندس مشروع" || user.role?.toLowerCase() === "site_engineer";
   
@@ -6786,7 +7020,21 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
             number: inv.number,
             amount: Number(inv.amount) || 0,
             status: invoiceStatusFromApi[inv.status] ?? "جزئية",
-            date: inv.createdAt ? inv.createdAt.split("T")[0] : "",
+            date: (inv.issueDate || inv.createdAt || "").split("T")[0],
+            clientId: inv.clientId ?? null,
+            dueDate: inv.dueDate ? String(inv.dueDate).split("T")[0] : undefined,
+            subtotal: inv.subtotal != null ? Number(inv.subtotal) : undefined,
+            vatPercent: inv.vatPercent != null ? Number(inv.vatPercent) : undefined,
+            vatAmount: inv.vatAmount != null ? Number(inv.vatAmount) : undefined,
+            notes: inv.notes ?? undefined,
+            items: Array.isArray(inv.items)
+              ? inv.items.map((it: any) => ({
+                  description: it.description,
+                  quantity: Number(it.quantity) || 0,
+                  unitPrice: Number(it.unitPrice) || 0,
+                  total: Number(it.total) || 0,
+                }))
+              : undefined,
           })));
         }
       } catch (e) {
@@ -8351,6 +8599,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
             deleteInvoice={deleteInvoice}
             addExpense={addExpense}
             deleteExpense={deleteExpense}
+            onPrintInvoice={setActiveInvoice}
           />
         );
       case "contracts":
@@ -8873,6 +9122,47 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
                   stamp={site.stamp ?? ""}
                   signature={site.signature ?? ""}
                   site={site}
+                />
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {activeInvoice && (
+        <div className="contract-modal claim-modal-active" role="dialog" aria-modal="true" onClick={() => setActiveInvoice(null)}>
+          <style>{`
+            @media print {
+              body * { visibility: hidden !important; }
+              .claim-modal-active, .claim-modal-active * { visibility: visible !important; }
+              .claim-modal-active { position: absolute !important; inset: 0 !important; width: 100% !important; background: #ffffff !important; z-index: 999999 !important; padding: 0 !important; margin: 0 !important; }
+              .contract-modal-toolbar, .contract-modal-close { display: none !important; }
+            }
+          `}</style>
+          <div className="contract-modal-inner" onClick={(event) => event.stopPropagation()} style={{ maxWidth: "800px" }}>
+            <div className="contract-modal-toolbar">
+              <button className="primary-button" onClick={() => window.print()}>
+                <Printer size={17} />
+                طباعة الفاتورة
+              </button>
+              <button className="contract-modal-close" onClick={() => setActiveInvoice(null)} aria-label="إغلاق">
+                <X size={20} />
+              </button>
+            </div>
+            {(() => {
+              const project = projects.find((p) => String(p.id) === String(activeInvoice.projectId));
+              // العميل من الفاتورة إن رُبط بها، وإلا من مشروعها
+              const client =
+                clients.find((c) => String(c.id) === String(activeInvoice.clientId)) ??
+                (project ? clients.find((c) => String(c.id) === String(project.clientId)) : undefined);
+              return (
+                <InvoiceDocument
+                  invoice={activeInvoice}
+                  project={project}
+                  client={client}
+                  site={site}
+                  stamp={site.stamp ?? ""}
+                  signature={site.signature ?? ""}
                 />
               );
             })()}

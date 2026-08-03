@@ -1228,6 +1228,25 @@ export class CompleteMaintenanceVisitDto {
 }
 
 // DTOs for Finance
+export class InvoiceItemDto {
+  @IsString()
+  @IsNotEmpty({ message: "وصف البند مطلوب" })
+  description!: string;
+
+  @IsNumber()
+  @Min(0)
+  quantity!: number;
+
+  @IsNumber()
+  @Min(0)
+  unitPrice!: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  total?: number;
+}
+
 export class CreateInvoiceDto {
   @IsString()
   @IsNotEmpty({ message: "المشروع مطلوب" })
@@ -1252,6 +1271,40 @@ export class CreateInvoiceDto {
   @IsDateString()
   @IsOptional()
   paidAt?: string;
+
+  // حقول الفاتورة الضريبية — اختيارية حتى تبقى الفواتير المبسّطة تعمل كما هي
+  @IsString()
+  @IsOptional()
+  clientId?: string;
+
+  @IsDateString()
+  @IsOptional()
+  issueDate?: string;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  subtotal?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  vatPercent?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  vatAmount?: number;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => InvoiceItemDto)
+  @IsOptional()
+  items?: InvoiceItemDto[];
 }
 
 export class UpdateInvoiceDto {

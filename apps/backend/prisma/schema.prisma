@@ -102,6 +102,7 @@ model Client {
   quotations           Quotation[]
   maintenanceContracts MaintenanceContract[]
   contracts            Contract[]
+  invoices             Invoice[]
 
   @@map("clients")
 }
@@ -432,13 +433,39 @@ model Invoice {
   projectId String
   project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   number    String        @unique // "INV-2026-001"
-  amount    Decimal       
+  amount    Decimal // الإجمالي شامل الضريبة
   status    InvoiceStatus @default(PARTIAL)
   dueDate   DateTime?
   paidAt    DateTime?
   createdAt DateTime      @default(now())
 
+  // حقول الفاتورة الضريبية. كلها اختيارية عن قصد: الفواتير المسجّلة قبل
+  // إضافتها تبقى صالحة، وإضافة أعمدة اختيارية لا تمسّ أي صف قائم.
+  clientId   String?
+  client     Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  issueDate  DateTime? // تاريخ الإصدار — يختلف عن createdAt عند تسجيل فاتورة قديمة
+  subtotal   Decimal? // الإجمالي قبل الضريبة
+  vatPercent Decimal? // 15 في السعودية
+  vatAmount  Decimal?
+  notes      String?   @db.Text
+
+  items InvoiceItem[]
+
   @@map("invoices")
+}
+
+// بنود الفاتورة الضريبية
+model InvoiceItem {
+  id          String  @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String  @db.Text
+  quantity    Decimal @default(1)
+  unitPrice   Decimal @default(0)
+  total       Decimal @default(0) // quantity × unitPrice قبل الضريبة
+  sortOrder   Int     @default(0)
+
+  @@map("invoice_items")
 }
 
 enum InvoiceStatus {

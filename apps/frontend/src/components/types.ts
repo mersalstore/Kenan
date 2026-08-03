@@ -118,13 +118,30 @@ export type InventoryItem = {
   brand?: string; // الماركة / الشركة المصنعة
 };
 
+export type InvoiceItem = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
 export type Invoice = {
   id: number | string;
   projectId: number | string;
   number: string;
+  /** الإجمالي شامل ضريبة القيمة المضافة */
   amount: number;
   status: InvoiceStatus;
   date: string;
+
+  // حقول الفاتورة الضريبية — اختيارية، فالفواتير المبسّطة القديمة بلا بنود
+  clientId?: number | string | null;
+  items?: InvoiceItem[];
+  subtotal?: number;
+  vatPercent?: number;
+  vatAmount?: number;
+  dueDate?: string;
+  notes?: string;
 };
 
 export type Expense = {
