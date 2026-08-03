@@ -22,14 +22,23 @@ export class FinanceService {
 
   // ===== الفواتير (Invoices) =====
   async findInvoices() {
-    return this.prisma.invoice.findMany({
-      include: {
-        project: true,
-        client: true,
-        items: { orderBy: { sortOrder: "asc" } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    try {
+      return await this.prisma.invoice.findMany({
+        include: {
+          project: true,
+          client: true,
+          items: { orderBy: { sortOrder: "asc" } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    } catch {
+      // جداول وأعمدة الفاتورة الضريبية تُضاف عبر prisma db push. حتى تُنفَّذ،
+      // نُرجع الفواتير بشكلها المبسّط بدل تعطيل شاشة المالية بالكامل.
+      return this.prisma.invoice.findMany({
+        include: { project: true },
+        orderBy: { createdAt: "desc" },
+      });
+    }
   }
 
   async createInvoice(dto: CreateInvoiceDto, user: any) {
@@ -46,35 +55,50 @@ export class FinanceService {
     const vatAmount = round2((subtotal * vatPercent) / 100);
     const total = round2(subtotal + vatAmount);
 
-    const invoice = await this.prisma.invoice.create({
-      data: {
-        projectId: dto.projectId,
-        number: dto.number,
-        // مع وجود بنود يكون الإجمالي محسوباً؛ وبدونها نحترم المبلغ المُدخل
-        amount: hasItems ? total : dto.amount,
-        status: dto.status || "PARTIAL",
-        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
-        paidAt: dto.paidAt ? new Date(dto.paidAt) : null,
-        clientId: dto.clientId || null,
-        issueDate: dto.issueDate ? new Date(dto.issueDate) : new Date(),
-        subtotal: round2(subtotal),
-        vatPercent,
-        vatAmount,
-        notes: dto.notes,
-        items: hasItems
-          ? {
-              create: items.map((it, index) => ({
-                description: it.description,
-                quantity: it.quantity,
-                unitPrice: it.unitPrice,
-                total: round2(it.quantity * it.unitPrice),
-                sortOrder: index,
-              })),
-            }
-          : undefined,
-      },
-      include: { items: { orderBy: { sortOrder: "asc" } }, client: true, project: true },
-    });
+    // الحقول المشتركة مع الشكل المبسّط للفاتورة
+    const base = {
+      projectId: dto.projectId,
+      number: dto.number,
+      // مع وجود بنود يكون الإجمالي محسوباً؛ وبدونها نحترم المبلغ المُدخل
+      amount: hasItems ? total : dto.amount,
+      status: (dto.status || "PARTIAL") as any,
+      dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      paidAt: dto.paidAt ? new Date(dto.paidAt) : null,
+    };
+
+    let invoice;
+    try {
+      invoice = await this.prisma.invoice.create({
+        data: {
+          ...base,
+          clientId: dto.clientId || null,
+          issueDate: dto.issueDate ? new Date(dto.issueDate) : new Date(),
+          subtotal: round2(subtotal),
+          vatPercent,
+          vatAmount,
+          notes: dto.notes,
+          items: hasItems
+            ? {
+                create: items.map((it, index) => ({
+                  description: it.description,
+                  quantity: it.quantity,
+                  unitPrice: it.unitPrice,
+                  total: round2(it.quantity * it.unitPrice),
+                  sortOrder: index,
+                })),
+              }
+            : undefined,
+        },
+        include: { items: { orderBy: { sortOrder: "asc" } }, client: true, project: true },
+      });
+    } catch {
+      // أعمدة الفاتورة الضريبية تُضاف عبر prisma db push. حتى تُنفَّذ، نحفظ
+      // الفاتورة بشكلها المبسّط بدل رفض العملية على المستخدم.
+      invoice = await this.prisma.invoice.create({
+        data: base,
+        include: { project: true },
+      });
+    }
 
     await this.auditService.log(user.sub, "CREATE", "Invoice", invoice.id, null, invoice);
     return invoice;
