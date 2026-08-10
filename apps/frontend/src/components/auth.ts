@@ -28,14 +28,14 @@ const DEMO_ACCOUNTS: Record<string, AuthUser> = {
     email: "kenansafety.sec@gmail.com",
     name: "إدارة كنان للسلامة",
     role: "ADMIN",
-    sections: ["dashboard", "projects", "quotations", "contracts", "inventory", "hr", "maintenance", "finance", "reports"],
+    sections: ["dashboard", "projects", "quotations", "contracts", "inventory", "workers", "maintenance", "finance", "reports"],
   },
   "admin@kenan.com": {
     id: "admin-main",
     email: "admin@kenan.com",
     name: "المدير العام",
     role: "ADMIN",
-    sections: ["dashboard", "projects", "quotations", "contracts", "inventory", "hr", "maintenance", "finance", "reports"],
+    sections: ["dashboard", "projects", "quotations", "contracts", "inventory", "workers", "maintenance", "finance", "reports"],
   },
   "engineer@kenan.com": {
     id: "eng-main",
@@ -120,7 +120,7 @@ export async function loginWithGoogle(credential: string): Promise<AuthUser> {
       email: "kenansafety.sec@gmail.com",
       name: "إدارة كنان للسلامة (Google Login)",
       role: "ADMIN",
-      sections: ["dashboard", "projects", "quotations", "contracts", "inventory", "hr", "maintenance", "finance", "reports"],
+      sections: ["dashboard", "projects", "quotations", "contracts", "inventory", "workers", "maintenance", "finance", "reports"],
     };
     storeSession({
       accessToken: "demo_google_access_token",
@@ -163,7 +163,7 @@ export async function loginWithEmail(email: string, password: string): Promise<A
         role: isClient ? "CLIENT" : "ADMIN",
         sections: isClient
           ? ["dashboard", "projects", "quotations"]
-          : ["dashboard", "projects", "quotations", "contracts", "inventory", "hr", "maintenance", "finance", "reports"],
+          : ["dashboard", "projects", "quotations", "contracts", "inventory", "workers", "maintenance", "finance", "reports"],
       };
       storeSession({
         accessToken: `local_token_${Date.now()}`,
