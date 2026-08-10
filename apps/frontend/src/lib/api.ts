@@ -31,7 +31,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
   try {
     response = await fetch(url, { ...options, headers });
   } catch (netErr) {
-    throw new Error("تعذر الاتصال بالسيرفر المحترّف (الوضع المحلي متوفر)");
+    throw new Error("تعذر الاتصال بالسيرفر (يعمل التطبيق في الوضع المحلي)");
   }
 
   if (response.status === 401) {
@@ -39,7 +39,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
 
     if (refreshToken) {
       try {
-        const refreshResponse = await fetch(`${BACKEND_URL}/api/auth/refresh`, {
+        const refreshResponse = await fetch(`${cleanBackend}/api/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken }),
@@ -55,25 +55,31 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
           const retryResponse = await fetch(url, { ...options, headers });
           if (!retryResponse.ok) {
             const err = await retryResponse.json().catch(() => ({}));
-            throw new Error(err.message || "Request failed");
+            throw new Error(err.message || "فشلت العملية على السيرفر");
           }
           return retryResponse.json();
         }
       } catch {
-        // نتجاهل الاستثناء هنا ونُنهي الجلسة بالأسفل — نفس معالجة الفشل العادي
+        // نتجاهل الاستثناء هنا ونُنهي الجلسة بالأسفل
       }
     }
 
-    // وصلنا هنا يعني أن الجلسة انتهت فعلاً: لا يوجد توكين تجديد، أو رفضه السيرفر.
-    // إنهاء الجلسة إجباري: تركها يُبقي المستخدم "مسجّلاً" بتوكين ميت فتفشل كل
-    // عملية بلا مخرج سوى مسح تخزين المتصفح يدوياً.
-    endSession();
-    throw new Error("انتهت الجلسة. يرجى تسجيل الدخول من جديد.");
+    if (accessToken) {
+      endSession();
+      throw new Error("انتهت الجلسة. يرجى تسجيل الدخول من جديد.");
+    } else {
+      throw new Error("تطلب هذه العملية الاتصال بالسيرفر");
+    }
+  }
+
+  if (response.status === 429) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || "تم تجاوز عدد محاولات الدخول المسموح بها. يرجى الانتظار قليلاً قبل المحاولة مجدداً.");
   }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || "حدث خطأ ما في الطلب");
+    throw new Error(err.message || "حدث خطأ أثناء معالجة الطلب على السيرفر");
   }
 
   // Handle files/blobs for reports or quotations export

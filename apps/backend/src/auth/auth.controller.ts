@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, HttpCode, HttpStatus, Req } from "@nestjs/common";
+import { Controller, Get, Post, Body, HttpCode, HttpStatus, Req, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { LoginDto, GoogleLoginDto } from "../shared";
+import { RateLimitGuard } from "./guards/rate-limit.guard";
 
 @Controller("api/auth")
 export class AuthController {
@@ -15,12 +16,14 @@ export class AuthController {
   }
 
   @Post("login")
+  @UseGuards(RateLimitGuard)
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
   @Post("google")
+  @UseGuards(RateLimitGuard)
   @HttpCode(HttpStatus.OK)
   async googleLogin(@Body() dto: GoogleLoginDto) {
     return this.authService.googleLogin(dto);

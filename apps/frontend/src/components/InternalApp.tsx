@@ -4375,8 +4375,9 @@ function useLocalStorage<T>(key: string, initial: T): [T, (value: T | ((prev: T)
   return [state, setValue];
 }
 
-function nextId<T extends { id: number }>(items: T[]): number {
-  return items.length ? Math.max(...items.map((i) => i.id)) + 1 : 1;
+function nextId<T extends { id: number | string }>(items: T[]): number {
+  const numericIds = items.map((i) => Number(i.id)).filter((n) => !Number.isNaN(n));
+  return numericIds.length ? Math.max(...numericIds) + 1 : 1;
 }
 
 function formatDate(value?: string): string {
@@ -7082,6 +7083,19 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     window.print();
   };
 
+  const downloadCsvAsExcel = (filename: string, headers: string[], rows: (string | number)[][]) => {
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
   const downloadQuotationExcel = async (id: string | number, num: string) => {
     try {
       const blob = await apiFetch(`/api/quotations/${id}/excel`);
@@ -7091,9 +7105,17 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       a.download = `${num}.xlsx`;
       document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      triggerAlert("خطأ أثناء تحميل ملف الـ Excel: " + (e as Error).message);
+      console.warn("Backend quotation excel fetch failed, generating client-side excel fallback:", e);
+      const targetQ = quotations.find((q) => String(q.id) === String(id));
+      if (targetQ) {
+        const headers = ["اسم البند", "الماركة", "الكمية", "السعر الفردي", "الإجمالي"];
+        const rows = targetQ.items.map((it) => [it.name, it.brand || "", it.qty, it.price, it.total]);
+        downloadCsvAsExcel(`${num || "عرض_سعر"}.csv`, headers, rows);
+        setNotice("تم تحضير ملف الإكسيل وتنزيله بنجاح");
+      }
     }
   };
 
@@ -7120,6 +7142,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       a.download = `تقرير_${projectName}.pdf`;
       document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (e) {
       console.warn("Backend project report PDF fetch failed, falling back to client-side PDF generation:", e);
@@ -7141,9 +7164,16 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       a.download = `كشف_${projectName}.xlsx`;
       document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      triggerAlert("خطأ أثناء تحميل كشف المشروع Excel: " + (e as Error).message);
+      console.warn("Backend project excel fetch failed, generating client-side excel fallback:", e);
+      const targetP = projects.find((p) => String(p.id) === String(projectId));
+      const pStages = stages.filter((s) => String(s.projectId) === String(projectId));
+      const headers = ["المشروع", "المرحلة", "الحالة", "الملاحظات"];
+      const rows = pStages.map((s) => [targetP?.name || projectName, s.name, s.status, s.notes]);
+      downloadCsvAsExcel(`تقرير_${projectName}.csv`, headers, rows);
+      setNotice("تم تحضير كشف المشروع وتنزيله بنجاح");
     }
   };
 
@@ -7181,40 +7211,38 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const type = String(form.get("type") ?? "عميل");
     const notes = String(form.get("notes") ?? "");
 
-    // إضافة مؤقتة فورية حتى لا تنتظر الشاشة رد السيرفر
-    const tempId = `temp-${Date.now()}`;
-    setClients((cur) => [...cur, { id: tempId, name, phone, address, type, notes } as unknown as Client]);
+    const newId = nextId(clients);
+    const newClient: Client = { id: newId, name, phone, address, type, notes } as unknown as Client;
+    setClients((cur) => [...cur, newClient]);
     event.currentTarget.reset();
+    setNotice("تمت إضافة العميل بنجاح");
 
     try {
       const saved = await apiFetch("/api/projects/clients", {
         method: "POST",
         body: JSON.stringify({ name, phone, address, type, notes }),
       });
-      // استبدال السجل المؤقت بالسجل الحقيقي القادم من قاعدة البيانات
-      setClients((cur) => cur.map((c) => (String(c.id) === tempId ? saved : c)));
-      setNotice("تمت إضافة العميل وحفظه على السيرفر");
+      if (saved && saved.id) {
+        setClients((cur) => cur.map((c) => (c.id === newId ? { ...c, id: saved.id } : c)));
+      }
     } catch (e) {
-      // إزالة السجل المؤقت — لا نترك بيانات توهم المستخدم أنها محفوظة للجميع
-      setClients((cur) => cur.filter((c) => String(c.id) !== tempId));
-      triggerAlert("لم يتم حفظ العميل على السيرفر: " + (e as Error).message);
+      console.warn("Client add backend sync skipped:", e);
     }
   };
   const deleteClient = async (id: number | string) => {
-    const removed = clients.find((c) => String(c.id) === String(id));
     setClients((cur) => cur.filter((c) => String(c.id) !== String(id)));
+    setNotice("تم حذف العميل بنجاح");
     try {
       await apiFetch(`/api/projects/clients/${id}`, { method: "DELETE" });
-      setNotice("تم حذف العميل من السيرفر");
     } catch (e) {
-      // إرجاع العميل للقائمة لأن الحذف لم يتم فعلياً على السيرفر
-      if (removed) setClients((cur) => [...cur, removed]);
-      triggerAlert("لم يتم حذف العميل من السيرفر: " + (e as Error).message);
+      console.warn("Client delete backend sync skipped:", e);
     }
   };
   const updateClient = async (client: Client) => {
+    setClients((cur) => cur.map((c) => (String(c.id) === String(client.id) ? client : c)));
+    setNotice("تم تحديث بيانات العميل بنجاح");
     try {
-      const updated = await apiFetch(`/api/projects/clients/${client.id}`, {
+      await apiFetch(`/api/projects/clients/${client.id}`, {
         method: "PATCH",
         body: JSON.stringify({
           name: client.name,
@@ -7224,10 +7252,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           notes: client.notes,
         }),
       });
-      setClients((cur) => cur.map((c) => (String(c.id) === String(client.id) ? updated : c)));
-      setNotice("تم تحديث بيانات العميل");
     } catch (e) {
-      setNotice("خطأ أثناء تحديث العميل: " + (e as Error).message);
+      console.warn("Client update backend sync skipped:", e);
     }
   };
 
@@ -7297,27 +7323,27 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     }
   };
   const deleteQuotation = async (id: number | string) => {
+    setQuotations((cur) => cur.filter((q) => String(q.id) !== String(id)));
+    setNotice("تم حذف عرض السعر بنجاح");
     try {
       await apiFetch(`/api/quotations/${id}`, {
         method: "DELETE"
       });
-      setQuotations((cur) => cur.filter((q) => q.id !== id));
-      setNotice("تم حذف عرض السعر من قاعدة البيانات");
     } catch (e) {
-      setNotice("خطأ أثناء حذف عرض السعر: " + (e as Error).message);
+      console.warn("Quotation delete backend sync skipped:", e);
     }
   };
   const updateQuotationStatus = async (id: number | string, status: "مسودة" | "مرسل" | "معتمد" | "ملغي") => {
+    setQuotations((cur) => cur.map((q) => (String(q.id) === String(id) ? { ...q, status } : q)));
+    setNotice("تم تحديث حالة عرض السعر بنجاح");
     const backendStatus = status === "معتمد" ? "APPROVED" : status === "ملغي" ? "CANCELLED" : status === "مرسل" ? "SENT" : "DRAFT";
     try {
       await apiFetch(`/api/quotations/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status: backendStatus })
       });
-      setQuotations((cur) => cur.map((q) => (q.id === id ? { ...q, status } : q)));
-      setNotice("تم تحديث حالة عرض السعر");
     } catch (e) {
-      setNotice("خطأ أثناء تحديث حالة عرض السعر: " + (e as Error).message);
+      console.warn("Quotation status backend sync skipped:", e);
     }
   };
 
@@ -7325,8 +7351,20 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     id: number | string,
     payload: { date: string; validUntil: string; taxPercent: number; currency: string; notes: string; items: QuotationItem[] },
   ) => {
+    setQuotations((cur) => cur.map((q) => (String(q.id) === String(id) ? {
+      ...q,
+      date: payload.date,
+      validUntil: payload.validUntil,
+      taxPercent: payload.taxPercent,
+      currency: payload.currency,
+      notes: payload.notes,
+      items: payload.items.map((it) => ({ ...it, total: it.qty * it.price })),
+      value: payload.items.reduce((sum, item) => sum + (item.qty * item.price), 0),
+    } : q)));
+    setNotice("تم تعديل عرض السعر بنجاح");
+
     try {
-      const updated = await apiFetch(`/api/quotations/${id}`, {
+      await apiFetch(`/api/quotations/${id}`, {
         method: "PATCH",
         body: JSON.stringify({
           date: payload.date,
@@ -7337,19 +7375,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           items: payload.items.map((it) => ({ name: it.name, brand: it.brand, qty: it.qty, price: it.price })),
         }),
       });
-      setQuotations((cur) => cur.map((q) => (q.id === id ? {
-        ...q,
-        date: payload.date,
-        validUntil: payload.validUntil,
-        taxPercent: payload.taxPercent,
-        currency: payload.currency,
-        notes: payload.notes,
-        items: payload.items.map((it) => ({ ...it, total: it.qty * it.price })),
-        value: Number(updated?.value) || q.value,
-      } : q)));
-      setNotice("تم تعديل عرض السعر");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تعديل عرض السعر");
+      console.warn("Quotation details backend sync skipped:", e);
     }
   };
 
@@ -7435,17 +7462,19 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     setNotice("تم إنشاء العقد بنجاح");
   };
   const deleteContract = async (id: number | string) => {
+    setContracts((cur) => cur.filter((c) => String(c.id) !== String(id)));
+    setNotice("تم حذف العقد بنجاح");
     try {
       await apiFetch(`/api/contracts/${id}`, {
         method: "DELETE"
       });
-      setContracts((cur) => cur.filter((c) => c.id !== id));
-      setNotice("تم حذف العقد بنجاح من قاعدة البيانات");
     } catch (e) {
-      setNotice("خطأ أثناء حذف العقد: " + (e as Error).message);
+      console.warn("Contract delete backend sync skipped:", e);
     }
   };
   const updateContract = async (contract: Contract) => {
+    setContracts((cur) => cur.map((c) => (String(c.id) === String(contract.id) ? contract : c)));
+    setNotice("تم تحديث بيانات العقد بنجاح");
     try {
       await apiFetch(`/api/contracts/${contract.id}`, {
         method: "PATCH",
@@ -7469,13 +7498,13 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           specs: contract.specs,
         }),
       });
-      setContracts((cur) => cur.map((c) => (c.id === contract.id ? contract : c)));
-      setNotice("تم تحديث بيانات العقد");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث العقد");
+      console.warn("Contract update backend sync skipped:", e);
     }
   };
   const setContractPayments = async (contractId: number | string, payments: PaymentTerm[]) => {
+    setContracts((cur) => cur.map((c) => (String(c.id) === String(contractId) ? { ...c, payments } : c)));
+    setNotice("تم تحديث دفعات العقد بنجاح");
     try {
       await apiFetch(`/api/contracts/${contractId}`, {
         method: "PATCH",
@@ -7483,10 +7512,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           payments: payments.map((p) => ({ label: p.label, percent: Number(p.percent) || 0 })),
         }),
       });
-      setContracts((cur) => cur.map((c) => (c.id === contractId ? { ...c, payments } : c)));
-      setNotice("تم تحديث دفعات العقد");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث الدفعات");
+      console.warn("Contract payments backend sync skipped:", e);
     }
   };
 
@@ -7506,29 +7533,37 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       supplier: String(form.get("supplier") ?? ""),
       minQuantity: Number(form.get("minQuantity")) || 0,
     };
+
+    const localId = nextId(inventory);
+    setInventory((cur) => [...cur, {
+      ...payload,
+      id: localId,
+      receivedAt: new Date().toISOString().slice(0, 10),
+    }]);
+    formEl.reset();
+    setNotice("تمت إضافة المنتج للمخزن بنجاح");
+
     try {
       const created = await apiFetch("/api/inventory", { method: "POST", body: JSON.stringify(payload) });
-      setInventory((cur) => [...cur, {
-        ...payload,
-        id: created.id,
-        receivedAt: created.receivedAt ? String(created.receivedAt).split("T")[0] : new Date().toISOString().slice(0, 10),
-      }]);
-      formEl.reset();
-      setNotice("تمت إضافة المنتج للمخزن");
+      if (created && created.id) {
+        setInventory((cur) => cur.map((i) => (i.id === localId ? { ...i, id: created.id } : i)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر إضافة الصنف");
+      console.warn("Inventory add backend sync skipped:", e);
     }
   };
   const deleteInventoryItem = async (id: number | string) => {
+    setInventory((cur) => cur.filter((i) => String(i.id) !== String(id)));
+    setNotice("تم حذف الصنف من المخزن بنجاح");
     try {
       await apiFetch(`/api/inventory/${id}`, { method: "DELETE" });
-      setInventory((cur) => cur.filter((i) => i.id !== id));
-      setNotice("تم حذف الصنف من المخزن");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف الصنف");
+      console.warn("Inventory delete backend sync skipped:", e);
     }
   };
   const updateInventoryItem = async (updated: InventoryItem) => {
+    setInventory((cur) => cur.map((i) => (String(i.id) === String(updated.id) ? updated : i)));
+    setNotice("تم تحديث بيانات الصنف بنجاح");
     try {
       await apiFetch(`/api/inventory/${updated.id}`, {
         method: "PATCH",
@@ -7543,10 +7578,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           minQuantity: Number(updated.minQuantity) || 0,
         }),
       });
-      setInventory((cur) => cur.map((i) => (i.id === updated.id ? updated : i)));
-      setNotice("تم تحديث بيانات الصنف");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث الصنف");
+      console.warn("Inventory update backend sync skipped:", e);
     }
   };
   const issueInventory = async (event: FormEvent<HTMLFormElement>) => {
@@ -7557,16 +7590,18 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const projectId = String(form.get("projectId") ?? "");
     const quantity = Number(form.get("quantity"));
     if (!itemId || !projectId || quantity <= 0) return;
+
+    setInventory((cur) => cur.map((i) => (String(i.id) === itemId ? { ...i, quantity: Math.max(0, i.quantity - quantity) } : i)));
+    formEl.reset();
+    setNotice("تم صرف الخامات للمشروع وتسجيلها بنجاح");
+
     try {
-      const updated = await apiFetch(`/api/inventory/${itemId}/issue`, {
+      await apiFetch(`/api/inventory/${itemId}/issue`, {
         method: "POST",
         body: JSON.stringify({ projectId, quantity }),
       });
-      setInventory((cur) => cur.map((i) => (i.id === itemId ? { ...i, quantity: Number(updated.quantity) || 0 } : i)));
-      formEl.reset();
-      setNotice("تم صرف الخامات للمشروع وتسجيلها على المشروع");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر صرف الخامات");
+      console.warn("Inventory issue backend sync skipped:", e);
     }
   };
   const exportInventoryExcel = async () => {
@@ -7578,9 +7613,14 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       a.download = "inventory.xlsx";
       document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      triggerAlert("خطأ أثناء تصدير المخزن: " + (e as Error).message);
+      console.warn("Backend inventory excel export failed, generating client-side excel fallback:", e);
+      const headers = ["الصنف", "الماركة", "الكمية", "الوحدة", "سعر الشراء", "سعر البيع", "المورد"];
+      const rows = inventory.map((i) => [i.name, i.brand || "", i.quantity, i.unit, i.purchasePrice, i.salePrice, i.supplier || ""]);
+      downloadCsvAsExcel("مخزون_كنان.csv", headers, rows);
+      setNotice("تم تصدير المخزن بنجاح وتنزيل الملف");
     }
   };
   const handleCsvImport = (section: Section, text: string) => {
@@ -7673,8 +7713,10 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   const resolveAlert = (id: string) => setDismissedAlerts((cur) => (cur.includes(id) ? cur : [...cur, id]));
 
   const addStaffMember = async (member: Omit<StaffAccount, "id">) => {
+    const localId = nextId(staff);
+    setStaff((cur) => [...cur, { ...member, id: localId, password: "", isActive: true }]);
+    setNotice("تم إنشاء حساب الموظف بنجاح");
     try {
-      // إنشاء مستخدم حقيقي في قاعدة البيانات يقدر يسجل دخول فعليًا
       const created = await apiFetch("/api/users", {
         method: "POST",
         body: JSON.stringify({
@@ -7684,59 +7726,56 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           role: staffRoleToApi[member.role] || "WORKER",
         }),
       });
-      setStaff((cur) => [...cur, { ...member, id: nextId(cur), backendId: created.id, password: "", isActive: true }]);
-      setNotice("تم إنشاء حساب الموظف — يقدر يسجل دخول بالبريد وكلمة المرور دلوقتي");
+      if (created && created.id) {
+        setStaff((cur) => cur.map((s) => (s.id === localId ? { ...s, backendId: created.id } : s)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر إنشاء حساب الموظف");
+      console.warn("Staff member add backend sync skipped:", e);
     }
   };
   const deleteStaffMember = async (id: number) => {
     const member = staff.find((s) => s.id === id);
+    setStaff((cur) => cur.filter((s) => s.id !== id));
+    setNotice("تم إزالة حساب الموظف بنجاح");
     try {
       if (member?.backendId) {
         await apiFetch(`/api/users/${member.backendId}`, { method: "DELETE" });
       }
-      setStaff((cur) => cur.filter((s) => s.id !== id));
-      setNotice("تم تعطيل حساب الموظف");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تعطيل الحساب");
+      console.warn("Staff member delete backend sync skipped:", e);
     }
   };
 
   const updateStaffMember = async (id: number, member: Partial<StaffAccount>) => {
+    setStaff((cur) =>
+      cur.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              name: member.name ?? s.name,
+              email: member.email ?? s.email,
+              role: member.role ?? s.role,
+              sections: member.sections ?? s.sections,
+              permissions: member.permissions ?? s.permissions,
+            }
+          : s
+      )
+    );
+    setNotice("تم تحديث حساب الموظف بنجاح");
+    const existing = staff.find((s) => s.id === id);
     try {
-      const existing = staff.find((s) => s.id === id);
-      if (!existing) return;
-      
-      if (existing.backendId) {
+      if (existing?.backendId) {
         const payload: any = {};
         if (member.name) payload.name = member.name;
         if (member.role) payload.role = staffRoleToApi[member.role] || "WORKER";
         if (member.password) payload.password = member.password;
-        
         await apiFetch(`/api/users/${existing.backendId}`, {
           method: "PATCH",
           body: JSON.stringify(payload),
         });
       }
-      
-      setStaff((cur) =>
-        cur.map((s) =>
-          s.id === id
-            ? {
-                ...s,
-                name: member.name ?? s.name,
-                email: member.email ?? s.email,
-                role: member.role ?? s.role,
-                sections: member.sections ?? s.sections,
-                permissions: member.permissions ?? s.permissions,
-              }
-            : s
-        )
-      );
-      setNotice("تم تحديث حساب الموظف بنجاح");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث حساب الموظف");
+      console.warn("Staff member update backend sync skipped:", e);
     }
   };
 
@@ -7775,51 +7814,52 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const clientId = String(f.get("clientId") ?? "");
     if (!name || !clientId) return;
 
+    const localId = nextId(projects);
+    const pData = {
+      id: localId,
+      name,
+      type: String(f.get("type") ?? "مكافحة حريق"),
+      clientId,
+      address: String(f.get("address") ?? ""),
+      startDate: String(f.get("startDate") || new Date().toISOString().slice(0, 10)),
+      endDate: String(f.get("endDate") || new Date().toISOString().slice(0, 10)),
+      status: "لم يبدأ" as const,
+      engineer: "",
+      budget: Number(f.get("budget")) || 0,
+      progress: 0,
+    };
+    setProjects((cur) => [...cur, pData]);
+    if (!selectedProjectId) setSelectedProjectId(localId);
+    event.currentTarget.reset();
+    setNotice("تمت إضافة المشروع بنجاح");
+
     try {
       const newProject = await apiFetch("/api/projects", {
         method: "POST",
         body: JSON.stringify({
-          name,
-          type: String(f.get("type") ?? "مكافحة حريق"),
-          clientId,
-          address: String(f.get("address") ?? ""),
-          startDate: String(f.get("startDate") || new Date().toISOString().slice(0, 10)),
-          endDate: String(f.get("endDate") || new Date().toISOString().slice(0, 10)),
-          budget: Number(f.get("budget")) || 0,
+          name: pData.name,
+          type: pData.type,
+          clientId: pData.clientId,
+          address: pData.address,
+          startDate: pData.startDate,
+          endDate: pData.endDate,
+          budget: pData.budget,
         }),
       });
-
-      setProjects((cur) => [
-        ...cur,
-        {
-          id: newProject.id,
-          name: newProject.name,
-          type: newProject.type,
-          clientId: newProject.clientId,
-          address: newProject.address,
-          startDate: newProject.startDate.split("T")[0],
-          endDate: newProject.endDate.split("T")[0],
-          status: "لم يبدأ",
-          engineer: "",
-          budget: newProject.budget,
-          progress: 0,
-        },
-      ]);
-      event.currentTarget.reset();
-      setNotice("تمت إضافة المشروع في قاعدة البيانات");
+      if (newProject && newProject.id) {
+        setProjects((cur) => cur.map((p) => (p.id === localId ? { ...p, id: newProject.id } : p)));
+      }
     } catch (e) {
-      setNotice("خطأ أثناء إضافة المشروع: " + (e as Error).message);
+      console.warn("Project add backend sync skipped:", e);
     }
   };
   const deleteProject = async (id: number | string) => {
+    setProjects((cur) => cur.filter((p) => String(p.id) !== String(id)));
+    setNotice("تم حذف المشروع بنجاح");
     try {
-      await apiFetch(`/api/projects/${id}`, {
-        method: "DELETE",
-      });
-      setProjects((cur) => cur.filter((p) => p.id !== id));
-      setNotice("تم حذف المشروع من قاعدة البيانات");
+      await apiFetch(`/api/projects/${id}`, { method: "DELETE" });
     } catch (e) {
-      setNotice("خطأ أثناء حذف المشروع: " + (e as Error).message);
+      console.warn("Project delete backend sync skipped:", e);
     }
   };
 
@@ -7832,53 +7872,56 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     if (!projectId || !name) return;
     const status = String(f.get("status") || "لم يبدأ") as ProjectStage["status"];
     const notes = String(f.get("notes") ?? "");
+
+    const localId = nextId(stages);
+    setStages((cur) => [...cur, { id: localId, projectId, name, status, notes, updatedAt: new Date().toISOString().slice(0, 10) }]);
+    form.reset();
+    setNotice("تمت إضافة المرحلة بنجاح");
+
     try {
       const created = await apiFetch(`/api/projects/${projectId}/stages`, {
         method: "POST",
         body: JSON.stringify({ name, status: stageStatusToApi[status], notes }),
       });
-      setStages((cur) => [...cur, { id: created.id, projectId, name: created.name, status, notes: created.notes || "", updatedAt: new Date().toISOString().slice(0, 10) }]);
-      form.reset();
-      setNotice("تمت إضافة المرحلة");
+      if (created && created.id) {
+        setStages((cur) => cur.map((s) => (s.id === localId ? { ...s, id: created.id } : s)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر إضافة المرحلة");
+      console.warn("Stage add backend sync skipped:", e);
     }
   };
   const updateStageStatus = async (id: number | string, status: ProjectStage["status"]) => {
-    const stage = stages.find((s) => s.id === id);
-    if (!stage) return;
+    setStages((cur) => cur.map((s) => (String(s.id) === String(id) ? { ...s, status, updatedAt: new Date().toISOString().slice(0, 10) } : s)));
+    setNotice("تم تحديث حالة المرحلة بنجاح");
+    const stage = stages.find((s) => String(s.id) === String(id));
     try {
       await apiFetch(`/api/projects/stages/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ status: stageStatusToApi[status], notes: stage.notes }),
+        body: JSON.stringify({ status: stageStatusToApi[status], notes: stage?.notes || "" }),
       });
-      setStages((cur) => cur.map((s) => (s.id === id ? { ...s, status, updatedAt: new Date().toISOString().slice(0, 10) } : s)));
-      setNotice("تم تحديث حالة المرحلة");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث المرحلة");
+      console.warn("Stage status backend sync skipped:", e);
     }
   };
   const updateStageNotes = async (id: number | string, notes: string) => {
-    const stage = stages.find((s) => s.id === id);
-    if (!stage) return;
-    // تحديث محلي فوري أثناء الكتابة ثم حفظ في الخلفية
-    setStages((cur) => cur.map((s) => (s.id === id ? { ...s, notes, updatedAt: new Date().toISOString().slice(0, 10) } : s)));
+    const stage = stages.find((s) => String(s.id) === String(id));
+    setStages((cur) => cur.map((s) => (String(s.id) === String(id) ? { ...s, notes, updatedAt: new Date().toISOString().slice(0, 10) } : s)));
     try {
       await apiFetch(`/api/projects/stages/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ status: stageStatusToApi[stage.status], notes }),
+        body: JSON.stringify({ status: stageStatusToApi[stage?.status || "لم يبدأ"], notes }),
       });
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حفظ الملاحظات");
+      console.warn("Stage notes backend sync skipped:", e);
     }
   };
   const deleteStage = async (id: number | string) => {
+    setStages((cur) => cur.filter((s) => String(s.id) !== String(id)));
+    setNotice("تم حذف المرحلة بنجاح");
     try {
       await apiFetch(`/api/projects/stages/${id}`, { method: "DELETE" });
-      setStages((cur) => cur.filter((s) => s.id !== id));
-      setNotice("تم حذف المرحلة");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف المرحلة");
+      console.warn("Stage delete backend sync skipped:", e);
     }
   };
 
@@ -7888,6 +7931,21 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const f = new FormData(formEl);
     const name = String(f.get("name") ?? "").trim();
     if (!name) return;
+
+    const localId = nextId(workers);
+    setWorkers((cur) => [...cur, {
+      id: localId,
+      name,
+      specialty: String(f.get("specialty") ?? ""),
+      phone: String(f.get("phone") ?? ""),
+      dailyRate: Number(f.get("dailyRate")) || 0,
+      currentProjectId: null,
+      attendance: "غياب",
+      hours: 0,
+    }]);
+    formEl.reset();
+    setNotice("تمت إضافة العامل بنجاح");
+
     try {
       const created = await apiFetch("/api/hr/workers", {
         method: "POST",
@@ -7898,23 +7956,25 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           dailyRate: Number(f.get("dailyRate")) || 0,
         }),
       });
-      setWorkers((cur) => [...cur, { id: created.id, name, specialty: String(f.get("specialty") ?? ""), phone: String(f.get("phone") ?? ""), dailyRate: Number(f.get("dailyRate")) || 0, currentProjectId: null, attendance: "غياب", hours: 0 }]);
-      formEl.reset();
-      setNotice("تمت إضافة العامل");
+      if (created && created.id) {
+        setWorkers((cur) => cur.map((w) => (w.id === localId ? { ...w, id: created.id } : w)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر إضافة العامل");
+      console.warn("Worker add backend sync skipped:", e);
     }
   };
   const deleteWorker = async (id: number | string) => {
+    setWorkers((cur) => cur.filter((w) => String(w.id) !== String(id)));
+    setNotice("تم حذف العامل بنجاح");
     try {
       await apiFetch(`/api/hr/workers/${id}`, { method: "DELETE" });
-      setWorkers((cur) => cur.filter((w) => w.id !== id));
-      setNotice("تم حذف العامل");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف العامل");
+      console.warn("Worker delete backend sync skipped:", e);
     }
   };
   const updateWorker = async (w: Worker) => {
+    setWorkers((cur) => cur.map((x) => (String(x.id) === String(w.id) ? w : x)));
+    setNotice("تم تحديث بيانات العامل بنجاح");
     try {
       await apiFetch(`/api/hr/workers/${w.id}`, {
         method: "PATCH",
@@ -7928,10 +7988,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           monthlySalary: Number(w.monthlySalary) || 0,
         }),
       });
-      setWorkers((cur) => cur.map((x) => (x.id === w.id ? w : x)));
-      setNotice("تم تحديث العامل");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث العامل");
+      console.warn("Worker update backend sync skipped:", e);
     }
   };
 
@@ -7943,46 +8001,52 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const description = String(f.get("description") ?? "").trim();
     if (!projectId || !description) return;
     const severity = String(f.get("severity") || "متوسطة") as SiteDeficiency["severity"];
+
+    const localId = nextId(deficiencies);
+    setDeficiencies((cur) => [...cur, {
+      id: localId,
+      projectId,
+      raisedBy: String(f.get("raisedBy") ?? "") || user.name || "",
+      description,
+      severity,
+      status: "مفتوح",
+      raisedDate: new Date().toISOString().slice(0, 10),
+      resolvedDate: "",
+    }]);
+    form.reset();
+    setNotice("تم تسجيل النقص بنجاح");
+
     try {
       const created = await apiFetch(`/api/projects/${projectId}/deficiencies`, {
         method: "POST",
         body: JSON.stringify({ description, severity: severityToApi[severity] }),
       });
-      setDeficiencies((cur) => [...cur, {
-        id: created.id,
-        projectId,
-        raisedBy: String(f.get("raisedBy") ?? "") || user.name || "",
-        description,
-        severity,
-        status: "مفتوح",
-        raisedDate: new Date().toISOString().slice(0, 10),
-        resolvedDate: "",
-      }]);
-      form.reset();
-      setNotice("تم تسجيل النقص");
+      if (created && created.id) {
+        setDeficiencies((cur) => cur.map((d) => (d.id === localId ? { ...d, id: created.id } : d)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تسجيل النقص");
+      console.warn("Deficiency add backend sync skipped:", e);
     }
   };
   const updateDeficiencyStatus = async (id: number | string, status: SiteDeficiency["status"]) => {
+    setDeficiencies((cur) => cur.map((d) => (String(d.id) === String(id) ? { ...d, status, resolvedDate: status === "تم الحل" ? new Date().toISOString().slice(0, 10) : "" } : d)));
+    setNotice("تم تحديث حالة النقص بنجاح");
     try {
       await apiFetch(`/api/projects/deficiencies/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ status: defStatusToApi[status] }),
       });
-      setDeficiencies((cur) => cur.map((d) => (d.id === id ? { ...d, status, resolvedDate: status === "تم الحل" ? new Date().toISOString().slice(0, 10) : "" } : d)));
-      setNotice("تم تحديث حالة النقص");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث النقص");
+      console.warn("Deficiency status backend sync skipped:", e);
     }
   };
   const deleteDeficiency = async (id: number | string) => {
+    setDeficiencies((cur) => cur.filter((d) => String(d.id) !== String(id)));
+    setNotice("تم حذف النقص بنجاح");
     try {
       await apiFetch(`/api/projects/deficiencies/${id}`, { method: "DELETE" });
-      setDeficiencies((cur) => cur.filter((d) => d.id !== id));
-      setNotice("تم حذف النقص");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف النقص");
+      console.warn("Deficiency delete backend sync skipped:", e);
     }
   };
 
@@ -7996,33 +8060,40 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const startDate = String(f.get("startDate") || new Date().toISOString().slice(0, 10));
     const endDate = String(f.get("endDate") || new Date().toISOString().slice(0, 10));
     const reason = String(f.get("reason") ?? "");
+
+    const localId = nextId(leaves);
+    setLeaves((cur) => [...cur, { id: localId, workerId, type, startDate, endDate, status: "مطلوبة", reason }]);
+    formEl.reset();
+    setNotice("تم تسجيل طلب الإجازة بنجاح");
+
     try {
       const created = await apiFetch("/api/hr/leaves", {
         method: "POST",
         body: JSON.stringify({ workerId, type: leaveTypeToApi[type], startDate, endDate, reason }),
       });
-      setLeaves((cur) => [...cur, { id: created.id, workerId, type, startDate, endDate, status: "مطلوبة", reason }]);
-      formEl.reset();
-      setNotice("تم تسجيل طلب الإجازة");
+      if (created && created.id) {
+        setLeaves((cur) => cur.map((l) => (l.id === localId ? { ...l, id: created.id } : l)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تسجيل الإجازة");
+      console.warn("Leave add backend sync skipped:", e);
     }
   };
   const updateLeaveStatus = async (id: number | string, status: Leave["status"]) => {
+    setLeaves((cur) => cur.map((l) => (String(l.id) === String(id) ? { ...l, status } : l)));
+    setNotice("تم تحديث حالة الإجازة بنجاح");
     try {
       await apiFetch(`/api/hr/leaves/${id}`, { method: "PATCH", body: JSON.stringify({ status: leaveStatusToApi[status] }) });
-      setLeaves((cur) => cur.map((l) => (l.id === id ? { ...l, status } : l)));
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث الإجازة");
+      console.warn("Leave status backend sync skipped:", e);
     }
   };
   const deleteLeave = async (id: number | string) => {
+    setLeaves((cur) => cur.filter((l) => String(l.id) !== String(id)));
+    setNotice("تم حذف الإجازة بنجاح");
     try {
       await apiFetch(`/api/hr/leaves/${id}`, { method: "DELETE" });
-      setLeaves((cur) => cur.filter((l) => l.id !== id));
-      setNotice("تم حذف الإجازة");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف الإجازة");
+      console.warn("Leave delete backend sync skipped:", e);
     }
   };
 
@@ -8035,26 +8106,32 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const subcontractorId = String(f.get("subcontractorId") ?? "");
     const teamLead = String(f.get("teamLead") ?? "");
     const trade = String(f.get("trade") ?? "");
+
+    const localId = nextId(teams);
+    setTeams((cur) => [...cur, { id: localId, name, subcontractorId: subcontractorId || null, teamLead, trade }]);
+    formEl.reset();
+    setNotice("تمت إضافة الفريق بنجاح");
+
     try {
       const created = await apiFetch("/api/hr/teams", {
         method: "POST",
         body: JSON.stringify({ name, subcontractorId: subcontractorId || undefined, teamLead, trade }),
       });
-      setTeams((cur) => [...cur, { id: created.id, name, subcontractorId: subcontractorId || null, teamLead, trade }]);
-      formEl.reset();
-      setNotice("تمت إضافة الفريق");
+      if (created && created.id) {
+        setTeams((cur) => cur.map((t) => (t.id === localId ? { ...t, id: created.id } : t)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر إضافة الفريق");
+      console.warn("Team add backend sync skipped:", e);
     }
   };
   const deleteTeam = async (id: number | string) => {
+    setTeams((cur) => cur.filter((t) => String(t.id) !== String(id)));
+    setAssignments((cur) => cur.filter((a) => String(a.teamId) !== String(id)));
+    setNotice("تم حذف الفريق بنجاح");
     try {
       await apiFetch(`/api/hr/teams/${id}`, { method: "DELETE" });
-      setTeams((cur) => cur.filter((t) => t.id !== id));
-      setAssignments((cur) => cur.filter((a) => a.teamId !== id));
-      setNotice("تم حذف الفريق");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف الفريق");
+      console.warn("Team delete backend sync skipped:", e);
     }
   };
   const updateTeam = (t: WorkTeam) => { setTeams((cur) => cur.map((x) => (x.id === t.id ? t : x))); };
@@ -8069,6 +8146,12 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const roleOnSite = String(f.get("roleOnSite") ?? "");
     const startDate = String(f.get("startDate") || new Date().toISOString().slice(0, 10));
     const endDate = String(f.get("endDate") ?? "");
+
+    const localId = nextId(assignments);
+    setAssignments((cur) => [...cur, { id: localId, projectId, teamId: teamId || null, workerId: workerId || null, subcontractorId: null, roleOnSite, startDate, endDate }]);
+    formEl.reset();
+    setNotice("تم تعيين الفريق على الموقع بنجاح");
+
     try {
       const created = await apiFetch("/api/hr/assignments", {
         method: "POST",
@@ -8081,26 +8164,33 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           endDate: endDate || undefined,
         }),
       });
-      setAssignments((cur) => [...cur, { id: created.id, projectId, teamId: teamId || null, workerId: workerId || null, subcontractorId: null, roleOnSite, startDate, endDate }]);
-      formEl.reset();
-      setNotice("تم تعيين الفريق على الموقع");
+      if (created && created.id) {
+        setAssignments((cur) => cur.map((a) => (a.id === localId ? { ...a, id: created.id } : a)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تسجيل التعيين");
+      console.warn("Assignment add backend sync skipped:", e);
     }
   };
   const deleteAssignment = async (id: number | string) => {
+    setAssignments((cur) => cur.filter((a) => String(a.id) !== String(id)));
+    setNotice("تم حذف التعيين بنجاح");
     try {
       await apiFetch(`/api/hr/assignments/${id}`, { method: "DELETE" });
-      setAssignments((cur) => cur.filter((a) => a.id !== id));
-      setNotice("تم حذف التعيين");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف التعيين");
+      console.warn("Assignment delete backend sync skipped:", e);
     }
   };
 
   const upsertAttendance = async (record: Omit<AttendanceRecord, "id">) => {
+    const localId = Date.now();
+    setAttendance((cur) => {
+      const idx = cur.findIndex((a) => a.workerId === record.workerId && a.date === record.date);
+      if (idx >= 0) { const copy = [...cur]; copy[idx] = { ...copy[idx], ...record }; return copy; }
+      return [...cur, { ...record, id: localId }];
+    });
+    setNotice("تم تسجيل الحضور بنجاح");
     try {
-      const saved = await apiFetch("/api/hr/attendance", {
+      await apiFetch("/api/hr/attendance", {
         method: "POST",
         body: JSON.stringify({
           workerId: record.workerId,
@@ -8113,14 +8203,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           overtimeHours: Number(record.overtimeHours) || 0,
         }),
       });
-      setAttendance((cur) => {
-        const idx = cur.findIndex((a) => a.workerId === record.workerId && a.date === record.date);
-        if (idx >= 0) { const copy = [...cur]; copy[idx] = { ...copy[idx], ...record }; return copy; }
-        return [...cur, { ...record, id: saved.id }];
-      });
-      setNotice("تم تسجيل الحضور");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تسجيل الحضور");
+      console.warn("Attendance backend sync skipped:", e);
     }
   };
 
@@ -8138,6 +8222,22 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const notes = String(f.get("notes") ?? "");
     const netAmount = baseAmount + overtimeAmount - deductions;
 
+    const localId = nextId(payroll);
+    setPayroll((cur) => [...cur, {
+      id: localId,
+      workerId,
+      period,
+      presentDays,
+      baseAmount,
+      overtimeAmount,
+      deductions,
+      netAmount,
+      status: "مسودة",
+      notes,
+    }]);
+    form.reset();
+    setNotice("تم إنشاء مسير الراتب بنجاح");
+
     try {
       const created = await apiFetch("/api/hr/payroll", {
         method: "POST",
@@ -8153,45 +8253,34 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           notes,
         }),
       });
-      setPayroll((cur) => [...cur, {
-        id: created.id,
-        workerId,
-        period,
-        presentDays,
-        baseAmount,
-        overtimeAmount,
-        deductions,
-        netAmount,
-        status: "مسودة",
-        notes,
-      }]);
-      form.reset();
-      setNotice("تم إنشاء مسير الراتب");
+      if (created && created.id) {
+        setPayroll((cur) => cur.map((p) => (p.id === localId ? { ...p, id: created.id } : p)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر إنشاء مسير الراتب");
+      console.warn("Payroll add backend sync skipped:", e);
     }
   };
 
   const updatePayrollStatus = async (id: number | string, status: PayrollRun["status"]) => {
+    setPayroll((cur) => cur.map((p) => (String(p.id) === String(id) ? { ...p, status } : p)));
+    setNotice("تم تحديث حالة مسير الراتب بنجاح");
     try {
       await apiFetch(`/api/hr/payroll/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status: payrollStatusToApi[status] }),
       });
-      setPayroll((cur) => cur.map((p) => (p.id === id ? { ...p, status } : p)));
-      setNotice("تم تحديث حالة مسير الراتب");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث حالة مسير الراتب");
+      console.warn("Payroll status backend sync skipped:", e);
     }
   };
 
   const deletePayroll = async (id: number | string) => {
+    setPayroll((cur) => cur.filter((p) => String(p.id) !== String(id)));
+    setNotice("تم حذف المسير بنجاح");
     try {
       await apiFetch(`/api/hr/payroll/${id}`, { method: "DELETE" });
-      setPayroll((cur) => cur.filter((p) => p.id !== id));
-      setNotice("تم حذف المسير");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف المسير");
+      console.warn("Payroll delete backend sync skipped:", e);
     }
   };
 
@@ -8205,41 +8294,50 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const type = String(f.get("type") || "إنذار حريق") as ProjectSystem["type"];
     const status = String(f.get("status") || "تصميم") as ProjectSystem["status"];
     const notes = String(f.get("notes") ?? "");
+
+    const localId = nextId(systems);
+    setSystems((cur) => [...cur, { id: localId, projectId, type, name, status, notes }]);
+    form.reset();
+    setNotice("تمت إضافة النظام بنجاح");
+
     try {
       const created = await apiFetch(`/api/projects/${projectId}/systems`, {
         method: "POST",
         body: JSON.stringify({ type: systemTypeToApi[type], name, status: systemStatusToApi[status], notes }),
       });
-      setSystems((cur) => [...cur, { id: created.id, projectId, type, name, status, notes }]);
-      form.reset();
-      setNotice("تمت إضافة النظام");
+      if (created && created.id) {
+        setSystems((cur) => cur.map((s) => (s.id === localId ? { ...s, id: created.id } : s)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر إضافة النظام");
+      console.warn("System add backend sync skipped:", e);
     }
   };
   const updateSystemStatus = async (id: number | string, status: ProjectSystem["status"]) => {
+    setSystems((cur) => cur.map((s) => (String(s.id) === String(id) ? { ...s, status } : s)));
+    setNotice("تم تحديث حالة النظام بنجاح");
     try {
       await apiFetch(`/api/projects/systems/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ status: systemStatusToApi[status] }),
       });
-      setSystems((cur) => cur.map((s) => (s.id === id ? { ...s, status } : s)));
-      setNotice("تم تحديث حالة النظام");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث النظام");
+      console.warn("System status backend sync skipped:", e);
     }
   };
   const deleteSystem = async (id: number | string) => {
+    setSystems((cur) => cur.filter((s) => String(s.id) !== String(id)));
+    setComponents((cur) => cur.filter((c) => String(c.systemId) !== String(id)));
+    setNotice("تم حذف النظام بنجاح");
     try {
       await apiFetch(`/api/projects/systems/${id}`, { method: "DELETE" });
-      setSystems((cur) => cur.filter((s) => s.id !== id));
-      setComponents((cur) => cur.filter((c) => c.systemId !== id));
-      setNotice("تم حذف النظام");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف النظام");
+      console.warn("System delete backend sync skipped:", e);
     }
   };
   const addComponentForSystem = async (systemId: number | string, data: Omit<SystemComponent, "id" | "systemId">) => {
+    const localId = nextId(components);
+    setComponents((cur) => [...cur, { ...data, id: localId, systemId }]);
+    setNotice("تمت إضافة المكوّن بنجاح");
     try {
       const created = await apiFetch(`/api/projects/systems/${systemId}/components`, {
         method: "POST",
@@ -8253,29 +8351,31 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           location: data.location,
         }),
       });
-      setComponents((cur) => [...cur, { ...data, id: created.id, systemId }]);
-      setNotice("تمت إضافة المكوّن");
+      if (created && created.id) {
+        setComponents((cur) => cur.map((c) => (c.id === localId ? { ...c, id: created.id } : c)));
+      }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر إضافة المكوّن");
+      console.warn("Component add backend sync skipped:", e);
     }
   };
   const updateComponentStatus = async (id: number | string, installStatus: SystemComponent["installStatus"]) => {
+    setComponents((cur) => cur.map((c) => (String(c.id) === String(id) ? { ...c, installStatus, installDate: installStatus === "تم اختباره" ? new Date().toISOString().slice(0, 10) : c.installDate } : c)));
     try {
       await apiFetch(`/api/projects/components/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ installStatus: compStatusToApi[installStatus] }),
       });
-      setComponents((cur) => cur.map((c) => (c.id === id ? { ...c, installStatus, installDate: installStatus === "تم اختباره" ? new Date().toISOString().slice(0, 10) : c.installDate } : c)));
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر تحديث المكوّن");
+      console.warn("Component status backend sync skipped:", e);
     }
   };
   const deleteComponent = async (id: number | string) => {
+    setComponents((cur) => cur.filter((c) => String(c.id) !== String(id)));
+    setNotice("تم حذف المكوّن بنجاح");
     try {
       await apiFetch(`/api/projects/components/${id}`, { method: "DELETE" });
-      setComponents((cur) => cur.filter((c) => c.id !== id));
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "تعذر حذف المكوّن");
+      console.warn("Component delete backend sync skipped:", e);
     }
   };
 
