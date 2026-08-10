@@ -8,12 +8,17 @@ interface RateLimitRecord {
 @Injectable()
 export class RateLimitGuard implements CanActivate {
   private static readonly records = new Map<string, RateLimitRecord>();
-  private readonly maxAttempts: number = 5;
+  private readonly maxAttempts: number = 10;
   private readonly windowMs: number = 5 * 60 * 1000; // 5 دقائق
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
+
+    // تجاهل طلبات OPTIONS الخاصة بـ CORS preflight
+    if (request.method === "OPTIONS") {
+      return true;
+    }
 
     const ip =
       (request.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||

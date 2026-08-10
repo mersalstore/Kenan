@@ -8,15 +8,12 @@ import { ValidationPipe } from "@nestjs/common";
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Allow frontend on kenan4saftey.com + localhost dev
+  // Allow frontend on kenan4saftey.com + all subdomains & localhost dev
   app.enableCors({
-    origin: [
-      "https://kenan4saftey.com",
-      "https://www.kenan4saftey.com",
-      "http://localhost:3000",
-      "http://localhost:3001",
-    ],
+    origin: true,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
   });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
