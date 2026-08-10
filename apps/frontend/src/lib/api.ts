@@ -1,8 +1,17 @@
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8787";
+function getBackendUrl(): string {
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+    return process.env.NEXT_PUBLIC_BACKEND_URL.trim();
+  }
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host !== "localhost" && host !== "127.0.0.1") {
+      return "https://api.kenan4saftey.com";
+    }
+  }
+  return "http://localhost:8787";
+}
 
-/** يمسح الجلسة ويعيد المستخدم لصفحة الدخول.
- *  المفاتيح هنا يجب أن تطابق ما يكتبه components/auth.ts — كان الكود السابق
- *  يمسح "kanan_user" وهو مفتاح غير موجود، فتبقى الجلسة الميتة في المتصفح. */
+/** يمسح الجلسة ويعيد المستخدم لصفحة الدخول. */
 function endSession() {
   if (typeof window === "undefined") return;
   localStorage.removeItem("kanan_access_token");
@@ -14,7 +23,7 @@ function endSession() {
 }
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
-  const cleanBackend = BACKEND_URL.replace(/\/$/, "");
+  const cleanBackend = getBackendUrl().replace(/\/$/, "");
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   const url = `${cleanBackend}${cleanEndpoint}`;
   const accessToken = typeof window !== "undefined" ? localStorage.getItem("kanan_access_token") : null;
