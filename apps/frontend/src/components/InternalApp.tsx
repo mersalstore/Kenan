@@ -3595,32 +3595,32 @@ function QuotationDocument({
         </div>
 
         <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px", fontSize: "0.85rem" }}>جدول الكميات والمواد:</h3>
-        <div className="table-wrap" style={{ marginBlock: "4px", direction: "rtl", pageBreakInside: "avoid", breakInside: "avoid" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: itemFontSize, pageBreakInside: "avoid", breakInside: "avoid" }}>
+        <div className="table-wrap" style={{ marginBlock: "4px", direction: "rtl", pageBreakInside: "avoid", breakInside: "avoid", backgroundColor: "#ffffff" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: itemFontSize, pageBreakInside: "avoid", breakInside: "avoid", backgroundColor: "#ffffff" }}>
             <thead>
-              <tr style={{ background: "#f8fafc", borderBottom: "2px solid #cbd5e1" }}>
-                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "35px", textAlign: "center" }}>الرقم</th>
-                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", textAlign: "right" }}>الصنف</th>
-                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "140px", textAlign: "right" }}>الوصف / الماركة</th>
-                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "50px", textAlign: "center" }}>الكمية</th>
-                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "85px", textAlign: "left" }}>السعر</th>
-                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "95px", textAlign: "left" }}>الإجمالي</th>
+              <tr style={{ background: "#f8fafc", backgroundColor: "#f8fafc", borderBottom: "2px solid #cbd5e1" }}>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "35px", textAlign: "center", backgroundColor: "#f8fafc", color: "#0f172a" }}>الرقم</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", textAlign: "right", backgroundColor: "#f8fafc", color: "#0f172a" }}>الصنف</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "140px", textAlign: "right", backgroundColor: "#f8fafc", color: "#0f172a" }}>الوصف / الماركة</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "50px", textAlign: "center", backgroundColor: "#f8fafc", color: "#0f172a" }}>الكمية</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "85px", textAlign: "left", backgroundColor: "#f8fafc", color: "#0f172a" }}>السعر</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "95px", textAlign: "left", backgroundColor: "#f8fafc", color: "#0f172a" }}>الإجمالي</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody style={{ backgroundColor: "#ffffff" }}>
               {quotation.items.map((item, index) => (
-                <tr key={index} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "center" }}>{index + 1}</td>
-                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "right" }}>{item.name}</td>
-                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "right" }}>{item.brand || "—"}</td>
-                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "center" }}>{item.qty}</td>
-                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(item.price).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
-                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(item.total).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                <tr key={index} style={{ borderBottom: "1px solid #e2e8f0", backgroundColor: "#ffffff" }}>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "center", backgroundColor: "#ffffff", color: "#0f172a" }}>{index + 1}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "right", backgroundColor: "#ffffff", color: "#0f172a" }}>{item.name}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "right", backgroundColor: "#ffffff", color: "#0f172a" }}>{item.brand || "—"}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "center", backgroundColor: "#ffffff", color: "#0f172a" }}>{item.qty}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left", backgroundColor: "#ffffff", color: "#0f172a" }}>{Number(item.price).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left", backgroundColor: "#ffffff", color: "#0f172a" }}>{Number(item.total).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
                 </tr>
               ))}
               {quotation.items.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ padding: "6px", textAlign: "center", color: "#64748b" }}>لا توجد بنود مدخلة لعرض السعر.</td>
+                <tr style={{ backgroundColor: "#ffffff" }}>
+                  <td colSpan={6} style={{ padding: "6px", textAlign: "center", color: "#64748b", backgroundColor: "#ffffff" }}>لا توجد بنود مدخلة لعرض السعر.</td>
                 </tr>
               )}
             </tbody>
@@ -3635,30 +3635,30 @@ function QuotationDocument({
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginBlock: "4px" }}>
-          <table style={{ width: "270px", borderCollapse: "collapse", fontSize: "0.76rem" }}>
-            <tbody>
-              <tr>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", fontWeight: "bold" }}>المجموع الفرعي:</td>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(subtotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+          <table style={{ width: "270px", borderCollapse: "collapse", fontSize: "0.76rem", backgroundColor: "#ffffff" }}>
+            <tbody style={{ backgroundColor: "#ffffff" }}>
+              <tr style={{ backgroundColor: "#ffffff" }}>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", fontWeight: "bold", backgroundColor: "#ffffff", color: "#0f172a" }}>المجموع الفرعي:</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left", backgroundColor: "#ffffff", color: "#0f172a" }}>{Number(subtotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
               </tr>
-              <tr>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", fontWeight: "bold" }}>ضريبة القيمة المضافة ({quotation.taxPercent}%):</td>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(vat).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+              <tr style={{ backgroundColor: "#ffffff" }}>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", fontWeight: "bold", backgroundColor: "#ffffff", color: "#0f172a" }}>ضريبة القيمة المضافة ({quotation.taxPercent}%):</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left", backgroundColor: "#ffffff", color: "#0f172a" }}>{Number(vat).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
               </tr>
-              <tr style={{ background: "#f1f5f9", fontWeight: "bold" }}>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1" }}>الإجمالي النهائي:</td>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left", color: "#d91c24" }}>{formatMoney(finalTotal, quotationCurrency)}</td>
+              <tr style={{ background: "#f1f5f9", backgroundColor: "#f1f5f9", fontWeight: "bold" }}>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", backgroundColor: "#f1f5f9", color: "#0f172a" }}>الإجمالي النهائي:</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left", color: "#d91c24", backgroundColor: "#f1f5f9" }}>{formatMoney(finalTotal, quotationCurrency)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <p className="contract-intro-p" style={{ fontWeight: "600", fontSize: "0.78rem", marginBlock: "3px" }}>
+        <p className="contract-intro-p" style={{ fontWeight: "600", fontSize: "0.78rem", marginBlock: "3px", backgroundColor: "#ffffff" }}>
           المبلغ الإجمالي كتابةً: فقط {valueWords} شامل ضريبة القيمة المضافة.
         </p>
 
         {/* Standard terms & notes */}
-        <div style={{ marginBlock: "4px", padding: "5px 8px", border: "1px dashed #d91c24", borderRadius: "6px", background: "#fff5f5" }}>
+        <div style={{ marginBlock: "4px", padding: "5px 8px", border: "1px dashed #d91c24", borderRadius: "6px", background: "#ffffff", backgroundColor: "#ffffff" }}>
           <strong style={{ display: "block", marginBottom: "2px", fontSize: "0.78rem", color: "#d91c24" }}>شروط وملاحظات العرض:</strong>
           <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "0.74rem", lineHeight: "1.35", color: "#334155" }}>
             <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "1px" }}>
@@ -3687,7 +3687,7 @@ function QuotationDocument({
         </div>
 
         {/* Bank & Tax details */}
-        <div className="bank-info-box" style={{ marginTop: "4px", padding: "4px 8px", background: "#f8fafc", border: "1px solid #cbd5e1" }}>
+        <div className="bank-info-box" style={{ marginTop: "4px", padding: "4px 8px", background: "#ffffff", backgroundColor: "#ffffff", border: "1px solid #cbd5e1" }}>
           <strong style={{ fontSize: "0.74rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "2px", marginBottom: "2px" }}>
             الحساب البنكي والضريبي للمؤسسة:
           </strong>
