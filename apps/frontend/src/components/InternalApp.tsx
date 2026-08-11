@@ -2022,6 +2022,24 @@ function ReportsView({
     return new Date().toISOString().slice(0, 10);
   });
 
+  // نطاق التصدير السريع: كل المشاريع افتراضياً، أو مشروع بعينه عند اختياره
+  const [quickProjId, setQuickProjId] = useState<number | string>("");
+  const quickProject = projects.find((p) => String(p.id) === String(quickProjId)) ?? null;
+  const belongsToQuickProject = (projectId: unknown) =>
+    !quickProject || String(projectId ?? "") === String(quickProject.id);
+  const scopedProjects = projects.filter((p) => !quickProject || String(p.id) === String(quickProject.id));
+  const scopedWorkers = workers.filter(
+    (w) =>
+      !quickProject ||
+      String(w.currentProjectId ?? "") === String(quickProject.id) ||
+      attendance.some(
+        (a) => String(a.projectId) === String(quickProject.id) && String(a.workerId) === String(w.id),
+      ),
+  );
+  const scopedInvoices = invoices.filter((i) => belongsToQuickProject(i.projectId));
+  const scopedExpenses = expenses.filter((e) => belongsToQuickProject(e.projectId));
+  const quickSuffix = quickProject ? `_${String(quickProject.name).replace(/[\\/:*?"<>|]/g, "-")}` : "";
+
   // Calculate detailed project metrics
   const activeProject = projects.find((p) => String(p.id) === String(selectedProjId));
   const activeProjClient = activeProject ? clients.find((c) => c.id === activeProject.clientId) : null;
@@ -2083,8 +2101,8 @@ function ReportsView({
       icon: BriefcaseBusiness,
       action: () =>
         downloadCsv(
-          "projects.csv",
-          projects.map((project) => ({
+          `projects${quickSuffix}.csv`,
+          scopedProjects.map((project) => ({
             id: project.id,
             name: project.name,
             type: project.type,
@@ -2100,17 +2118,27 @@ function ReportsView({
       icon: HardHat,
       action: () =>
         downloadCsv(
-          "workers.csv",
-          workers.map((worker) => ({
+          `workers${quickSuffix}.csv`,
+          scopedWorkers.map((worker) => ({
             id: worker.id,
             name: worker.name,
             specialty: worker.specialty,
             attendance: worker.attendance,
             dailyRate: worker.dailyRate,
+            // أيام الحضور المحسوبة على المشروع المختار فقط
+            daysOnProject: quickProject
+              ? attendance.filter(
+                  (a) =>
+                    String(a.projectId) === String(quickProject.id) &&
+                    String(a.workerId) === String(worker.id) &&
+                    a.status === "حاضر",
+                ).length
+              : "",
           })),
         ),
     },
     {
+      // المخزن مخزن مركزي وليس مرتبطاً بمشروع، فلا يتأثر باختيار المشروع
       title: "تقرير المخزن السريع",
       icon: Warehouse,
       action: () =>
@@ -2130,18 +2158,20 @@ function ReportsView({
       title: "تقرير الحسابات السريع",
       icon: WalletCards,
       action: () =>
-        downloadCsv("finance.csv", [
-          ...invoices.map((invoice) => ({
+        downloadCsv(`finance${quickSuffix}.csv`, [
+          ...scopedInvoices.map((invoice) => ({
             type: "invoice",
             reference: invoice.number,
             projectId: invoice.projectId,
+            project: projects.find((p) => String(p.id) === String(invoice.projectId))?.name ?? "",
             amount: invoice.amount,
             status: invoice.status,
           })),
-          ...expenses.map((expense) => ({
+          ...scopedExpenses.map((expense) => ({
             type: "expense",
             reference: expense.type,
             projectId: expense.projectId,
+            project: projects.find((p) => String(p.id) === String(expense.projectId))?.name ?? "",
             amount: expense.amount,
             status: expense.description,
           })),
@@ -2483,6 +2513,36 @@ function ReportsView({
       )}
 
       {activeTab === "quick" && (
+        <>
+        <div className="panel wide" style={{ marginBottom: "16px" }}>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+            <label style={{ margin: 0, fontWeight: "600", fontSize: "0.95rem" }}>نطاق التصدير:</label>
+            <select
+              value={quickProjId}
+              onChange={(e) => setQuickProjId(e.target.value)}
+              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", minWidth: "240px" }}
+            >
+              <option value="">كل المشاريع</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+              {quickProject
+                ? `الملفات ستحتوي بيانات «${quickProject.name}» فقط (عدا المخزن، فهو مخزن مركزي).`
+                : "الملفات ستحتوي بيانات كل المشاريع."}
+            </span>
+            {quickProject && (
+              <button
+                className="primary-button"
+                style={{ marginRight: "auto", minHeight: "36px", fontSize: "0.85rem", background: "#10b981" }}
+                onClick={() => downloadReportExcel(quickProject.id, quickProject.name)}
+              >
+                <Download size={15} /> كشف حساب المشروع (Excel)
+              </button>
+            )}
+          </div>
+        </div>
         <div className="report-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
           {reports.map((report) => {
             const Icon = report.icon;
@@ -2504,6 +2564,7 @@ function ReportsView({
             );
           })}
         </div>
+        </>
       )}
     </section>
   );
@@ -7168,12 +7229,45 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       window.URL.revokeObjectURL(url);
     } catch (e) {
       console.warn("Backend project excel fetch failed, generating client-side excel fallback:", e);
+      // كشف حساب من البيانات المحمّلة في المتصفح: نفس أعمدة كشف السيرفر
       const targetP = projects.find((p) => String(p.id) === String(projectId));
-      const pStages = stages.filter((s) => String(s.projectId) === String(projectId));
-      const headers = ["المشروع", "المرحلة", "الحالة", "الملاحظات"];
-      const rows = pStages.map((s) => [targetP?.name || projectName, s.name, s.status, s.notes]);
-      downloadCsvAsExcel(`تقرير_${projectName}.csv`, headers, rows);
-      setNotice("تم تحضير كشف المشروع وتنزيله بنجاح");
+      const movements = [
+        ...invoices
+          .filter((inv) => String(inv.projectId) === String(projectId))
+          .map((inv) => ({
+            date: inv.date,
+            kind: "فاتورة",
+            reference: inv.number,
+            statement: `فاتورة على المشروع — الحالة: ${inv.status}`,
+            debit: 0,
+            credit: Number(inv.amount) || 0,
+          })),
+        ...expenses
+          .filter((exp) => String(exp.projectId) === String(projectId))
+          .map((exp) => ({
+            date: exp.date,
+            kind: "مصروف",
+            reference: exp.type,
+            statement: exp.description || "",
+            debit: Number(exp.amount) || 0,
+            credit: 0,
+          })),
+      ].sort((a, b) => (a.date < b.date ? -1 : 1));
+
+      let balance = 0;
+      const headers = ["التاريخ", "النوع", "المرجع", "البيان", "مدين (مصروف)", "دائن (فاتورة)", "الرصيد"];
+      const rows: (string | number)[][] = movements.map((m) => {
+        balance += m.credit - m.debit;
+        return [m.date, m.kind, m.reference, m.statement, m.debit, m.credit, balance];
+      });
+      const totalCredit = movements.reduce((sum, m) => sum + m.credit, 0);
+      const totalDebit = movements.reduce((sum, m) => sum + m.debit, 0);
+      rows.push(["", "", "", "الإجمالي", totalDebit, totalCredit, balance]);
+      rows.push([]);
+      rows.push(["", "", "", "قيمة العقد", Number(targetP?.budget) || 0, "", ""]);
+
+      downloadCsvAsExcel(`كشف_حساب_${projectName}.csv`, headers, rows);
+      setNotice("تعذر الوصول للسيرفر — تم تحضير كشف الحساب من البيانات المحمّلة");
     }
   };
 
@@ -8521,7 +8615,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       const created = await apiFetch("/api/finance/invoices", {
         method: "POST",
         body: JSON.stringify({
-          projectId: String(projectId),
+          projectId: projectId && String(projectId).trim() !== "" ? String(projectId) : undefined,
           number,
           amount,
           status: invoiceStatusToApi[status as Invoice["status"]] || "PARTIAL",

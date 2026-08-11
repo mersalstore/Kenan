@@ -83,50 +83,113 @@ export async function ensureFontsExist(): Promise<{ regular: string; bold: strin
   return { regular: regularPath, bold: boldPath };
 }
 
+/*
+ * ترتيب النص العربي قبل رسمه في PDFKit.
+ *
+ * PDFKit 0.19 يمرّر النص إلى fontkit، و fontkit يقوم بأمرين تلقائياً: تشكيل
+ * الحروف العربية (initial/medial/final) ثم عكس ترتيب حروف السطر كلها دفعةً
+ * واحدة حين يكون اتجاه السطر RTL. لذلك أي تشكيل أو عكس نجريه نحن يُطبَّق
+ * مرتين فيخرج النص مقلوباً — وهو سبب ظهور التقارير بحروف معكوسة.
+ *
+ * الناقص في fontkit هو خوارزمية bidi وحدها: فهو يعكس السطر بالكامل بما فيه
+ * الأرقام والكلمات الإنجليزية والأقواس. فنكتفي هنا بسدّ ذلك النقص: نعكس
+ * المقاطع اللاتينية مسبقاً (فيعيدها عكس fontkit إلى وضعها الصحيح)، ونقلب
+ * الأقواس، ونترك الحروف العربية كما هي ليشكّلها fontkit بنفسه.
+ */
+const RTL_STRONG = /[֐-׿؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+const LTR_STRONG = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿ]/;
+/** حروف وأرقام تبدأ وتُنهي المقطع اللاتيني */
+const LTR_CORE = /[A-Za-z0-9À-ɏ]/;
+/** رموز تبقى داخل المقطع اللاتيني إن جاءت بين حرفين منه: user@host.com و 12.5 و A-1 */
+const LTR_GLUE = /[ .,:;/\\+*%_@#&'"()[\]{}=<>|~^$!?-]/;
+/** إشارة تسبق الرقم مباشرة فتُعدّ جزءاً منه: -3200 و +966 */
+const SIGN_BEFORE = /[+\-$€£]/;
+/** وحدة تلي الرقم مباشرة فتُعدّ جزءاً منه: 45% */
+const UNIT_AFTER = /[%‰°$€£]/;
+const MIRRORED: Record<string, string> = {
+  "(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{", "<": ">", ">": "<",
+};
+
+type TextSegment = { ltr: boolean; text: string };
+
+/** يقسّم السطر إلى مقاطع لاتينية (أرقام/إنجليزي) وما عداها. */
+function segmentLine(text: string): TextSegment[] {
+  const segments: TextSegment[] = [];
+  let i = 0;
+  while (i < text.length) {
+    if (!LTR_CORE.test(text[i])) {
+      const start = i;
+      while (i < text.length && !LTR_CORE.test(text[i])) i++;
+      segments.push({ ltr: false, text: text.slice(start, i) });
+      continue;
+    }
+
+    let cursor = i;
+    let last = i;
+    while (cursor < text.length) {
+      if (LTR_CORE.test(text[cursor])) {
+        last = cursor;
+        cursor++;
+      } else if (LTR_GLUE.test(text[cursor])) {
+        cursor++;
+      } else {
+        break;
+      }
+    }
+    while (last + 1 < text.length && UNIT_AFTER.test(text[last + 1])) last++;
+
+    let start = i;
+    if (start > 0 && SIGN_BEFORE.test(text[start - 1])) {
+      const previous = segments[segments.length - 1];
+      previous.text = previous.text.slice(0, -1);
+      if (!previous.text) segments.pop();
+      start--;
+    }
+
+    segments.push({ ltr: true, text: text.slice(start, last + 1) });
+    i = last + 1;
+  }
+  return segments;
+}
+
+const reverseChars = (value: string) => Array.from(value).reverse().join("");
+const mirrorBrackets = (value: string) => value.replace(/[()[\]{}<>]/g, (c) => MIRRORED[c]);
+
+/** يحدد الاتجاه بنفس قاعدة fontkit: أول حرف ذي اتجاه صريح في السطر. */
+function baseIsRtl(text: string): boolean {
+  for (const char of text) {
+    if (RTL_STRONG.test(char)) return true;
+    if (LTR_STRONG.test(char)) return false;
+  }
+  return false;
+}
+
 export function prepareArabicText(text: string): string {
   if (!text) return "";
-  
-  // Reshape characters using arabic-persian-reshaper
-  const reshaped = ArabicShaper.convertArabic(text);
-  
-  // Tokenize string to isolate Arabic blocks, numbers, and English words
-  const tokens: { type: "rtl" | "ltr"; text: string }[] = [];
-  const regex = /([\uFB50-\uFDFF\uFE70-\uFEFF\u0600-\u06FF\u0621-\u064A]+)/g;
-  
-  let match;
-  let lastIndex = 0;
-  
-  while ((match = regex.exec(reshaped)) !== null) {
-    if (match.index > lastIndex) {
-      tokens.push({
-        type: "ltr",
-        text: reshaped.slice(lastIndex, match.index),
-      });
-    }
-    tokens.push({
-      type: "rtl",
-      text: match[0],
-    });
-    lastIndex = regex.lastIndex;
-  }
-  
-  if (lastIndex < reshaped.length) {
-    tokens.push({
-      type: "ltr",
-      text: reshaped.slice(lastIndex),
-    });
-  }
+  try {
+    if (!RTL_STRONG.test(text)) return text;
 
-  // Reverse letters inside RTL Arabic tokens
-  const processedTokens = tokens.map((t) => {
-    if (t.type === "rtl") {
-      return t.text.split("").reverse().join("");
-    }
-    return t.text;
-  });
-
-  // Reverse token order so numbers/English words layout LTR inside RTL flow
-  return processedTokens.reverse().join("");
+    return text
+      .split("\n")
+      .map((line) => {
+        const segments = segmentLine(line);
+        if (baseIsRtl(line)) {
+          // fontkit سيعكس السطر كله، فنعكس المقاطع اللاتينية مسبقاً لتعود سليمة
+          return segments
+            .map((s) => (s.ltr ? reverseChars(s.text) : mirrorBrackets(s.text)))
+            .join("");
+        }
+        // سطر يبدأ بحرف لاتيني: fontkit سيعامله LTR ولن يعكس العربي، فنعكسه نحن
+        return segments
+          .map((s) =>
+            s.ltr ? s.text : reverseChars(mirrorBrackets(ArabicShaper.convertArabic(s.text))),
+          )
+          .join("");
+      })
+      .join("\n");
+  } catch {
+    return text;
+  }
 }
 
 export function drawBase64Image(doc: any, base64Str: string, x: number, y: number, options: any) {

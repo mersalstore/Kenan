@@ -430,8 +430,8 @@ enum TemplateType {
 // 11. المالية (الفواتير والمصاريف)
 model Invoice {
   id        String        @id @default(uuid())
-  projectId String
-  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
   number    String        @unique // "INV-2026-001"
   amount    Decimal // الإجمالي شامل الضريبة
   status    InvoiceStatus @default(PARTIAL)

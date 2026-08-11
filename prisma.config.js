@@ -10,8 +10,8 @@ console.log("=== Loading prisma.config.js ===");
 console.log("DATABASE_URL in config:", process.env.DATABASE_URL);
 
 module.exports = defineConfig({
-  schema: path.join(__dirname, "database/schema.prisma"),
+  schema: path.join(__dirname, "apps/backend/prisma/schema.prisma"),
   datasource: {
-    url: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/kanan?schema=public",
+    url: process.env.DATABASE_URL,
   },
 });

@@ -22,11 +22,26 @@ function endSession() {
   }
 }
 
+/**
+ * توكينات وهمية خلّفتها نسخة قديمة من الواجهة كانت تُلفّق جلسة محلية عند تعذر
+ * الوصول للسيرفر. السيرفر يرفضها دائماً بـ 401، فيبدو النظام وكأنه "لا يزامن"
+ * إلى الأبد. نتخلص منها فور اكتشافها بدل إرسالها في كل طلب.
+ */
+function isFabricatedToken(token: string | null): boolean {
+  if (!token) return false;
+  return /^(demo_|local_|google-admin)/.test(token);
+}
+
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
   const cleanBackend = getBackendUrl().replace(/\/$/, "");
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   const url = `${cleanBackend}${cleanEndpoint}`;
   const accessToken = typeof window !== "undefined" ? localStorage.getItem("kanan_access_token") : null;
+
+  if (isFabricatedToken(accessToken) && !cleanEndpoint.startsWith("/api/auth/")) {
+    endSession();
+    throw new Error("انتهت صلاحية الجلسة. يرجى تسجيل الدخول من جديد.");
+  }
 
   const headers = new Headers(options.headers || {});
   if (accessToken && !headers.has("Authorization")) {
@@ -43,10 +58,18 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     throw new Error("تعذر الاتصال بالسيرفر (يعمل التطبيق في الوضع المحلي)");
   }
 
+  if (cleanEndpoint.startsWith("/api/auth/")) {
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || "فشلت عملية المصادقة");
+    }
+    return response.json();
+  }
+
   if (response.status === 401) {
     const refreshToken = typeof window !== "undefined" ? localStorage.getItem("kanan_refresh_token") : null;
 
-    if (refreshToken) {
+    if (refreshToken && !isFabricatedToken(refreshToken)) {
       try {
         const refreshResponse = await fetch(`${cleanBackend}/api/auth/refresh`, {
           method: "POST",
@@ -73,12 +96,13 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
       }
     }
 
+    // تجديد التوكين فشل: الجلسة انتهت فعلاً. إبقاء المستخدم داخل النظام هنا
+    // يجعل كل حفظ لاحق يفشل بنفس الرسالة بلا مخرج، فنعيده لصفحة الدخول.
     if (accessToken) {
       endSession();
-      throw new Error("انتهت الجلسة. يرجى تسجيل الدخول من جديد.");
-    } else {
-      throw new Error("تطلب هذه العملية الاتصال بالسيرفر");
+      throw new Error("انتهت صلاحية الجلسة. يرجى تسجيل الدخول من جديد.");
     }
+    throw new Error("تطلب هذه العملية تسجيل الدخول أولاً");
   }
 
   if (response.status === 429) {

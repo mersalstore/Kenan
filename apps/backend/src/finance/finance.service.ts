@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import {
@@ -13,8 +20,26 @@ function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+/**
+ * هل الخطأ سببه أن قاعدة البيانات أقدم من مخطط Prisma؟ يحدث حين تُضاف أعمدة
+ * جديدة (أعمدة الفاتورة الضريبية مثلاً) دون تنفيذ `prisma db push` على السيرفر.
+ * عندها يفشل الإدراج والقراءة معاً لأن Prisma يذكر كل أعمدة الموديل في الاستعلام.
+ */
+function isSchemaDriftError(error: any): boolean {
+  const code = error?.code;
+  if (code === "P2021" || code === "P2022") return true;
+  const message = String(error?.message ?? "");
+  return /Unknown column|doesn't exist|no such column|ER_BAD_FIELD_ERROR/i.test(message);
+}
+
+const SCHEMA_DRIFT_MESSAGE =
+  "قاعدة البيانات على السيرفر أقدم من النظام (أعمدة الفاتورة الضريبية غير موجودة). " +
+  "نفّذ مزامنة المخطط: npm run db:push داخل apps/backend.";
+
 @Injectable()
 export class FinanceService {
+  private readonly logger = new Logger(FinanceService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
@@ -31,11 +56,28 @@ export class FinanceService {
         },
         orderBy: { createdAt: "desc" },
       });
-    } catch {
+    } catch (error) {
+      this.logger.error(`findInvoices failed: ${(error as Error).message}`);
+      if (!isSchemaDriftError(error)) {
+        const code = (error as any)?.code;
+        throw new InternalServerErrorException(
+          `تعذر قراءة الفواتير${code ? ` (رمز الخطأ ${code})` : ""}. التفاصيل في سجل السيرفر.`,
+        );
+      }
       // جداول وأعمدة الفاتورة الضريبية تُضاف عبر prisma db push. حتى تُنفَّذ،
       // نُرجع الفواتير بشكلها المبسّط بدل تعطيل شاشة المالية بالكامل.
       return this.prisma.invoice.findMany({
-        include: { project: true },
+        select: {
+          id: true,
+          projectId: true,
+          number: true,
+          amount: true,
+          status: true,
+          dueDate: true,
+          paidAt: true,
+          createdAt: true,
+          project: true,
+        },
         orderBy: { createdAt: "desc" },
       });
     }
@@ -55,10 +97,25 @@ export class FinanceService {
     const vatAmount = round2((subtotal * vatPercent) / 100);
     const total = round2(subtotal + vatAmount);
 
+    // التحقق من صحة ووجود مشروع وعميل مطابقين في قاعدة البيانات لمنع أخطاء Foreign Key Constraint
+    let projectId: string | null = null;
+    if (dto.projectId && typeof dto.projectId === "string" && dto.projectId.trim() !== "" && dto.projectId !== "null" && dto.projectId !== "undefined") {
+      const projExists = await this.prisma.project.findUnique({ where: { id: dto.projectId.trim() } });
+      if (projExists) projectId = projExists.id;
+    }
+
+    let clientId: string | null = null;
+    if (dto.clientId && typeof dto.clientId === "string" && dto.clientId.trim() !== "" && dto.clientId !== "null" && dto.clientId !== "undefined") {
+      const clientExists = await this.prisma.client.findUnique({ where: { id: dto.clientId.trim() } });
+      if (clientExists) clientId = clientExists.id;
+    }
+
+    const invNumber = (dto.number && dto.number.trim() !== "") ? dto.number.trim() : `INV-${Date.now().toString().slice(-6)}`;
+
     // الحقول المشتركة مع الشكل المبسّط للفاتورة
     const base = {
-      projectId: dto.projectId,
-      number: dto.number,
+      projectId,
+      number: invNumber,
       // مع وجود بنود يكون الإجمالي محسوباً؛ وبدونها نحترم المبلغ المُدخل
       amount: hasItems ? total : dto.amount,
       status: (dto.status || "PARTIAL") as any,
@@ -66,12 +123,22 @@ export class FinanceService {
       paidAt: dto.paidAt ? new Date(dto.paidAt) : null,
     };
 
+    // رقم الفاتورة فريد في القاعدة. رفض العملية برسالة غامضة ("Internal server
+    // error") هو ما كان يحدث سابقاً، فنكشف التعارض قبل الإدراج.
+    const duplicate = await this.prisma.invoice.findUnique({
+      where: { number: invNumber },
+      select: { id: true },
+    });
+    if (duplicate) {
+      throw new ConflictException(`رقم الفاتورة ${invNumber} مستخدم من قبل. اختر رقماً آخر.`);
+    }
+
     let invoice;
     try {
       invoice = await this.prisma.invoice.create({
         data: {
           ...base,
-          clientId: dto.clientId || null,
+          clientId,
           issueDate: dto.issueDate ? new Date(dto.issueDate) : new Date(),
           subtotal: round2(subtotal),
           vatPercent,
@@ -91,13 +158,43 @@ export class FinanceService {
         },
         include: { items: { orderBy: { sortOrder: "asc" } }, client: true, project: true },
       });
-    } catch {
+    } catch (error) {
+      this.logger.error(`createInvoice failed: ${(error as Error).message}`);
+      const code = (error as any)?.code;
+      if (code === "P2002") {
+        throw new ConflictException(`رقم الفاتورة ${invNumber} مستخدم من قبل. اختر رقماً آخر.`);
+      }
+      if (code === "P2003") {
+        throw new BadRequestException("المشروع أو العميل المرتبط بالفاتورة غير موجود.");
+      }
+      if (!isSchemaDriftError(error)) {
+        // رسالة Prisma قد تكشف مضيف قاعدة البيانات، فنكتفي برمز الخطأ للمستخدم
+        throw new InternalServerErrorException(
+          `تعذر حفظ الفاتورة${code ? ` (رمز الخطأ ${code})` : ""}. التفاصيل في سجل السيرفر.`,
+        );
+      }
+
       // أعمدة الفاتورة الضريبية تُضاف عبر prisma db push. حتى تُنفَّذ، نحفظ
-      // الفاتورة بشكلها المبسّط بدل رفض العملية على المستخدم.
-      invoice = await this.prisma.invoice.create({
-        data: base,
-        include: { project: true },
-      });
+      // الفاتورة بشكلها المبسّط بدل رفض العملية على المستخدم. لا نستخدم include
+      // هنا لأن Prisma عندها يقرأ الأعمدة الناقصة نفسها فيفشل الحفظ مرة أخرى.
+      try {
+        invoice = await this.prisma.invoice.create({
+          data: base,
+          select: {
+            id: true,
+            projectId: true,
+            number: true,
+            amount: true,
+            status: true,
+            dueDate: true,
+            paidAt: true,
+            createdAt: true,
+          },
+        });
+      } catch (fallbackError) {
+        this.logger.error(`createInvoice fallback failed: ${(fallbackError as Error).message}`);
+        throw new InternalServerErrorException(SCHEMA_DRIFT_MESSAGE);
+      }
     }
 
     await this.auditService.log(user.sub, "CREATE", "Invoice", invoice.id, null, invoice);
@@ -141,9 +238,15 @@ export class FinanceService {
   }
 
   async createExpense(dto: CreateExpenseDto, user: any) {
+    let projectId: string | null = null;
+    if (dto.projectId && typeof dto.projectId === "string" && dto.projectId.trim() !== "" && dto.projectId !== "null" && dto.projectId !== "undefined") {
+      const projExists = await this.prisma.project.findUnique({ where: { id: dto.projectId.trim() } });
+      if (projExists) projectId = projExists.id;
+    }
+
     const expense = await this.prisma.expense.create({
       data: {
-        projectId: dto.projectId || null,
+        projectId,
         type: dto.type,
         amount: dto.amount,
         description: dto.description,

@@ -106,75 +106,22 @@ export function getStoredUser(): AuthUser | null {
 }
 
 export async function loginWithGoogle(credential: string): Promise<AuthUser> {
-  try {
-    const data = await apiFetch("/api/auth/google", {
-      method: "POST",
-      body: JSON.stringify({ credential }),
-    });
-    storeSession(data);
-    return data.user;
-  } catch (error) {
-    // Fallback for admin Google login if backend is unreachable
-    const fallbackUser: AuthUser = {
-      id: "google-admin",
-      email: "kenansafety.sec@gmail.com",
-      name: "إدارة كنان للسلامة (Google Login)",
-      role: "ADMIN",
-      sections: ["dashboard", "projects", "quotations", "contracts", "inventory", "workers", "maintenance", "finance", "reports"],
-    };
-    storeSession({
-      accessToken: "demo_google_access_token",
-      refreshToken: "demo_google_refresh_token",
-      user: fallbackUser,
-    });
-    return fallbackUser;
-  }
+  const data = await apiFetch("/api/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ credential }),
+  });
+  storeSession(data);
+  return data.user;
 }
 
 export async function loginWithEmail(email: string, password: string): Promise<AuthUser> {
   const cleanEmail = email.toLowerCase().trim();
-  try {
-    const data = await apiFetch("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email: cleanEmail, password }),
-    });
-    storeSession(data);
-    return data.user;
-  } catch (error) {
-    // Check demo/fallback accounts map
-    const matchedUser = DEMO_ACCOUNTS[cleanEmail];
-    if (matchedUser) {
-      const demoSession = {
-        accessToken: `demo_token_${Date.now()}`,
-        refreshToken: `demo_refresh_${Date.now()}`,
-        user: matchedUser,
-      };
-      storeSession(demoSession);
-      return matchedUser;
-    }
-
-    // Auto-create local user session if valid email
-    if (cleanEmail.includes("@")) {
-      const isClient = cleanEmail.includes("client");
-      const user: AuthUser = {
-        id: `user-${Date.now()}`,
-        email: cleanEmail,
-        name: cleanEmail.split("@")[0] || "مستخدم كنان",
-        role: isClient ? "CLIENT" : "ADMIN",
-        sections: isClient
-          ? ["dashboard", "projects", "quotations"]
-          : ["dashboard", "projects", "quotations", "contracts", "inventory", "workers", "maintenance", "finance", "reports"],
-      };
-      storeSession({
-        accessToken: `local_token_${Date.now()}`,
-        refreshToken: `local_refresh_${Date.now()}`,
-        user,
-      });
-      return user;
-    }
-
-    throw error;
-  }
+  const data = await apiFetch("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email: cleanEmail, password }),
+  });
+  storeSession(data);
+  return data.user;
 }
 
 export function registerClientAccount(name: string, phoneOrEmail: string): AuthUser {

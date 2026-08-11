@@ -41,16 +41,18 @@ export class ReportsController {
     res.end(buffer);
   }
 
-  // Export Project Excel
+  // Export Project Statement Excel (كشف حساب المشروع)
   @Get("project/:projectId/excel")
   async exportProjectExcel(
     @Param("projectId") projectId: string,
     @Res() res: Response,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
   ) {
-    const buffer = await this.reportsService.generateProjectExcel(projectId);
+    const buffer = await this.reportsService.generateProjectExcel(projectId, startDate, endDate);
     res.set({
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename=project-report-${projectId}.xlsx`,
+      "Content-Disposition": `attachment; filename=statement-${projectId}.xlsx`,
       "Content-Length": buffer.length,
     });
     res.end(buffer);

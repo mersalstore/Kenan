@@ -11,6 +11,7 @@
   "scripts": {
     "build": "prisma generate --schema=prisma/schema.prisma && nest build && npm run copy:env",
     "copy:env": "node -e \"const fs=require('fs');if(fs.existsSync('.env.production'))fs.copyFileSync('.env.production','dist/.env.production')\"",
+    "db:push": "prisma db push --schema=prisma/schema.prisma",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node dist/main",
     "start:dev": "nest start --watch",

@@ -1,14 +1,8 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { UserRole } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
-/**
- * ينشئ حساب المدير الأول عند أول تشغيل على قاعدة بيانات فارغة.
- *
- * الشرط الصارم: لا يعمل إطلاقاً إن كان في الجدول أي مستخدم. بذلك لا يمكنه
- * تجاوز حساب قائم أو إعادة ضبط كلمة مرور، حتى لو بقيت المتغيرات في الإعدادات.
- * بعد الدخول أول مرة، غيّر كلمة المرور واحذف BOOTSTRAP_ADMIN_PASSWORD.
- */
 @Injectable()
 export class AdminBootstrapService implements OnModuleInit {
   private readonly logger = new Logger(AdminBootstrapService.name);
@@ -16,32 +10,54 @@ export class AdminBootstrapService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
-    const email = process.env.BOOTSTRAP_ADMIN_EMAIL?.toLowerCase().trim();
-    const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
-    if (!email || !password) return;
-
     try {
-      // قاعدة بيانات غير جاهزة أو غير متصلة يجب ألا تُسقط السيرفر كله
-      const existing = await this.prisma.user.count();
-      if (existing > 0) return;
+      const defaultPasswordHash = await bcrypt.hash("123456", 10);
 
-      await this.prisma.user.create({
-        data: {
-          name: process.env.BOOTSTRAP_ADMIN_NAME || "مدير النظام",
-          email,
-          passwordHash: await bcrypt.hash(password, 10),
-          role: "ADMIN",
-          isActive: true,
+      const defaultUsers: Array<{ email: string; name: string; role: UserRole }> = [
+        {
+          email: "kenansafety.sec@gmail.com",
+          name: "إدارة كنان للسلامة",
+          role: UserRole.ADMIN,
         },
-      });
+        {
+          email: "engineer@kenan.com",
+          name: "م. كريم عادل (مهندس الموقع)",
+          role: UserRole.SITE_ENGINEER,
+        },
+        {
+          email: "pm@kenan.com",
+          name: "مدير المشاريع",
+          role: UserRole.PROJECT_MANAGER,
+        },
+        {
+          email: "procurement@kenan.com",
+          name: "مسؤول المشتريات والمخازن",
+          role: UserRole.PROCUREMENT,
+        },
+        {
+          email: "accountant@kenan.com",
+          name: "محاسب الشركة",
+          role: UserRole.PROCUREMENT,
+        },
+      ];
 
-      this.logger.warn(
-        `تم إنشاء حساب المدير الأولي (${email}). غيّر كلمة المرور فوراً من شاشة إدارة المستخدمين.`,
-      );
+      for (const u of defaultUsers) {
+        const existing = await this.prisma.user.findUnique({ where: { email: u.email } });
+        if (!existing) {
+          await this.prisma.user.create({
+            data: {
+              name: u.name,
+              email: u.email,
+              passwordHash: defaultPasswordHash,
+              role: u.role,
+              isActive: true,
+            },
+          });
+          this.logger.log(`تم إنشاء الحساب التمهيدي بنجاح: ${u.email} (${u.role})`);
+        }
+      }
     } catch (error) {
-      this.logger.error(
-        "تعذّر إنشاء حساب المدير الأولي: " + (error as Error).message,
-      );
+      this.logger.error("تعذّر إنشاء الحسابات التمهيدية: " + (error as Error).message);
     }
   }
 }

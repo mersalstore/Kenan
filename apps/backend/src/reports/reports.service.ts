@@ -13,6 +13,7 @@ export class ReportsService {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: {
+        client: true,
         engineer: { select: { name: true, email: true } },
         stages: true,
         assignments: {
@@ -156,27 +157,97 @@ export class ReportsService {
     });
   }
 
-  // 4. Generate Project Report Excel Buffer
-  async generateProjectExcel(projectId: string): Promise<Buffer> {
+  // 4. Generate Project Statement Excel Buffer (كشف حساب المشروع)
+  async generateProjectExcel(
+    projectId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<Buffer> {
     const data = await this.getProjectReport(projectId);
     const { project } = data;
 
-    const rows = [
-      ["Project Name", project.name],
-      ["Type", project.type],
-      ["Status", project.status],
-      ["Progress", `${project.progress}%`],
-      ["Budget", Number(project.budget)],
+    const from = startDate ? new Date(startDate) : null;
+    const to = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
+    const withinRange = (date: Date) => (!from || date >= from) && (!to || date <= to);
+
+    // حركات الفواتير (دائن) والمصروفات (مدين) مرتبة زمنياً لبناء رصيد تراكمي
+    const movements = [
+      ...project.invoices
+        .map((inv) => ({
+          date: inv.issueDate ?? inv.createdAt,
+          kind: "فاتورة",
+          reference: inv.number,
+          statement: `فاتورة على المشروع — الحالة: ${inv.status}`,
+          credit: Number(inv.amount),
+          debit: 0,
+        }))
+        .filter((row) => withinRange(row.date)),
+      ...project.expenses
+        .map((exp) => ({
+          date: exp.date,
+          kind: "مصروف",
+          reference: exp.type,
+          statement: exp.description ?? "",
+          credit: 0,
+          debit: Number(exp.amount),
+        }))
+        .filter((row) => withinRange(row.date)),
+    ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const invoicedInRange = movements.reduce((sum, row) => sum + row.credit, 0);
+    const spentInRange = movements.reduce((sum, row) => sum + row.debit, 0);
+
+    const day = (value: Date) => value.toISOString().slice(0, 10);
+
+    const summaryRows: (string | number)[][] = [
+      ["كشف حساب المشروع"],
       [],
-      ["Financial Report"],
-      ["Total Invoiced", data.summary.totalInvoiced],
-      ["Total Expenses", data.summary.totalExpenses],
-      ["Profit", data.summary.projectProfit],
+      ["اسم المشروع", project.name],
+      ["العميل", project.client?.name ?? "—"],
+      ["نوع الأعمال", project.type],
+      ["المهندس المشرف", project.engineer?.name ?? "غير معيّن"],
+      ["حالة المشروع", project.status],
+      ["نسبة الإنجاز", `${project.progress}%`],
+      ["تاريخ البدء", day(project.startDate)],
+      ["تاريخ الانتهاء", day(project.endDate)],
+      ["قيمة العقد (الموازنة)", Number(project.budget)],
+      [],
+      ["فترة الكشف", from || to ? `${startDate ?? "البداية"} إلى ${endDate ?? "اليوم"}` : "كل الفترات"],
+      ["إجمالي المفوتر (دائن)", invoicedInRange],
+      ["إجمالي المصروفات (مدين)", spentInRange],
+      ["صافي الربح", invoicedInRange - spentInRange],
+      ["المتبقي من قيمة العقد", Number(project.budget) - invoicedInRange],
     ];
 
-    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    let balance = 0;
+    const ledgerRows: (string | number)[][] = [
+      ["التاريخ", "النوع", "المرجع", "البيان", "مدين (مصروف)", "دائن (فاتورة)", "الرصيد"],
+      ...movements.map((row) => {
+        balance += row.credit - row.debit;
+        return [day(row.date), row.kind, row.reference, row.statement, row.debit, row.credit, balance];
+      }),
+      ["", "", "", "الإجمالي", spentInRange, invoicedInRange, balance],
+    ];
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Project Report");
+
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+    summarySheet["!cols"] = [{ wch: 26 }, { wch: 40 }];
+    summarySheet["!views"] = [{ RTL: true } as any];
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "ملخص المشروع");
+
+    const ledgerSheet = XLSX.utils.aoa_to_sheet(ledgerRows);
+    ledgerSheet["!cols"] = [
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 18 },
+      { wch: 40 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 16 },
+    ];
+    ledgerSheet["!views"] = [{ RTL: true } as any];
+    XLSX.utils.book_append_sheet(workbook, ledgerSheet, "كشف الحساب");
 
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
     return buffer as Buffer;

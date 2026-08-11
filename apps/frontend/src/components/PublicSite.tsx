@@ -1394,35 +1394,6 @@ function LoginPage({
                 </button>
               </form>
 
-              <div style={{ marginTop: "16px", marginBottom: "16px" }}>
-                <div style={{ fontSize: "0.82rem", color: "#94a3b8", marginBottom: "8px", fontWeight: 600 }}>
-                  ⚡ الحسابات الأساسية والتجريبية للدخول السريع:
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                  {getDemoAccounts().map((acc) => (
-                    <button
-                      key={acc.email}
-                      type="button"
-                      onClick={() => quickFill(acc.email, acc.pass)}
-                      style={{
-                        background: "rgba(255, 255, 255, 0.06)",
-                        border: "1px solid rgba(255, 255, 255, 0.12)",
-                        borderRadius: "8px",
-                        padding: "8px 10px",
-                        color: "#f8fafc",
-                        fontSize: "0.8rem",
-                        cursor: "pointer",
-                        textAlign: "right",
-                        transition: "all 0.2s ease-in-out",
-                      }}
-                    >
-                      <div style={{ fontWeight: "bold", color: "#38bdf8" }}>{acc.label}</div>
-                      <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{acc.email}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div className="login-divider">
                 <span>أو الدخول المباشر بـ Google</span>
               </div>
