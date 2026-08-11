@@ -1858,8 +1858,9 @@ svg.lucide {
     /* مطابقة لقاعدة الشاشة أعلاه — الطباعة والمعاينة يجب أن تتطابقا تماماً */
     padding: 48mm 15mm 27mm 15mm !important;
     box-shadow: none !important;
-    page-break-after: always !important;
-    break-after: page !important;
+    /* لا نضع page-break-after: always هنا لأنه يسبب صفحة بيضاء بعد الصفحة الأخيرة */
+    page-break-after: avoid !important;
+    break-after: avoid !important;
     position: relative !important;
     box-sizing: border-box !important;
     background-image: url('/letterhead_bg.png') !important;
@@ -1870,6 +1871,13 @@ svg.lucide {
     print-color-adjust: exact !important;
     overflow: hidden !important;
   }
+
+  /* الصفحات التي تليها صفحة أخرى تحصل على فاصل — الأخيرة لا تحصل عليه */
+  .contract-page:not(:last-child) {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
 
   .contract-footer {
     display: none !important;
