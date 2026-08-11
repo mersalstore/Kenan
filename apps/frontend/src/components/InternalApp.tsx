@@ -202,7 +202,16 @@ function InventoryView({
   const [editMinQty, setEditMinQty] = useState(0);
   const [editBrand, setEditBrand] = useState("");
   const [selectedIds, setSelectedIds] = useState<(number | string)[]>([]);
+  const [inventorySearch, setInventorySearch] = useState("");
   const [dispatchVoucher, setDispatchVoucher] = useState<{ items: { name: string; unit: string; quantity: number; purchasePrice: number }[]; project: Project | null; date: string; ref: string } | null>(null);
+
+  const filteredInventory = inventorySearch.trim()
+    ? inventory.filter((i) =>
+        i.name.toLowerCase().includes(inventorySearch.trim().toLowerCase()) ||
+        (i.brand || "").toLowerCase().includes(inventorySearch.trim().toLowerCase()) ||
+        (i.supplier || "").toLowerCase().includes(inventorySearch.trim().toLowerCase())
+      )
+    : inventory;
 
   const startEdit = (item: InventoryItem) => {
     setEditingId(item.id); setEditName(item.name); setEditQuantity(item.quantity); setEditUnit(item.unit);
@@ -284,7 +293,7 @@ function InventoryView({
       </div>
 
       <div className="panel wide">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "12px" }}>
           <SectionTitle icon={Warehouse} title="إدارة وجرد المخزن" />
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             {selectedIds.length > 0 && (
@@ -313,6 +322,36 @@ function InventoryView({
           </div>
         </div>
 
+        {/* حقل البحث في المخزن */}
+        <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+          <input
+            type="text"
+            placeholder="🔍  ابحث باسم الصنف أو الماركة أو المورد..."
+            value={inventorySearch}
+            onChange={(e) => setInventorySearch(e.target.value)}
+            style={{
+              flex: 1,
+              padding: "8px 14px",
+              borderRadius: "10px",
+              border: "1px solid #cbd5e1",
+              fontSize: "0.88rem",
+              background: "#f8fafc",
+              outline: "none",
+              direction: "rtl",
+            }}
+          />
+          {inventorySearch && (
+            <button type="button" className="secondary-button" style={{ padding: "7px 14px", fontSize: "0.82rem" }} onClick={() => setInventorySearch("")}>
+              مسح
+            </button>
+          )}
+          {inventorySearch && (
+            <span style={{ fontSize: "0.82rem", color: "#64748b" }}>
+              {filteredInventory.length} من {inventory.length}
+            </span>
+          )}
+        </div>
+
         <div className="table-wrap">
           <table>
             <thead>
@@ -329,7 +368,7 @@ function InventoryView({
               </tr>
             </thead>
             <tbody>
-              {inventory.map((item) => {
+              {filteredInventory.map((item) => {
                 const isEditing = editingId === item.id;
                 const isLow = item.quantity <= item.minQuantity;
                 return (
@@ -3571,12 +3610,12 @@ function QuotationDocument({
         </div>
 
         {/* Intro Text */}
-        <div style={{ marginBottom: "6px", fontSize: "0.80rem", lineHeight: "1.35", direction: "rtl", textAlign: "right" }}>
-          <div style={{ fontWeight: "bold", fontSize: "0.88rem", marginBottom: "2px" }}>
+        <div style={{ marginBottom: "6px", fontSize: "0.80rem", lineHeight: "1.35", direction: "rtl", textAlign: "right", background: "#ffffff", backgroundColor: "#ffffff", position: "relative", zIndex: 2, borderRadius: "4px", padding: "4px 6px" }}>
+          <div style={{ fontWeight: "bold", fontSize: "0.88rem", marginBottom: "2px", background: "#ffffff", backgroundColor: "#ffffff" }}>
             السادة: {quotation.clientName || client?.name || "................"} المحترمين
           </div>
-          <div style={{ fontWeight: "600", marginBottom: "2px" }}>السلام عليكم ورحمة الله وبركاته،،،</div>
-          <p style={{ margin: 0, textIndent: "10px" }}>
+          <div style={{ fontWeight: "600", marginBottom: "2px", background: "#ffffff", backgroundColor: "#ffffff" }}>السلام عليكم ورحمة الله وبركاته،،،</div>
+          <p style={{ margin: 0, textIndent: "10px", background: "#ffffff", backgroundColor: "#ffffff" }}>
             {quotation.introText || `يسر مؤسسة كنان لأنظمة الأمن والسلامة أن تقدم عرض سعرها لتوريد وتنفيذ أنظمة السلامة لكم في موقعكم في مدينة / ${quotation.locationCity || client?.city || "الرياض"}${quotation.locationDistrict ? ` - حي ${quotation.locationDistrict}` : ""}${quotation.locationPlot ? ` - قطعة رقم (${quotation.locationPlot})` : ""}${quotation.locationPlan ? ` - مخطط رقم (${quotation.locationPlan})` : ""}${quotation.projectAddress || client?.address ? ` - ${quotation.projectAddress || client?.address}` : ""} وذلك حسب المخطط المعتمد.`}
           </p>
         </div>
@@ -3640,12 +3679,12 @@ function QuotationDocument({
           </table>
         </div>
 
-        <p className="contract-intro-p" style={{ fontWeight: "600", fontSize: "0.78rem", marginBlock: "3px", backgroundColor: "#ffffff" }}>
+        <p className="contract-intro-p" style={{ fontWeight: "600", fontSize: "0.78rem", marginBlock: "3px", backgroundColor: "#ffffff", background: "#ffffff", position: "relative", zIndex: 2, padding: "3px 6px", borderRadius: "4px" }}>
           المبلغ الإجمالي كتابةً: فقط {valueWords} شامل ضريبة القيمة المضافة.
         </p>
 
         {/* Standard terms & notes */}
-        <div style={{ marginBlock: "4px", padding: "5px 8px", border: "1px dashed #d91c24", borderRadius: "6px", background: "#ffffff", backgroundColor: "#ffffff" }}>
+        <div style={{ marginBlock: "4px", padding: "5px 8px", border: "1px dashed #d91c24", borderRadius: "6px", background: "#ffffff", backgroundColor: "#ffffff", position: "relative", zIndex: 2 }}>
           <strong style={{ display: "block", marginBottom: "2px", fontSize: "0.78rem", color: "#d91c24" }}>شروط وملاحظات العرض:</strong>
           <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "0.74rem", lineHeight: "1.35", color: "#334155" }}>
             <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "1px" }}>
@@ -7590,6 +7629,14 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const form = new FormData(formEl);
     const name = String(form.get("name") ?? "").trim();
     if (!name) return;
+    // منع التكرار: لو اسم الصنف موجود مسبقاً نُحذّر ونوقف
+    const duplicate = inventory.find(
+      (i) => i.name.trim().toLowerCase() === name.toLowerCase()
+    );
+    if (duplicate) {
+      setNotice(`⚠️ الصنف "${name}" موجود بالفعل في المخزن (الكمية الحالية: ${duplicate.quantity} ${duplicate.unit}). لتعديل الكمية استخدم زر التعديل.`);
+      return;
+    }
     const payload = {
       name,
       brand: String(form.get("brand") ?? "").trim(),
