@@ -33,8 +33,7 @@ export async function generateClientQuotationPdf(quotation: any, siteInfo: any) 
 
   container.innerHTML = `
     <div style="position: relative; width: 816px; min-height: 1054px; box-sizing: border-box; overflow: hidden; background: white; color: #000000;">
-      <!-- Letterhead Background Template (Doc1.pdf) -->
-      <img src="/letterhead_bg.png" style="position: absolute; top: 0; left: 0; width: 816px; height: 1054px; object-fit: fill; z-index: 1;" alt="Letterhead" />
+      <!-- Clean white background without watermark -->
 
       <!-- Document Content -->
       <div style="position: relative; z-index: 10; padding: 155px 45px 80px 45px; box-sizing: border-box; color: #000000;">
@@ -177,8 +176,7 @@ export async function generateClientProjectReportPdf(project: any, siteInfo: any
   container.innerHTML = `
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
     <div style="position: relative; width: 816px; min-height: 1054px; box-sizing: border-box; overflow: hidden; background: white; color: #000000; font-family: 'Cairo', sans-serif;">
-      <!-- Letterhead Background Template (Doc1.pdf) -->
-      <img src="/letterhead_bg.png" style="position: absolute; top: 0; left: 0; width: 816px; height: 1054px; object-fit: fill; z-index: 1;" alt="Letterhead" />
+      <!-- Clean white background without watermark -->
 
       <!-- Document Content -->
       <div style="position: relative; z-index: 10; padding: 155px 45px 80px 45px; box-sizing: border-box; color: #000000;">

@@ -1346,34 +1346,7 @@ function normalizeArabic(text: string): string {
 }
 
 function PageWatermark() {
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: "100%",
-        height: "100%",
-        pointerEvents: "none",
-        zIndex: -1,
-        overflow: "hidden"
-      }}
-    >
-      <img
-        src="/letterhead_bg.png"
-        alt="Official Letterhead Background"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "fill",
-          display: "block"
-        }}
-      />
-    </div>
-  );
+  return null;
 }
 
 function DocumentHeader({ documentTitle, site }: { documentTitle?: string; site?: SiteSettings }) {
@@ -1754,23 +1727,11 @@ function ContractDocument({
   isEditingText?: boolean;
 }) {
   const contractCurrency = contract.currency || "SAR";
-  const currencyUnit = (currencyWords[contractCurrency] ?? currencyWords.SAR).unit;
   const valueWords = numberToArabicWords(contract.value, contractCurrency);
   const dayName = getArabicDayName(contract.startDate);
   const formattedStartDate = formatArabicDate(contract.startDate);
   const paymentAmount = (percent: string) => formatMoney((Number(contract.value) * (Number(percent) || 0)) / 100, contractCurrency);
   const resolvedSpecs = contract.specs && contract.specs.length > 0 ? contract.specs : defaultSpecs;
-
-  // صفحة العقد الأولى ثابتة على A4 مع overflow:hidden، فما يتجاوزها يُقصّ بصمت.
-  // قياس السعة عملياً: 16 بنداً بالمقاس الحالي، 18 و20 بعد تصغيرين متدرجين.
-  // بعد 20 لا ينفع التصغير، فنُظهر تحذيراً بدل أن تختفي شروط من عقد موقَّع.
-  const SPEC_CAPACITY = 20;
-  const specStyle =
-    resolvedSpecs.length <= 16
-      ? { fontSize: "0.74rem", lineHeight: "1.35" }
-      : resolvedSpecs.length <= 18
-        ? { fontSize: "0.68rem", lineHeight: "1.28" }
-        : { fontSize: "0.62rem", lineHeight: "1.22" };
 
   const defaultPayments = [
     { id: 1, label: "عند التعميد", percent: "30" },
@@ -1785,19 +1746,18 @@ function ContractDocument({
   return (
     <div className="contract-doc" contentEditable={isEditingText} suppressContentEditableWarning={true} style={isEditingText ? { outline: "2px dashed #2563eb", borderRadius: "8px", padding: "4px" } : {}}>
       {/* ==================== PAGE 1 ==================== */}
-      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
-        <PageWatermark />
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden", background: "#ffffff", padding: "12mm 15mm 15mm 15mm" }}>
         <DocumentHeader documentTitle="عقد اتفاق" site={site} />
 
-        <h2 className="contract-page-title">عقد الاتفاق</h2>
-        <p className="contract-intro-p">
+        <h2 className="contract-page-title" style={{ fontSize: "1.5rem", margin: "4px 0 10px 0" }}>عقد الاتفاق</h2>
+        <p className="contract-intro-p" style={{ fontSize: "0.88rem", lineHeight: "1.55", marginBottom: "8px" }}>
           بعون الله تعالى تم الاتفاق في مدينة الرياض يوم {dayName} بتاريخ {formattedStartDate}م بين كل من:
         </p>
 
-        <div className="contract-parties-box">
-          <div className="party-card">
-            <h4>الطرف الأول (المقاول):</h4>
-            <ul className="party-details">
+        <div className="contract-parties-box" style={{ margin: "8px 0" }}>
+          <div className="party-card" style={{ padding: "8px 10px" }}>
+            <h4 style={{ fontSize: "0.92rem", marginBottom: "6px" }}>الطرف الأول (المقاول):</h4>
+            <ul className="party-details" style={{ fontSize: "0.82rem", lineHeight: "1.5" }}>
               <li><strong>الاسم:</strong> {site.companyNameAr || "مؤسسة كنان لأنظمة الأمن والسلامة"}</li>
               <li><strong>السجل التجاري:</strong> {site.companyCRNumber || "7050404537"}</li>
               <li><strong>يمثلها في التوقيع:</strong> المهندس طارق مختار علي</li>
@@ -1807,9 +1767,9 @@ function ContractDocument({
               <li><strong>البريد الإلكتروني:</strong> {site.contactEmail || "info@kenan4saftey.com"}</li>
             </ul>
           </div>
-          <div className="party-card">
-            <h4>الطرف الثاني (المالك):</h4>
-            <ul className="party-details">
+          <div className="party-card" style={{ padding: "8px 10px" }}>
+            <h4 style={{ fontSize: "0.92rem", marginBottom: "6px" }}>الطرف الثاني (المالك):</h4>
+            <ul className="party-details" style={{ fontSize: "0.82rem", lineHeight: "1.5" }}>
               <li><strong>اسم المنشأة/العميل:</strong> {contract.secondPartyName || client?.name || "................"}</li>
               <li><strong>السجل التجاري/الهوية:</strong> {contract.secondPartyRegister || client?.phone || "................"}</li>
               <li><strong>يمثلها في التوقيع:</strong> {contract.secondPartyRepresentative || client?.name || "................"}</li>
@@ -1821,35 +1781,20 @@ function ContractDocument({
           </div>
         </div>
 
-        <p className="contract-intro-p" style={{ fontSize: "0.78rem", lineHeight: "1.38", marginTop: "6px", color: "#000000" }}>
+        <p className="contract-intro-p" style={{ fontSize: "0.86rem", lineHeight: "1.5", marginTop: "6px", marginBottom: "8px", color: "#000000" }}>
           ويشار إليهم مجتمعين بهذا العقد بالطرفين أو الطرفان وحيث اتفق الطرفان على أن يقوم الطرف الأول بتنفيذ وتوريد وتركيب شبكة إطفاء الحريق العادي والرش الآلي ونظام التهوية للموقع الخاص بالطرف الثاني الكائن بمدينة {contract.locationCity || "الرياض"}{contract.locationDistrict ? `، حي ${contract.locationDistrict}` : ""}، على قطعة رقم ({contract.locationPlot || "—"})، من المخطط التنظيمي رقم ({contract.locationPlan || "—"}) وعليه قد تقدم الطرف الأول بعرضه بجدول للكميات مرفق بعرض الأسعار رقم ({contract.quotationNumber || `QT-${contract.id + 650}`}) وقيمته ({formatMoney(contract.quotationValue || contract.value, contractCurrency)}) فقط {numberToArabicWords(contract.quotationValue || contract.value, contractCurrency)} شامل ضريبة القيمة المضافة. وبهذا فقد تم الاتفاق والتعاقد بين الطرفين على ما يلي:
         </p>
 
-        <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px" }}>البنود والمواصفات:</h3>
-        <p style={{ fontSize: "0.78rem", margin: "0 0 6px 0" }}>بحسب العرض الفني المقدم من الطرف الأول والمعتمد من قبل الطرف الثاني والموضح تفاصيله أدناه:</p>
-        <ol className="spec-list" style={specStyle}>
+        <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "4px", fontSize: "0.95rem" }}>البنود والمواصفات:</h3>
+        <p style={{ fontSize: "0.84rem", margin: "0 0 6px 0" }}>بحسب العرض الفني المقدم من الطرف الأول والمعتمد من قبل الطرف الثاني والموضح تفاصيله أدناه:</p>
+        <ol className="spec-list" style={{ fontSize: "0.84rem", lineHeight: "1.45", paddingRight: "18px", margin: "0 0 10px 0" }}>
           {resolvedSpecs.map((spec, index) => (
             <li key={index} style={{ marginBottom: "2px" }}>{spec}</li>
           ))}
         </ol>
 
-        {resolvedSpecs.length > SPEC_CAPACITY && (
-          <p style={{ marginTop: "6px", padding: "6px 10px", border: "1px solid #dc2626", borderRadius: "6px", background: "#fef2f2", color: "#991b1b", fontSize: "0.72rem", fontWeight: "700" }}>
-            تنبيه: عدد البنود ({resolvedSpecs.length}) يتجاوز ما تتّسع له الصفحة ({SPEC_CAPACITY} بنداً).
-            البنود الأخيرة لن تظهر في النسخة المطبوعة — اختصر البنود أو ادمج المتشابه منها قبل الطباعة.
-          </p>
-        )}
-
-        <ContractFooter site={site} />
-      </div>
-
-      {/* ==================== PAGE 2 ==================== */}
-      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
-        <PageWatermark />
-        <DocumentHeader documentTitle="عقد اتفاق" site={site} />
-
-        <h3 className="contract-section-title">الشروط العامة</h3>
-        <ol className="terms-list">
+        <h3 className="contract-section-title" style={{ marginTop: "10px", marginBottom: "4px", fontSize: "0.95rem" }}>الشروط العامة:</h3>
+        <ol className="terms-list" style={{ fontSize: "0.84rem", lineHeight: "1.45", paddingRight: "18px", margin: 0 }}>
           {(site.contractGeneralTerms || `مدة هذا المشروع سنة وتعتمد حسب سير العمل في الموقع، تبدأ اعتبارا من تاريخ توقيع العقد بين الطرفين واستلام الدفعة الأولى غير قابلة للتمديد.
 إنهاء الأعمال والاستلام والتسليم:
 - يقوم الطرف الأول بإشعار الطرف الثاني بإنهاء الأعمال، ويقوم بتسليمه الاستشاري طبقاً للمخططات المعتمدة واستخراج شهادة إنهاء التركيبات للموقع وتوقيع محضر استلام وحساب ما للطرف الأول وما عليه وتسليمه باقي مستحقاته بالتنسيق مع الدفاع المدني.
@@ -1862,35 +1807,30 @@ function ContractDocument({
 يلتزم الطرف الثاني بأخلاء الموقع للعمل بالتنسيق مع الطرف الأول وتسهيل مهمة العاملين للتنفيذ.
 الطرف الأول غير مسؤول عن أي مخالفات معمارية في الموقع.`)
             .split("\n")
-            .map((line, i) => line.trim() && <li key={i}>{line.trim()}</li>)
+            .map((line, i) => line.trim() && <li key={i} style={{ marginBottom: "2px" }}>{line.trim()}</li>)
           }
           <li>تبلغ القيمة الإجمالية لهذا العقد مبلغ وقدره ({formatMoney(contract.value, contractCurrency)}) فقط {valueWords} شامل ضريبة القيمة المضافة.</li>
         </ol>
-
-        <ContractFooter site={site} />
       </div>
 
-      {/* ==================== PAGE 3 ==================== */}
-      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
-        <PageWatermark />
-        <DocumentHeader documentTitle="عقد اتفاق" site={site} />
-
-        <h3 className="contract-section-title">الجزاءات والغرامات:</h3>
-        <ol className="terms-list">
+      {/* ==================== PAGE 2 ==================== */}
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden", background: "#ffffff", padding: "12mm 15mm 15mm 15mm" }}>
+        <h3 className="contract-section-title" style={{ marginTop: "4px", marginBottom: "4px", fontSize: "0.95rem" }}>الجزاءات والغرامات:</h3>
+        <ol className="terms-list" style={{ fontSize: "0.84rem", lineHeight: "1.45", paddingRight: "18px", margin: "0 0 8px 0" }}>
           {(site.contractFines || `في حال لم ينته المقاول من تنفيذ الأعمال المتعاقد عليها بعد انقضاء المدة المحددة للعقد، يتم احتساب غرامة تأخير على الطرف الأول بمقدار (300) ريال عن كل يوم تأخير، على ألا يتجاوز إجمالي هذه المبالغ 10% من قيمة العقد.
 للطرف الثاني الحق في خصم تلك الغرامة من مستحقات المقاول بعد إخطار الطرف الأول بخطاب رسمي عن طريق الإيميل المدون بهذا العقد.`)
             .split("\n")
-            .map((line, i) => line.trim() && <li key={i}>{line.trim()}</li>)
+            .map((line, i) => line.trim() && <li key={i} style={{ marginBottom: "2px" }}>{line.trim()}</li>)
           }
         </ol>
 
-        <h3 className="contract-section-title">المراسلات:</h3>
-        <p className="contract-intro-p" style={{ fontSize: "0.92rem" }}>
+        <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "4px", fontSize: "0.95rem" }}>المراسلات:</h3>
+        <p className="contract-intro-p" style={{ fontSize: "0.86rem", lineHeight: "1.5", marginBottom: "8px" }}>
           تتم المراسلات الرسمية بين الطرفين بواسطة البريد الإلكتروني والجوال الموضح بهذا العقد، وتعتبر الرسائل المرسلة إلى البريد أو الجوال إشعاراً بالوصول وهي تبرأ الذمة بمجرد الإرسال، ويلتزم كلا الطرفين بإشعار الطرف الآخر خطياً في حال تغير عنوانه.
         </p>
 
-        <h3 className="contract-section-title">العمالة والسلامة:</h3>
-        <ol className="terms-list">
+        <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "4px", fontSize: "0.95rem" }}>العمالة والسلامة:</h3>
+        <ol className="terms-list" style={{ fontSize: "0.84rem", lineHeight: "1.45", paddingRight: "18px", margin: "0 0 8px 0" }}>
           {(site.contractSafety || `يلتزم الطرف الأول بتوفير وتأمين العدد الكافي من الأيدي العاملة اللازمة والمطلوبة لتنفيذ المشروع.
 يلتزم الطرف الأول بتوفير عمالة فنية ماهرة ذات الخبرة في تنفيذ جميع الأعمال.
 يلتزم الطرف الأول بتأمين الأعمال في الموقع وإلزام العمالة بالالتزام باشتراطات الأمن والسلامة في الموقع.
@@ -1898,95 +1838,136 @@ function ContractDocument({
 يلتزم الطرف الأول باستمرار العمل دون توقف كما يلتزم الطرف الثاني بتسليم الدفعات في وقتها مع المراحل المذكورة في بند الدفعات.
 يلتزم الطرف الأول باستبدال أي عامل أو موظف يطلب الطرف الثاني أو من يمثله استبداله بسبب مخالفته أو عدم اتقانه للعمل.`)
             .split("\n")
-            .map((line, i) => line.trim() && <li key={i}>{line.trim()}</li>)
+            .map((line, i) => line.trim() && <li key={i} style={{ marginBottom: "2px" }}>{line.trim()}</li>)
           }
         </ol>
 
-        <h3 className="contract-section-title">الدفعات المالية:</h3>
-        <ol className="terms-list">
+        <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "4px", fontSize: "0.95rem" }}>الدفعات المالية:</h3>
+        <ol className="terms-list" style={{ fontSize: "0.84rem", lineHeight: "1.45", paddingRight: "18px", margin: "0 0 10px 0" }}>
           {resolvedPayments.map((term, i) => (
-            <li key={term.id || i}>
+            <li key={term.id || i} style={{ marginBottom: "2px" }}>
               دفع <strong>{term.percent}%</strong> {term.label} (بقيمة {paymentAmount(term.percent)}).
             </li>
           ))}
         </ol>
 
-        <ContractFooter site={site} />
-      </div>
-
-      {/* ==================== PAGE 4 ==================== */}
-      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
-        <PageWatermark />
-        <DocumentHeader documentTitle="عقد اتفاق" site={site} />
-
-        <h3 className="contract-section-title">تسوية الخلافات والقانون الواجب التطبيق:</h3>
-        <p className="contract-intro-p" style={{ fontSize: "0.92rem" }}>
+        <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "4px", fontSize: "0.95rem" }}>تسوية الخلافات والقانون الواجب التطبيق:</h3>
+        <p className="contract-intro-p" style={{ fontSize: "0.86rem", lineHeight: "1.5", marginBottom: "8px" }}>
           {site.contractDisputes || `اتفق الطرفان على أن أي خلاف أو نزاع ينشأ بينهما، فإنهما يلتزمان ببذل كافة المساعي الودية لتسويته، وإلا فإنه يتم اللجوء الى المحكمة المختصة في الرياض، ولا يحول الخلاف أو النزاع الحاصل دون الالتزام بتطبيق هذا العقد واستمرار الطرفين في تنفيذ الأعمال بالشكل المتعاقد عليه. وفي جميع الأحوال لا يجوز للطرف الثاني مطالبة الطرف الأول بعدم الاستمرار في تنفيذ الأعمال ما دام يلتزم ببنود هذا العقد.`}
         </p>
         
-        <p className="contract-intro-p" style={{ fontWeight: "800", textAlign: "center", margin: "30px 0" }}>
+        <p className="contract-intro-p" style={{ fontWeight: "800", textAlign: "center", margin: "14px 0 6px 0", fontSize: "0.88rem" }}>
           بهذا يقر الطرفان أنهما اطلعوا على بنود هذه الاتفاقية وفهما فهماً تاماً نافياً للجهالة وبالتوقيع عليها تصبح سارية.
         </p>
         
-        <p className="contract-intro-p" style={{ textAlign: "center", fontStyle: "italic", marginBottom: "15px" }}>
+        <p className="contract-intro-p" style={{ textAlign: "center", fontStyle: "italic", marginBottom: "12px", fontSize: "0.84rem" }}>
           وعلى هذا تم الاتفاق بين الطرفين وتوقيع العقد من نسختين، والله ولي التوفيق.
         </p>
 
-        <table className="contract-sign-table">
+        <table className="contract-sign-table" style={{ margin: "10px 0" }}>
           <thead>
             <tr>
-              <th>الطرف الأول</th>
-              <th>الطرف الثاني</th>
+              <th style={{ padding: "6px", fontSize: "0.88rem" }}>الطرف الأول</th>
+              <th style={{ padding: "6px", fontSize: "0.88rem" }}>الطرف الثاني</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>
-                <div className="sign-cell">
-                  <span style={{ fontWeight: "800", display: "block" }}>مؤسسة كنان لأنظمة الأمن والسلامة</span>
-                  <span style={{ fontSize: "0.85rem", display: "block" }}>يمثلها: المهندس طارق مختار علي</span>
-                  {stamp && <img src={stamp} alt="ختم الطرف الأول" className="stamp-img" />}
-                  {signature && <img src={signature} alt="توقيع الطرف الأول" className="stamp-img" />}
-                  <span style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "40px" }}>الختم والتوقيع: ............................</span>
+              <td style={{ padding: "8px" }}>
+                <div className="sign-cell" style={{ minHeight: "90px" }}>
+                  <span style={{ fontWeight: "800", display: "block", fontSize: "0.88rem" }}>مؤسسة كنان لأنظمة الأمن والسلامة</span>
+                  <span style={{ fontSize: "0.82rem", display: "block" }}>يمثلها: المهندس طارق مختار علي</span>
+                  {stamp && <img src={stamp} alt="ختم الطرف الأول" className="stamp-img" style={{ maxHeight: "65px" }} />}
+                  {signature && <img src={signature} alt="توقيع الطرف الأول" className="stamp-img" style={{ maxHeight: "65px" }} />}
+                  <span style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "24px" }}>الختم والتوقيع: ............................</span>
                 </div>
               </td>
-              <td>
-                <div className="sign-cell">
-                  <span style={{ fontWeight: "800", display: "block" }}>{contract.secondPartyName || client?.name || "................"}</span>
-                  <span style={{ fontSize: "0.85rem", display: "block" }}>يمثلها: {contract.secondPartyRepresentative || client?.name || "................"}</span>
-                  <span style={{ fontSize: "0.85rem", display: "block" }}>الصفة: {contract.secondPartyRole || "المالك"}</span>
-                  <span style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "40px" }}>الختم والتوقيع: ............................</span>
+              <td style={{ padding: "8px" }}>
+                <div className="sign-cell" style={{ minHeight: "90px" }}>
+                  <span style={{ fontWeight: "800", display: "block", fontSize: "0.88rem" }}>{contract.secondPartyName || client?.name || "................"}</span>
+                  <span style={{ fontSize: "0.82rem", display: "block" }}>يمثلها: {contract.secondPartyRepresentative || client?.name || "................"}</span>
+                  <span style={{ fontSize: "0.82rem", display: "block" }}>الصفة: {contract.secondPartyRole || "المالك"}</span>
+                  <span style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "24px" }}>الختم والتوقيع: ............................</span>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
 
-        {/* Bank details box formatted exactly like client screenshots */}
-        <div style={{ marginTop: "20px", padding: "12px 15px", border: "1px solid #cbd5e1", borderRadius: "8px", background: "#f8fafc", direction: "rtl" }}>
-          <strong style={{ fontSize: "0.9rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "6px", marginBottom: "8px" }}>
+        <div className="bank-info-box" style={{ marginTop: "10px", padding: "8px 12px", background: "#f8fafc", border: "1px solid #cbd5e1" }}>
+          <strong style={{ fontSize: "0.85rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "4px", marginBottom: "6px" }}>
             الحساب البنكي والضريبي للمؤسسة:
           </strong>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 15px", fontSize: "0.85rem", color: "#334155" }}>
+          <div className="bank-info-grid" style={{ fontSize: "0.82rem", gridGap: "4px 12px" }}>
             <div><strong>اسم البنك:</strong> مصرف الراجحي</div>
-            <div style={{ textAlign: "left" }}><strong>الرقم الضريبي:</strong> {site.companyTaxNumber || "313072607300003"}</div>
-            <div style={{ gridColumn: "span 2" }}><strong>رقم الحساب:</strong> <code style={{ fontStyle: "normal", letterSpacing: "0.5px" }}>448000010006086265902</code></div>
-            <div style={{ gridColumn: "span 2" }}><strong>الآيبان:</strong> <code style={{ fontStyle: "normal", letterSpacing: "0.5px" }}>SA9080000448608016265902</code></div>
+            <div><strong>الرقم الضريبي:</strong> {site.companyTaxNumber || "313072607300003"}</div>
+            <div style={{ gridColumn: "span 2" }}><strong>رقم الحساب:</strong> <code style={{ fontStyle: "normal" }}>448000010006086265902</code></div>
+            <div style={{ gridColumn: "span 2" }}><strong>الآيبان:</strong> <code style={{ fontStyle: "normal" }}>SA9080000448608016265902</code></div>
           </div>
         </div>
-
-        <ContractFooter site={site} />
       </div>
     </div>
   );
 }
 
 function ContractFooter({ site }: { site?: SiteSettings }) {
-  void site;
-  // عنصر فارغ كان يحجز ~32مم في نهاية كل مستند لإبعاد المحتوى عن الشريط
-  // الأحمر في الترويسة. أصبح padding-bottom على .contract-page يقوم بذلك،
-  // فبقاء الحجز هنا يعني حجزاً مزدوجاً يدفع المحتوى خارج حدود A4.
-  return <footer className="contract-footer" style={{ position: "relative", zIndex: 2 }} />;
+  return (
+    <footer
+      className="contract-footer"
+      style={{
+        position: "relative",
+        marginTop: "auto",
+        width: "100%",
+        background: "#d91c24",
+        color: "#ffffff",
+        padding: "5px 10px",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        direction: "rtl",
+        boxSizing: "border-box",
+        borderRadius: "4px",
+        fontSize: "0.72rem"
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "14px",
+          width: "100%",
+          textAlign: "center",
+          flexWrap: "nowrap"
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <span style={{ display: "block", fontSize: "0.64rem", opacity: 0.9 }}>الموقع الإلكتروني</span>
+          <strong style={{ fontWeight: "700" }}>{(site as any)?.contactWebsite || "kenan4saftey.com"}</strong>
+        </div>
+        <div style={{ width: "1px", height: "18px", background: "rgba(255,255,255,0.4)" }} />
+        <div style={{ textAlign: "center" }}>
+          <span style={{ display: "block", fontSize: "0.64rem", opacity: 0.9 }}>البريد الإلكتروني</span>
+          <strong style={{ fontWeight: "700" }}>{site?.contactEmail || "info@kenan4saftey.com"}</strong>
+        </div>
+        <div style={{ width: "1px", height: "18px", background: "rgba(255,255,255,0.4)" }} />
+        <div style={{ textAlign: "center" }}>
+          <span style={{ display: "block", fontSize: "0.64rem", opacity: 0.9 }}>الهاتف / الجوال</span>
+          <strong style={{ fontWeight: "700" }}>{site?.contactPhone || "0574590198"}</strong>
+        </div>
+        <div style={{ width: "1px", height: "18px", background: "rgba(255,255,255,0.4)" }} />
+        <div style={{ textAlign: "center" }}>
+          <span style={{ display: "block", fontSize: "0.64rem", opacity: 0.9 }}>السجل التجاري</span>
+          <strong style={{ fontWeight: "700" }}>{site?.companyCRNumber || "7050404537"}</strong>
+        </div>
+        <div style={{ width: "1px", height: "18px", background: "rgba(255,255,255,0.4)" }} />
+        <div style={{ textAlign: "center" }}>
+          <span style={{ display: "block", fontSize: "0.64rem", opacity: 0.9 }}>KSA - RIYADH</span>
+          <strong style={{ fontWeight: "700" }}>السعودية - الرياض</strong>
+        </div>
+      </div>
+    </footer>
+  );
 }
 
 function ReportsView({
@@ -3646,39 +3627,39 @@ function QuotationDocument({
 
   return (
     <div className="contract-doc" contentEditable={isEditingText} suppressContentEditableWarning={true} style={isEditingText ? { outline: "2px dashed #2563eb", borderRadius: "8px", padding: "4px" } : {}}>
-      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden", padding: "8mm 12mm 6mm 12mm", minHeight: "297mm", maxHeight: "297mm", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
         <PageWatermark />
         <DocumentHeader documentTitle="عرض سعر" site={site} />
 
         {/* Metadata info */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.78rem", background: "#f8fafc", padding: "5px 10px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.78rem", background: "#f8fafc", padding: "4px 8px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
           <div><strong>رقم العرض:</strong> {quotation.number}</div>
           <div><strong>التاريخ:</strong> {formattedDate} م</div>
           <div><strong>صالح لغاية:</strong> {formattedValidUntil} م</div>
         </div>
 
         {/* Intro Text */}
-        <div style={{ marginBottom: "8px", fontSize: "0.82rem", lineHeight: "1.38", direction: "rtl", textAlign: "right" }}>
-          <div style={{ fontWeight: "bold", fontSize: "0.92rem", marginBottom: "4px" }}>
+        <div style={{ marginBottom: "6px", fontSize: "0.80rem", lineHeight: "1.35", direction: "rtl", textAlign: "right" }}>
+          <div style={{ fontWeight: "bold", fontSize: "0.88rem", marginBottom: "2px" }}>
             السادة: {quotation.clientName || client?.name || "................"} المحترمين
           </div>
           <div style={{ fontWeight: "600", marginBottom: "2px" }}>السلام عليكم ورحمة الله وبركاته،،،</div>
-          <p style={{ margin: 0, textIndent: "12px" }}>
+          <p style={{ margin: 0, textIndent: "10px" }}>
             {quotation.introText || `يسر مؤسسة كنان لأنظمة الأمن والسلامة أن تقدم عرض سعرها لتوريد وتنفيذ أنظمة السلامة لكم في موقعكم في مدينة / ${quotation.locationCity || client?.city || "الرياض"}${quotation.locationDistrict ? ` - حي ${quotation.locationDistrict}` : ""}${quotation.locationPlot ? ` - قطعة رقم (${quotation.locationPlot})` : ""}${quotation.locationPlan ? ` - مخطط رقم (${quotation.locationPlan})` : ""}${quotation.projectAddress || client?.address ? ` - ${quotation.projectAddress || client?.address}` : ""} وذلك حسب المخطط المعتمد.`}
           </p>
         </div>
 
-        <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "4px", fontSize: "0.86rem" }}>جدول الكميات والمواد:</h3>
-        <div className="table-wrap" style={{ marginBlock: "6px", direction: "rtl", pageBreakInside: "avoid", breakInside: "avoid" }}>
+        <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px", fontSize: "0.85rem" }}>جدول الكميات والمواد:</h3>
+        <div className="table-wrap" style={{ marginBlock: "4px", direction: "rtl", pageBreakInside: "avoid", breakInside: "avoid" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: itemFontSize, pageBreakInside: "avoid", breakInside: "avoid" }}>
             <thead>
               <tr style={{ background: "#f8fafc", borderBottom: "2px solid #cbd5e1" }}>
-                <th style={{ padding: "4px 6px", border: "1px solid #cbd5e1", width: "35px", textAlign: "center" }}>الرقم</th>
-                <th style={{ padding: "4px 6px", border: "1px solid #cbd5e1", textAlign: "right" }}>الصنف</th>
-                <th style={{ padding: "4px 6px", border: "1px solid #cbd5e1", width: "150px", textAlign: "right" }}>الوصف</th>
-                <th style={{ padding: "4px 6px", border: "1px solid #cbd5e1", width: "50px", textAlign: "center" }}>الكمية</th>
-                <th style={{ padding: "4px 6px", border: "1px solid #cbd5e1", width: "90px", textAlign: "left" }}>السعر</th>
-                <th style={{ padding: "4px 6px", border: "1px solid #cbd5e1", width: "100px", textAlign: "left" }}>الإجمالي</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "35px", textAlign: "center" }}>الرقم</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", textAlign: "right" }}>الصنف</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "140px", textAlign: "right" }}>الوصف / الماركة</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "50px", textAlign: "center" }}>الكمية</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "85px", textAlign: "left" }}>السعر</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "95px", textAlign: "left" }}>الإجمالي</th>
               </tr>
             </thead>
             <tbody>
@@ -3688,72 +3669,81 @@ function QuotationDocument({
                   <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "right" }}>{item.name}</td>
                   <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "right" }}>{item.brand || "—"}</td>
                   <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "center" }}>{item.qty}</td>
-                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(item.price, quotationCurrency)}</td>
-                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(item.total, quotationCurrency)}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(item.price).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(item.total).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
                 </tr>
               ))}
               {quotation.items.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: "8px", textAlign: "center", color: "#64748b" }}>لا توجد بنود مدخلة لعرض السعر.</td>
+                  <td colSpan={6} style={{ padding: "6px", textAlign: "center", color: "#64748b" }}>لا توجد بنود مدخلة لعرض السعر.</td>
                 </tr>
               )}
             </tbody>
           </table>
 
           {itemCount > QUOTE_CAPACITY && (
-            <p style={{ marginTop: "6px", padding: "6px 10px", border: "1px solid #dc2626", borderRadius: "6px", background: "#fef2f2", color: "#991b1b", fontSize: "0.72rem", fontWeight: "700" }}>
+            <p style={{ marginTop: "4px", padding: "4px 8px", border: "1px solid #dc2626", borderRadius: "6px", background: "#fef2f2", color: "#991b1b", fontSize: "0.70rem", fontWeight: "700" }}>
               تنبيه: عدد البنود ({itemCount}) يتجاوز ما تتّسع له الصفحة ({QUOTE_CAPACITY} بنداً).
               البنود الأخيرة لن تظهر في النسخة المطبوعة — قسّم العرض أو ادمج البنود المتشابهة.
             </p>
           )}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBlock: "6px" }}>
-          <table style={{ width: "280px", borderCollapse: "collapse", fontSize: "0.74rem" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBlock: "4px" }}>
+          <table style={{ width: "270px", borderCollapse: "collapse", fontSize: "0.76rem" }}>
             <tbody>
               <tr>
-                <td style={{ padding: "3px 8px", border: "1px solid #cbd5e1", fontWeight: "bold" }}>المجموع الفرعي:</td>
-                <td style={{ padding: "3px 8px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(subtotal, quotationCurrency)}</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", fontWeight: "bold" }}>المجموع الفرعي:</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(subtotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
               </tr>
               <tr>
-                <td style={{ padding: "3px 8px", border: "1px solid #cbd5e1", fontWeight: "bold" }}>ضريبة القيمة المضافة ({quotation.taxPercent}%):</td>
-                <td style={{ padding: "3px 8px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(vat, quotationCurrency)}</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", fontWeight: "bold" }}>ضريبة القيمة المضافة ({quotation.taxPercent}%):</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(vat).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
               </tr>
               <tr style={{ background: "#f1f5f9", fontWeight: "bold" }}>
-                <td style={{ padding: "3px 8px", border: "1px solid #cbd5e1" }}>الإجمالي النهائي:</td>
-                <td style={{ padding: "3px 8px", border: "1px solid #cbd5e1", textAlign: "left", color: "#e11d48" }}>{formatMoney(finalTotal, quotationCurrency)}</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1" }}>الإجمالي النهائي:</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left", color: "#d91c24" }}>{formatMoney(finalTotal, quotationCurrency)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <p className="contract-intro-p" style={{ fontWeight: "600", fontSize: "0.78rem", marginBlock: "5px" }}>
+        <p className="contract-intro-p" style={{ fontWeight: "600", fontSize: "0.78rem", marginBlock: "3px" }}>
           المبلغ الإجمالي كتابةً: فقط {valueWords} شامل ضريبة القيمة المضافة.
         </p>
 
-        {/* Standard terms & notes as shown in the PDF */}
-        <div style={{ marginBlock: "6px", padding: "6px 8px", border: "1px dashed #e11d48", borderRadius: "6px", background: "#fff5f5" }}>
-          <strong style={{ display: "block", marginBottom: "2px", fontSize: "0.78rem", color: "#e11d48" }}>شروط وملاحظات العرض:</strong>
-          <ul style={{ margin: 0, paddingRight: "16px", fontSize: "0.74rem", lineHeight: "1.35", color: "#334155", listStyleType: "disc" }}>
-            {(site.quotationDefaultNotes || `الأسعار بالريال السعودي.
-العرض يشمل تسليم الاستشاري ومهندس الموقع.
-العرض يشمل عمل الشوب دروينق لأعمال الإطفاء.
-العرض يشمل استخراج شهادة إنهاء التركيبات.
-العرض لا يشمل الأعمال المدنية من تكسير وحفر وردم.`)
-              .split("\n")
-              .map((line, i) => line.trim() && <li key={i} style={{ marginBottom: "2px" }}>{line.trim()}</li>)
-            }
+        {/* Standard terms & notes */}
+        <div style={{ marginBlock: "4px", padding: "5px 8px", border: "1px dashed #d91c24", borderRadius: "6px", background: "#fff5f5" }}>
+          <strong style={{ display: "block", marginBottom: "2px", fontSize: "0.78rem", color: "#d91c24" }}>شروط وملاحظات العرض:</strong>
+          <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "0.74rem", lineHeight: "1.35", color: "#334155" }}>
+            <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "1px" }}>
+              <span style={{ color: "#d91c24", fontWeight: "bold" }}>•</span>
+              <span>الأسعار بالريال السعودي.</span>
+            </li>
+            <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "1px" }}>
+              <span style={{ color: "#d91c24", fontWeight: "bold" }}>•</span>
+              <span>العرض يشمل تسليم الاستشاري ومهندس الموقع.</span>
+            </li>
+            <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "1px" }}>
+              <span style={{ color: "#d91c24", fontWeight: "bold" }}>•</span>
+              <span>العرض يشمل عمل الشوب دروينق لأعمال الإطفاء واستخراج شهادة إنهاء التركيبات.</span>
+            </li>
+            <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "1px" }}>
+              <span style={{ color: "#d91c24", fontWeight: "bold" }}>•</span>
+              <span>العرض لا يشمل الأعمال المدنية من تكسير وحفر وردم.</span>
+            </li>
             {quotation.notes && (
-              <li style={{ fontWeight: "bold", marginTop: "2px", listStyleType: "none", paddingRight: "0" }}>
-                ملاحظات إضافية: {quotation.notes}
+              <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginTop: "1px", fontWeight: "bold" }}>
+                <span style={{ color: "#d91c24", fontWeight: "bold" }}>•</span>
+                <span>ملاحظات إضافية: {quotation.notes}</span>
               </li>
             )}
           </ul>
         </div>
 
         {/* Bank & Tax details */}
-        <div className="bank-info-box" style={{ marginTop: "6px", padding: "5px 8px", background: "#f8fafc", border: "1px solid #cbd5e1" }}>
-          <strong style={{ fontSize: "0.76rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "2px", marginBottom: "4px" }}>
+        <div className="bank-info-box" style={{ marginTop: "4px", padding: "4px 8px", background: "#f8fafc", border: "1px solid #cbd5e1" }}>
+          <strong style={{ fontSize: "0.74rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "2px", marginBottom: "2px" }}>
             الحساب البنكي والضريبي للمؤسسة:
           </strong>
           <div className="bank-info-grid" style={{ fontSize: "0.72rem", gridGap: "2px 6px" }}>
@@ -3763,8 +3753,6 @@ function QuotationDocument({
             <div style={{ gridColumn: "span 2" }}><strong>الآيبان:</strong> <code style={{ fontStyle: "normal" }}>SA9080000448608016265902</code></div>
           </div>
         </div>
-
-        {/* Note: Signature table for Offeror & Client Approval removed per user request */}
 
         <ContractFooter site={site} />
       </div>
@@ -3829,13 +3817,42 @@ function QuotationsView({
       return copy;
     });
   };
+  const consolidateQuotationItems = (items: QuotationItem[]): QuotationItem[] => {
+    const result: QuotationItem[] = [];
+    for (const item of items) {
+      const trimmedName = item.name.trim();
+      if (!trimmedName) continue;
+      const existingIndex = result.findIndex(
+        (r) => r.name.trim().toLowerCase() === trimmedName.toLowerCase()
+      );
+      if (existingIndex !== -1) {
+        const existing = result[existingIndex];
+        existing.qty = (Number(existing.qty) || 0) + (Number(item.qty) || 1);
+        if (!existing.brand && item.brand) existing.brand = item.brand;
+        if (item.price > 0 && existing.price === 0) existing.price = item.price;
+        existing.total = existing.qty * existing.price;
+      } else {
+        result.push({
+          ...item,
+          name: trimmedName,
+          brand: item.brand || "",
+          qty: Number(item.qty) || 1,
+          price: Number(item.price) || 0,
+          total: (Number(item.qty) || 1) * (Number(item.price) || 0),
+        });
+      }
+    }
+    return result;
+  };
+
   const saveQuotationEdit = () => {
     if (!editing) return;
     if (editItems.some((it) => !it.name.trim())) {
       triggerAlert("يرجى إدخال أسماء جميع البنود");
       return;
     }
-    updateQuotation(editing.id, { ...editMeta, items: editItems });
+    const consolidated = consolidateQuotationItems(editItems);
+    updateQuotation(editing.id, { ...editMeta, items: consolidated });
     setEditing(null);
   };
 
@@ -3888,9 +3905,6 @@ function QuotationsView({
     const notes = String(data.get("notes") || "");
     const currency = String(data.get("currency") || "SAR");
 
-    const subtotal = formItems.reduce((acc, it) => acc + it.total, 0);
-    const value = Math.round(subtotal * 1.15); // with 15% VAT
-
     if (!clientId) {
       triggerAlert("يرجى اختيار العميل أولاً");
       return;
@@ -3900,7 +3914,11 @@ function QuotationsView({
       return;
     }
 
-    addQuotation(clientId, date, validUntil, formItems, value, notes, currency, formIntroText, formLocationCity, formLocationDistrict, formLocationPlot, formLocationPlan);
+    const consolidatedItems = consolidateQuotationItems(formItems);
+    const subtotal = consolidatedItems.reduce((acc, it) => acc + it.total, 0);
+    const value = Math.round(subtotal * 1.15); // with 15% VAT
+
+    addQuotation(clientId, date, validUntil, consolidatedItems, value, notes, currency, formIntroText, formLocationCity, formLocationDistrict, formLocationPlot, formLocationPlan);
     setFormItems([{ name: "", brand: "", qty: 1, price: 0, total: 0 }]);
     setFormIntroText("");
     setFormLocationCity("الرياض");
