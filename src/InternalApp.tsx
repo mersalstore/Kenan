@@ -2406,13 +2406,17 @@ function QuotationDocument({
   client,
   stamp,
   signature,
+  site,
+  isEditingText = false,
 }: {
   quotation: Quotation;
   client?: Client;
-  stamp: string;
-  signature: string;
+  stamp?: string;
+  signature?: string;
+  site?: any;
+  isEditingText?: boolean;
 }) {
-  const quotationCurrency = quotation.currency || "EGP";
+  const quotationCurrency = quotation.currency || "SAR";
   const valueWords = numberToArabicWords(quotation.value, quotationCurrency);
   const formattedDate = formatArabicDate(quotation.date);
   const formattedValidUntil = formatArabicDate(quotation.validUntil);
@@ -2420,143 +2424,142 @@ function QuotationDocument({
   const subtotal = quotation.items.reduce((acc, it) => acc + it.total, 0);
   const vat = Math.round(subtotal * (quotation.taxPercent / 100));
   const finalTotal = subtotal + vat;
-  const HeaderWave = () => (
-    <div className="page-header-wave">
-      <svg viewBox="0 0 1000 120" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
-        {/* Navy Blue Base Swoosh Curve */}
-        <path d="M 210,0 C 440,82 730,118 1000,92 L 1000,0 Z" fill="#141b34" />
-        {/* White Separator Ribbon */}
-        <path d="M 250,0 C 470,72 750,102 1000,76 L 1000,0 Z" fill="#ffffff" />
-        {/* Main Crimson Red Wave Ribbon */}
-        <path d="M 280,0 C 490,64 770,90 1000,64 L 1000,0 Z" fill="#d91c24" />
-        {/* Navy Accent Line */}
-        <path d="M 360,0 C 540,44 790,56 1000,34 L 1000,0 Z" fill="#141b34" />
-        {/* White Separator Line */}
-        <path d="M 410,0 C 590,32 810,40 1000,20 L 1000,0 Z" fill="#ffffff" />
-        {/* Topmost Red Stripe */}
-        <path d="M 470,0 C 630,22 830,24 1000,10 L 1000,0 Z" fill="#d91c24" />
-      </svg>
-    </div>
-  );
+
+  const QUOTE_CAPACITY = 24;
+  const itemCount = quotation.items.length;
+  const itemFontSize = itemCount <= 20 ? "0.74rem" : itemCount <= 22 ? "0.68rem" : "0.62rem";
+  const itemCellPadding = itemCount <= 20 ? "3px 6px" : itemCount <= 22 ? "2px 5px" : "1px 4px";
 
   return (
-    <div className="contract-doc">
-      <div className="contract-page">
-        {/* Header Section Matching PDF */}
-        <header className="contract-page-header">
-          <img src="/kenan-logo.png" alt="KENAN Logo" className="page-header-logo" />
-          <HeaderWave />
-        </header>
-
-        <h2 className="contract-page-title" style={{ margin: "5px 0 15px 0" }}>عرض سعر أنظمة سلامة</h2>
+    <div className="contract-doc" contentEditable={isEditingText} suppressContentEditableWarning={true} style={isEditingText ? { outline: "2px dashed #2563eb", borderRadius: "8px", padding: "4px" } : {}}>
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden", padding: "8mm 12mm 6mm 12mm", minHeight: "297mm", maxHeight: "297mm", boxSizing: "border-box", display: "flex", flexDirection: "column", background: "#ffffff" }}>
+        <PageWatermark />
+        <DocumentHeader documentTitle="عرض سعر" site={site} />
 
         {/* Metadata info */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px", fontSize: "0.85rem", background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.78rem", background: "#f8fafc", padding: "4px 8px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
           <div><strong>رقم العرض:</strong> {quotation.number}</div>
           <div><strong>التاريخ:</strong> {formattedDate} م</div>
           <div><strong>صالح لغاية:</strong> {formattedValidUntil} م</div>
         </div>
 
-        {/* Dynamic Intro Text from System */}
-        <div style={{ marginBottom: "15px", fontSize: "0.95rem", lineHeight: "1.6", direction: "rtl", textAlign: "right" }}>
-          <div style={{ fontWeight: "bold", fontSize: "1.05rem", marginBottom: "6px" }}>
+        {/* Intro Text */}
+        <div style={{ marginBottom: "6px", fontSize: "0.80rem", lineHeight: "1.35", direction: "rtl", textAlign: "right" }}>
+          <div style={{ fontWeight: "bold", fontSize: "0.88rem", marginBottom: "2px" }}>
             السادة: {quotation.clientName || client?.name || "................"} المحترمين
           </div>
-          <div style={{ fontWeight: "600", marginBottom: "4px" }}>السلام عليكم ورحمة الله وبركاته،،،</div>
-          <p style={{ margin: 0, textIndent: "15px" }}>
+          <div style={{ fontWeight: "600", marginBottom: "2px" }}>السلام عليكم ورحمة الله وبركاته،،،</div>
+          <p style={{ margin: 0, textIndent: "10px" }}>
             {quotation.introText || `يسر مؤسسة كنان لأنظمة الأمن والسلامة أن تقدم عرض سعرها لتوريد وتنفيذ أنظمة السلامة لكم في موقعكم في مدينة / ${quotation.locationCity || client?.city || "الرياض"}${quotation.locationDistrict ? ` - حي ${quotation.locationDistrict}` : ""}${quotation.locationPlot ? ` - قطعة رقم (${quotation.locationPlot})` : ""}${quotation.locationPlan ? ` - مخطط رقم (${quotation.locationPlan})` : ""}${quotation.projectAddress || client?.address ? ` - ${quotation.projectAddress || client?.address}` : ""} وذلك حسب المخطط المعتمد.`}
           </p>
         </div>
 
-        <h3 className="contract-section-title" style={{ marginTop: "15px", marginBottom: "8px" }}>جدول الكميات والمواد:</h3>
-        <div className="table-wrap" style={{ marginBlock: "10px", direction: "rtl", pageBreakInside: "avoid", breakInside: "avoid" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", pageBreakInside: "avoid", breakInside: "avoid" }}>
+        <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px", fontSize: "0.85rem" }}>جدول الكميات والمواد:</h3>
+        <div className="table-wrap" style={{ marginBlock: "4px", direction: "rtl", pageBreakInside: "avoid", breakInside: "avoid" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: itemFontSize, pageBreakInside: "avoid", breakInside: "avoid" }}>
             <thead>
               <tr style={{ background: "#f8fafc", borderBottom: "2px solid #cbd5e1" }}>
-                <th style={{ padding: "8px", border: "1px solid #cbd5e1", width: "40px", textAlign: "center" }}>الرقم</th>
-                <th style={{ padding: "8px", border: "1px solid #cbd5e1", textAlign: "right" }}>المنتج</th>
-                <th style={{ padding: "8px", border: "1px solid #cbd5e1", width: "180px", textAlign: "right" }}>الوصف / الماركة</th>
-                <th style={{ padding: "8px", border: "1px solid #cbd5e1", width: "60px", textAlign: "center" }}>الكمية</th>
-                <th style={{ padding: "8px", border: "1px solid #cbd5e1", width: "100px", textAlign: "left" }}>سعر الوحدة</th>
-                <th style={{ padding: "8px", border: "1px solid #cbd5e1", width: "120px", textAlign: "left" }}>الإجمالي</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "35px", textAlign: "center" }}>الرقم</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", textAlign: "right" }}>الصنف</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "140px", textAlign: "right" }}>الوصف / الماركة</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "50px", textAlign: "center" }}>الكمية</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "85px", textAlign: "left" }}>السعر</th>
+                <th style={{ padding: "3px 6px", border: "1px solid #cbd5e1", width: "95px", textAlign: "left" }}>الإجمالي</th>
               </tr>
             </thead>
             <tbody>
               {quotation.items.map((item, index) => (
                 <tr key={index} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                  <td style={{ padding: "8px", border: "1px solid #cbd5e1", textAlign: "center" }}>{index + 1}</td>
-                  <td style={{ padding: "8px", border: "1px solid #cbd5e1", textAlign: "right" }}>{item.name}</td>
-                  <td style={{ padding: "8px", border: "1px solid #cbd5e1", textAlign: "right" }}>{item.brand || "—"}</td>
-                  <td style={{ padding: "8px", border: "1px solid #cbd5e1", textAlign: "center" }}>{item.qty}</td>
-                  <td style={{ padding: "8px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(item.price, quotationCurrency)}</td>
-                  <td style={{ padding: "8px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(item.total, quotationCurrency)}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "center" }}>{index + 1}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "right" }}>{item.name}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "right" }}>{item.brand || "—"}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "center" }}>{item.qty}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(item.price).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                  <td style={{ padding: itemCellPadding, border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(item.total).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
                 </tr>
               ))}
               {quotation.items.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: "12px", textAlign: "center", color: "#64748b" }}>لا توجد بنود مدخلة لعرض السعر.</td>
+                  <td colSpan={6} style={{ padding: "6px", textAlign: "center", color: "#64748b" }}>لا توجد بنود مدخلة لعرض السعر.</td>
                 </tr>
               )}
             </tbody>
           </table>
+
+          {itemCount > QUOTE_CAPACITY && (
+            <p style={{ marginTop: "4px", padding: "4px 8px", border: "1px solid #dc2626", borderRadius: "6px", background: "#fef2f2", color: "#991b1b", fontSize: "0.70rem", fontWeight: "700" }}>
+              تنبيه: عدد البنود ({itemCount}) يتجاوز ما تتّسع له الصفحة ({QUOTE_CAPACITY} بنداً).
+              البنود الأخيرة لن تظهر في النسخة المطبوعة — قسّم العرض أو ادمج البنود المتشابهة.
+            </p>
+          )}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBlock: "10px" }}>
-          <table style={{ width: "320px", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBlock: "4px" }}>
+          <table style={{ width: "270px", borderCollapse: "collapse", fontSize: "0.76rem" }}>
             <tbody>
               <tr>
-                <td style={{ padding: "6px 10px", border: "1px solid #cbd5e1", fontWeight: "bold" }}>المجموع الفرعي:</td>
-                <td style={{ padding: "6px 10px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(subtotal, quotationCurrency)}</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", fontWeight: "bold" }}>المجموع الفرعي:</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(subtotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
               </tr>
               <tr>
-                <td style={{ padding: "6px 10px", border: "1px solid #cbd5e1", fontWeight: "bold" }}>ضريبة القيمة المضافة ({quotation.taxPercent}%):</td>
-                <td style={{ padding: "6px 10px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(vat, quotationCurrency)}</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", fontWeight: "bold" }}>ضريبة القيمة المضافة ({quotation.taxPercent}%):</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left" }}>{Number(vat).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
               </tr>
               <tr style={{ background: "#f1f5f9", fontWeight: "bold" }}>
-                <td style={{ padding: "6px 10px", border: "1px solid #cbd5e1" }}>الإجمالي النهائي:</td>
-                <td style={{ padding: "6px 10px", border: "1px solid #cbd5e1", textAlign: "left", color: "#e11d48" }}>{formatMoney(finalTotal, quotationCurrency)}</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1" }}>الإجمالي النهائي:</td>
+                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left", color: "#d91c24" }}>{formatMoney(finalTotal, quotationCurrency)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <p className="contract-intro-p" style={{ fontWeight: "600", fontSize: "0.9rem", marginBlock: "10px" }}>
+        <p className="contract-intro-p" style={{ fontWeight: "600", fontSize: "0.78rem", marginBlock: "3px" }}>
           المبلغ الإجمالي كتابةً: فقط {valueWords} شامل ضريبة القيمة المضافة.
         </p>
 
-        {/* Standard terms & notes as shown in the PDF */}
-        <div style={{ marginBlock: "12px", padding: "10px", border: "1px dashed #e11d48", borderRadius: "6px", background: "#fff5f5" }}>
-          <strong style={{ display: "block", marginBottom: "4px", fontSize: "0.85rem", color: "#e11d48" }}>شروط وملاحظات العرض:</strong>
-          <ul style={{ margin: 0, paddingRight: "20px", fontSize: "0.8rem", lineHeight: "1.5", color: "#334155", listStyleType: "disc" }}>
-            <li>الأسعار بالريال السعودي.</li>
-            <li>العرض يشمل تسليم الاستشاري ومهندس الموقع.</li>
-            <li>العرض يشمل عمل الشوب دروينق لأعمال الإطفاء.</li>
-            <li>العرض يشمل استخراج شهادة إنهاء التركيبات.</li>
-            <li>العرض لا يشمل الأعمال المدنية من تكسير وحفر وردم.</li>
+        {/* Standard terms & notes */}
+        <div style={{ marginBlock: "4px", padding: "5px 8px", border: "1px dashed #d91c24", borderRadius: "6px", background: "#fff5f5" }}>
+          <strong style={{ display: "block", marginBottom: "2px", fontSize: "0.78rem", color: "#d91c24" }}>شروط وملاحظات العرض:</strong>
+          <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "0.74rem", lineHeight: "1.35", color: "#334155" }}>
+            <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "1px" }}>
+              <span style={{ color: "#d91c24", fontWeight: "bold" }}>•</span>
+              <span>الأسعار بالريال السعودي.</span>
+            </li>
+            <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "1px" }}>
+              <span style={{ color: "#d91c24", fontWeight: "bold" }}>•</span>
+              <span>العرض يشمل تسليم الاستشاري ومهندس الموقع.</span>
+            </li>
+            <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "1px" }}>
+              <span style={{ color: "#d91c24", fontWeight: "bold" }}>•</span>
+              <span>العرض يشمل عمل الشوب دروينق لأعمال الإطفاء واستخراج شهادة إنهاء التركيبات.</span>
+            </li>
+            <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "1px" }}>
+              <span style={{ color: "#d91c24", fontWeight: "bold" }}>•</span>
+              <span>العرض لا يشمل الأعمال المدنية من تكسير وحفر وردم.</span>
+            </li>
             {quotation.notes && (
-              <li style={{ fontWeight: "bold", marginTop: "4px", listStyleType: "none", paddingRight: "0" }}>
-                ملاحظات إضافية: {quotation.notes}
+              <li style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginTop: "1px", fontWeight: "bold" }}>
+                <span style={{ color: "#d91c24", fontWeight: "bold" }}>•</span>
+                <span>ملاحظات إضافية: {quotation.notes}</span>
               </li>
             )}
           </ul>
         </div>
 
         {/* Bank & Tax details */}
-        <div className="bank-info-box" style={{ marginTop: "15px", padding: "10px", background: "#f8fafc", border: "1px solid #cbd5e1" }}>
-          <strong style={{ fontSize: "0.85rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "4px", marginBottom: "6px" }}>
+        <div className="bank-info-box" style={{ marginTop: "4px", padding: "4px 8px", background: "#f8fafc", border: "1px solid #cbd5e1" }}>
+          <strong style={{ fontSize: "0.74rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "2px", marginBottom: "2px" }}>
             الحساب البنكي والضريبي للمؤسسة:
           </strong>
-          <div className="bank-info-grid" style={{ fontSize: "0.8rem", gridGap: "4px" }}>
+          <div className="bank-info-grid" style={{ fontSize: "0.72rem", gridGap: "2px 6px" }}>
             <div><strong>اسم البنك:</strong> مصرف الراجحي</div>
-            <div><strong>الرقم الضريبي:</strong> 313072607300003</div>
+            <div><strong>الرقم الضريبي:</strong> {site?.companyTaxNumber || "313072607300003"}</div>
             <div style={{ gridColumn: "span 2" }}><strong>رقم الحساب:</strong> <code style={{ fontStyle: "normal" }}>448000010006086265902</code></div>
             <div style={{ gridColumn: "span 2" }}><strong>الآيبان:</strong> <code style={{ fontStyle: "normal" }}>SA9080000448608016265902</code></div>
           </div>
         </div>
 
-        {/* Note: Signature table for Offeror & Client Approval removed per user request */}
-
-        <ContractFooter />
+        <ContractFooter site={site} />
       </div>
     </div>
   );
