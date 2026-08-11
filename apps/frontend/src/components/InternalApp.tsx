@@ -3598,7 +3598,7 @@ function QuotationDocument({
 
   return (
     <div className="contract-doc" contentEditable={isEditingText} suppressContentEditableWarning={true} style={isEditingText ? { outline: "2px dashed #2563eb", borderRadius: "8px", padding: "4px" } : {}}>
-      <div className="contract-page" style={{ position: "relative", overflow: "hidden", padding: "8mm 12mm 6mm 12mm", minHeight: "297mm", maxHeight: "297mm", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
+      <div className="contract-page quotation-page" style={{ position: "relative", overflow: "hidden", padding: "8mm 12mm 6mm 12mm", minHeight: "297mm", maxHeight: "297mm", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
         <PageWatermark />
         <DocumentHeader documentTitle="عرض سعر" site={site} />
 

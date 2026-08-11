@@ -1744,6 +1744,27 @@ svg.lucide {
   border-radius: 4px !important;
 }
 
+/* ===== طبقة بيضاء فوق ورق الترويسة في منطقة المحتوى ===== */
+/* تمنع ظهور اللوجو من خلال الفراغات بين عناصر المحتوى */
+.contract-page::before {
+  content: '';
+  position: absolute;
+  top: 48mm;
+  left: 0;
+  right: 0;
+  bottom: 27mm;
+  background: #ffffff;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* كل الأبناء المباشرة تظهر فوق الطبقة البيضاء */
+.contract-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+
 /* Compact Regal Typography for Single Page & Clean Page-Break Clearance */
 .contract-page .terms-list {
   font-size: 0.74rem !important;
@@ -1908,6 +1929,37 @@ svg.lucide {
   .contract-page:not(:last-of-type) {
     page-break-after: always !important;
     break-after: page !important;
+  }
+
+  /* ===== القوطيشن: صفحة واحدة ثابتة ===== */
+  .contract-page.quotation-page {
+    overflow: hidden !important;
+    max-height: 297mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+  }
+
+  /* ===== العقد والفاتورة والمطالبة: يطبع حسب المحتوى بدون قطع ===== */
+  .contract-page:not(.quotation-page) {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    min-height: 297mm !important;
+  }
+
+  /* ===== الطبقة البيضاء تستمر في الطباعة ===== */
+  .contract-page::before {
+    content: '';
+    position: absolute;
+    top: 48mm;
+    left: 0;
+    right: 0;
+    bottom: 27mm;
+    background: #ffffff;
+    z-index: 0;
+    pointer-events: none;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .contract-footer {
