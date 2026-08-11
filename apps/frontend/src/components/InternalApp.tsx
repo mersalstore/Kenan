@@ -1844,87 +1844,92 @@ function ContractDocument({
 
       {/* ==================== PAGE 2 ==================== */}
       <div className="contract-page" style={{ position: "relative", overflow: "hidden", background: "#ffffff", padding: "8mm 12mm 10mm 12mm", minHeight: "297mm", maxHeight: "297mm", boxSizing: "border-box" }}>
-        <DocumentHeader documentTitle="عقد اتفاق (تابع)" site={site} />
+        <DocumentHeader documentTitle="عقد اتفاق (صفحة 2)" site={site} />
 
         <h3 className="contract-section-title" style={{ marginTop: "4px", marginBottom: "3px", fontSize: "0.88rem" }}>تكملة الشروط العامة:</h3>
-        <ol className="terms-list" start={6} style={{ fontSize: "0.78rem", lineHeight: "1.35", paddingRight: "16px", margin: "0 0 6px 0" }}>
+        <ol className="terms-list" start={6} style={{ fontSize: "0.78rem", lineHeight: "1.35", paddingRight: "16px", margin: "0 0 8px 0" }}>
           <li>يقوم الطرف الثاني بتوفير مصدر الكهرباء والمياه والأعمال المدنية كالتكسير والتلييس والحفر والردم وقاطع الكهرباء والكابل وتوصيل الخاص بالمضخة والرافعة في حالة الارتفاعات التي تزيد عن 8 متر.</li>
           <li>يلتزم الطرف الثاني بأخلاء الموقع للعمل بالتنسيق مع الطرف الأول وتسهيل مهمة العاملين للتنفيذ.</li>
           <li>الطرف الأول غير مسؤول عن أي مخالفات معمارية في الموقع.</li>
           <li>تبلغ القيمة الإجمالية لهذا العقد مبلغ وقدره ({formatMoney(contract.value, contractCurrency)}) فقط {valueWords} شامل ضريبة القيمة المضافة.</li>
         </ol>
 
-        <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px", fontSize: "0.88rem" }}>الجزاءات والغرامات:</h3>
-        <ol className="terms-list" style={{ fontSize: "0.78rem", lineHeight: "1.35", paddingRight: "16px", margin: "0 0 6px 0" }}>
+        <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "3px", fontSize: "0.88rem" }}>الجزاءات والغرامات:</h3>
+        <ol className="terms-list" style={{ fontSize: "0.78rem", lineHeight: "1.35", paddingRight: "16px", margin: "0 0 8px 0" }}>
           {(site.contractFines || `في حال لم ينته المقاول من تنفيذ الأعمال المتعاقد عليها بعد انقضاء المدة المحددة للعقد، يتم احتساب غرامة تأخير على الطرف الأول بمقدار (300) ريال عن كل يوم تأخير، على ألا يتجاوز إجمالي هذه المبالغ 10% من قيمة العقد.
 للطرف الثاني الحق في خصم تلك الغرامة من مستحقات المقاول بعد إخطار الطرف الأول بخطاب رسمي عن طريق الإيميل المدون بهذا العقد.`)
             .split("\n")
-            .map((line, i) => line.trim() && <li key={i} style={{ marginBottom: "1px" }}>{line.trim()}</li>)
+            .map((line, i) => line.trim() && <li key={i} style={{ marginBottom: "2px" }}>{line.trim()}</li>)
           }
         </ol>
 
-        <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px", fontSize: "0.88rem" }}>المراسلات والعمالة والسلامة:</h3>
-        <p className="contract-intro-p" style={{ fontSize: "0.78rem", lineHeight: "1.4", marginBottom: "6px" }}>
+        <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "3px", fontSize: "0.88rem" }}>المراسلات والعمالة والسلامة:</h3>
+        <p className="contract-intro-p" style={{ fontSize: "0.78rem", lineHeight: "1.4", marginBottom: "8px" }}>
           تتم المراسلات الرسمية بين الطرفين بواسطة البريد الإلكتروني والجوال الموضح بهذا العقد، وتعتبر الرسائل المرسلة إشعاراً بالوصول وهي تبرأ الذمة بمجرد الإرسال. كما يلتزم الطرف الأول بتوفير العمالة الفنية الماهرة والسلامة التامة بالموقع وتأمين عمالته بدون أدنى مسؤولية على الطرف الثاني.
         </p>
 
-        <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px", fontSize: "0.88rem" }}>الدفعات المالية:</h3>
-        <ol className="terms-list" style={{ fontSize: "0.78rem", lineHeight: "1.35", paddingRight: "16px", margin: "0 0 6px 0" }}>
+        <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "3px", fontSize: "0.88rem" }}>الدفعات المالية:</h3>
+        <ol className="terms-list" style={{ fontSize: "0.78rem", lineHeight: "1.4", paddingRight: "16px", margin: "0 0 8px 0" }}>
           {resolvedPayments.map((term, i) => (
-            <li key={term.id || i} style={{ marginBottom: "1px" }}>
+            <li key={term.id || i} style={{ marginBottom: "3px" }}>
               دفع <strong>{term.percent}%</strong> {term.label} (بقيمة {paymentAmount(term.percent)}).
             </li>
           ))}
         </ol>
+      </div>
 
-        <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px", fontSize: "0.88rem" }}>تسوية الخلافات والقانون الواجب التطبيق:</h3>
-        <p className="contract-intro-p" style={{ fontSize: "0.78rem", lineHeight: "1.4", marginBottom: "6px" }}>
+      {/* ==================== PAGE 3 ==================== */}
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden", background: "#ffffff", padding: "8mm 12mm 10mm 12mm", minHeight: "297mm", maxHeight: "297mm", boxSizing: "border-box" }}>
+        <DocumentHeader documentTitle="عقد اتفاق (صفحة 3 - التوقيعات)" site={site} />
+
+        <h3 className="contract-section-title" style={{ marginTop: "8px", marginBottom: "4px", fontSize: "0.88rem" }}>تسوية الخلافات والقانون الواجب التطبيق:</h3>
+        <p className="contract-intro-p" style={{ fontSize: "0.80rem", lineHeight: "1.45", marginBottom: "12px" }}>
           {site.contractDisputes || `اتفق الطرفان على أن أي خلاف أو نزاع ينشأ بينهما، فإنهما يلتزمان ببذل كافة المساعي الودية لتسويته، وإلا فإنه يتم اللجوء الى المحكمة المختصة في الرياض، ولا يحول الخلاف أو النزاع الحاصل دون الالتزام بتطبيق هذا العقد واستمرار الطرفين في تنفيذ الأعمال بالشكل المتعاقد عليه.`}
         </p>
         
-        <p className="contract-intro-p" style={{ fontWeight: "800", textAlign: "center", margin: "8px 0 4px 0", fontSize: "0.80rem" }}>
+        <p className="contract-intro-p" style={{ fontWeight: "800", textAlign: "center", margin: "14px 0 6px 0", fontSize: "0.84rem" }}>
           بهذا يقر الطرفان أنهما اطلعوا على بنود هذه الاتفاقية وفهما فهماً تاماً نافياً للجهالة وبالتوقيع عليها تصبح سارية.
         </p>
         
-        <p className="contract-intro-p" style={{ textAlign: "center", fontStyle: "italic", marginBottom: "8px", fontSize: "0.78rem" }}>
+        <p className="contract-intro-p" style={{ textAlign: "center", fontStyle: "italic", marginBottom: "16px", fontSize: "0.80rem" }}>
           وعلى هذا تم الاتفاق بين الطرفين وتوقيع العقد من نسختين، والله ولي التوفيق.
         </p>
 
-        <table className="contract-sign-table" style={{ margin: "6px 0" }}>
+        <table className="contract-sign-table" style={{ margin: "12px 0 16px 0" }}>
           <thead>
             <tr>
-              <th style={{ padding: "4px", fontSize: "0.82rem" }}>الطرف الأول (المقاول)</th>
-              <th style={{ padding: "4px", fontSize: "0.82rem" }}>الطرف الثاني (المالك)</th>
+              <th style={{ padding: "6px", fontSize: "0.85rem" }}>الطرف الأول (المقاول)</th>
+              <th style={{ padding: "6px", fontSize: "0.85rem" }}>الطرف الثاني (المالك)</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td style={{ padding: "6px" }}>
-                <div className="sign-cell" style={{ minHeight: "75px" }}>
-                  <span style={{ fontWeight: "800", display: "block", fontSize: "0.82rem" }}>مؤسسة كنان لأنظمة الأمن والسلامة</span>
-                  <span style={{ fontSize: "0.78rem", display: "block" }}>يمثلها: المهندس طارق مختار علي</span>
-                  {stamp && <img src={stamp} alt="ختم الطرف الأول" className="stamp-img" style={{ maxHeight: "55px" }} />}
-                  {signature && <img src={signature} alt="توقيع الطرف الأول" className="stamp-img" style={{ maxHeight: "55px" }} />}
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "16px" }}>الختم والتوقيع: ............................</span>
+              <td style={{ padding: "8px" }}>
+                <div className="sign-cell" style={{ minHeight: "95px" }}>
+                  <span style={{ fontWeight: "800", display: "block", fontSize: "0.84rem" }}>مؤسسة كنان لأنظمة الأمن والسلامة</span>
+                  <span style={{ fontSize: "0.80rem", display: "block", marginTop: "2px" }}>يمثلها: المهندس طارق مختار علي</span>
+                  {stamp && <img src={stamp} alt="ختم الطرف الأول" className="stamp-img" style={{ maxHeight: "65px" }} />}
+                  {signature && <img src={signature} alt="توقيع الطرف الأول" className="stamp-img" style={{ maxHeight: "65px" }} />}
+                  <span style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "20px" }}>الختم والتوقيع: ............................</span>
                 </div>
               </td>
-              <td style={{ padding: "6px" }}>
-                <div className="sign-cell" style={{ minHeight: "75px" }}>
-                  <span style={{ fontWeight: "800", display: "block", fontSize: "0.82rem" }}>{contract.secondPartyName || client?.name || "................"}</span>
-                  <span style={{ fontSize: "0.78rem", display: "block" }}>يمثلها: {contract.secondPartyRepresentative || client?.name || "................"}</span>
-                  <span style={{ fontSize: "0.78rem", display: "block" }}>الصفة: {contract.secondPartyRole || "المالك"}</span>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "16px" }}>الختم والتوقيع: ............................</span>
+              <td style={{ padding: "8px" }}>
+                <div className="sign-cell" style={{ minHeight: "95px" }}>
+                  <span style={{ fontWeight: "800", display: "block", fontSize: "0.84rem" }}>{contract.secondPartyName || client?.name || "................"}</span>
+                  <span style={{ fontSize: "0.80rem", display: "block", marginTop: "2px" }}>يمثلها: {contract.secondPartyRepresentative || client?.name || "................"}</span>
+                  <span style={{ fontSize: "0.80rem", display: "block" }}>الصفة: {contract.secondPartyRole || "المالك"}</span>
+                  <span style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "20px" }}>الختم والتوقيع: ............................</span>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
 
-        <div className="bank-info-box" style={{ marginTop: "6px", padding: "6px 10px", background: "#ffffff", backgroundColor: "#ffffff", border: "1px solid #cbd5e1" }}>
-          <strong style={{ fontSize: "0.78rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "2px", marginBottom: "4px" }}>
+        <div className="bank-info-box" style={{ marginTop: "12px", padding: "8px 12px", background: "#ffffff", backgroundColor: "#ffffff", border: "1px solid #cbd5e1" }}>
+          <strong style={{ fontSize: "0.80rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "3px", marginBottom: "6px" }}>
             الحساب البنكي والضريبي للمؤسسة:
           </strong>
-          <div className="bank-info-grid" style={{ fontSize: "0.76rem", gridGap: "2px 10px" }}>
+          <div className="bank-info-grid" style={{ fontSize: "0.78rem", gridGap: "4px 12px" }}>
             <div><strong>اسم البنك:</strong> مصرف الراجحي</div>
             <div><strong>الرقم الضريبي:</strong> {site.companyTaxNumber || "313072607300003"}</div>
             <div style={{ gridColumn: "span 2" }}><strong>رقم الحساب:</strong> <code style={{ fontStyle: "normal" }}>448000010006086265902</code></div>

@@ -1835,14 +1835,14 @@ svg.lucide {
 }
 
 @media print {
-  /* ==================== تقييد الصفحة الواحدة في الطباعة ==================== */
-  /* إخفاء كل العناصر ما عدا المستند الذي يُطبع */
+  /* ==================== إعدادات الطباعة المتعددة الصفحات ==================== */
   html, body {
+    width: 210mm !important;
     height: auto !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: transparent !important;
+    background: #ffffff !important;
   }
 
   body * {
@@ -1857,22 +1857,23 @@ svg.lucide {
   }
 
   .contract-modal {
-    position: fixed !important;
+    position: absolute !important;
     top: 0 !important;
     left: 0 !important;
     width: 210mm !important;
     height: auto !important;
-    background: transparent !important;
+    background: #ffffff !important;
     padding: 0 !important;
     margin: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     z-index: 9999 !important;
   }
 
   .contract-modal-inner {
+    position: static !important;
     padding: 0 !important;
     margin: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     background: transparent !important;
@@ -1892,11 +1893,12 @@ svg.lucide {
   }
 
   .contract-doc {
+    position: static !important;
     background: transparent !important;
     padding: 0 !important;
     margin: 0 !important;
     gap: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     width: 210mm !important;
     height: auto !important;
     display: block !important;
@@ -1910,9 +1912,6 @@ svg.lucide {
     margin: 0 !important;
     padding: 48mm 15mm 27mm 15mm !important;
     box-shadow: none !important;
-    /* فقط الصفحات التي يليها صفحة تحصل على break — الأخيرة لا */
-    page-break-after: avoid !important;
-    break-after: avoid !important;
     position: relative !important;
     box-sizing: border-box !important;
     background-image: url('/letterhead_bg.png') !important;
@@ -1923,31 +1922,30 @@ svg.lucide {
     print-color-adjust: exact !important;
     overflow: hidden !important;
     display: block !important;
-  }
-
-  /* الصفحات التي يليها صفحة أخرى تحصل على فاصل — الأخيرة لا تحصل عليه */
-  .contract-page:not(:last-of-type) {
     page-break-after: always !important;
     break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
-  /* ===== القوطيشن: صفحة واحدة ثابتة ===== */
+  /* الصفحة الأخيرة لا تأخذ فاصل صفحة بعدها لمنع صفحة بيضاء زائدة */
+  .contract-page:last-child,
+  .contract-page:last-of-type {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* القوطيشن: صفحة واحدة فقط */
   .contract-page.quotation-page {
     overflow: hidden !important;
     max-height: 297mm !important;
     height: 297mm !important;
     min-height: 297mm !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
-  /* ===== العقد والفاتورة والمطالبة: يطبع حسب المحتوى بدون قطع ===== */
-  .contract-page:not(.quotation-page) {
-    overflow: visible !important;
-    max-height: none !important;
-    height: auto !important;
-    min-height: 297mm !important;
-  }
-
-  /* ===== الطبقة البيضاء تستمر في الطباعة ===== */
+  /* الطبقة البيضاء تستمر في الطباعة في كل الأوراق */
   .contract-page::before {
     content: '';
     position: absolute;
@@ -1971,6 +1969,7 @@ svg.lucide {
     margin: 0;
   }
 }
+
 
 
 /* تنسيق الجداول داخل عروض الأسعار والوثائق الرسمية لمنع شريط التمرير وضمان ملاءمتها للطباعة والمعاينة */
