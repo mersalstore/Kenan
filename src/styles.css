@@ -1133,28 +1133,38 @@ svg.lucide {
   margin-top: 4px;
 }
 
-/* Centered Red Footer Banner */
-.contract-footer {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  background: #d91c24 !important;
-  color: #ffffff !important;
-  padding: 6px 10px !important;
-  width: 100% !important;
-  margin-top: auto !important;
-  box-sizing: border-box !important;
-  direction: rtl !important;
-  text-align: center !important;
-  border-radius: 4px !important;
+/* Footer red bar hidden completely per user request */
+.contract-footer, .footer-column, .footer-label, .footer-val, .footer-divider {
+  display: none !important;
 }
 
-.footer-column {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
+/* Ensure all tables, cells, and boxes have solid non-transparent background */
+.contract-doc table,
+.contract-doc thead,
+.contract-doc tbody,
+.contract-doc tr,
+.contract-doc th,
+.contract-doc td,
+.table-wrap,
+.bank-info-box,
+.contract-parties-box,
+.party-card,
+.contract-intro-p {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+.contract-doc th {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.contract-doc tr:nth-child(even) td {
+  background-color: #f8fafc !important;
+}
+
+.contract-doc tr:nth-child(odd) td {
+  background-color: #ffffff !important;
 }
 
 /* PRINT MEDIA OVERRIDES */
@@ -1189,35 +1199,42 @@ svg.lucide {
   }
 
   .contract-doc {
-    background: transparent !important;
+    background: #ffffff !important;
     padding: 0 !important;
+    margin: 0 !important;
     gap: 0 !important;
   }
 
   .contract-page {
     width: 210mm !important;
-    min-height: 297mm !important;
+    max-height: 295mm !important;
     margin: 0 !important;
-    padding: 10mm 12mm 10mm 12mm !important;
+    padding: 8mm 12mm 8mm 12mm !important;
     background-image: none !important;
     background-color: #ffffff !important;
     box-shadow: none !important;
-    page-break-after: always !important;
-    break-after: page !important;
     position: relative !important;
     box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
+  .contract-page:not(:last-child) {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .contract-page:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-before: auto !important;
+  }
+
   .contract-footer {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    background: #d91c24 !important;
-    color: #ffffff !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+    display: none !important;
   }
 
   @page {

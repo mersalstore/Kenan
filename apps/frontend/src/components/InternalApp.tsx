@@ -1911,63 +1911,8 @@ function ContractDocument({
 }
 
 function ContractFooter({ site }: { site?: SiteSettings }) {
-  return (
-    <footer
-      className="contract-footer"
-      style={{
-        position: "relative",
-        marginTop: "auto",
-        width: "100%",
-        background: "#d91c24",
-        color: "#ffffff",
-        padding: "5px 10px",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        direction: "rtl",
-        boxSizing: "border-box",
-        borderRadius: "4px",
-        fontSize: "0.72rem"
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "14px",
-          width: "100%",
-          textAlign: "center",
-          flexWrap: "nowrap"
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <span style={{ display: "block", fontSize: "0.64rem", opacity: 0.9 }}>الموقع الإلكتروني</span>
-          <strong style={{ fontWeight: "700" }}>{(site as any)?.contactWebsite || "kenan4saftey.com"}</strong>
-        </div>
-        <div style={{ width: "1px", height: "18px", background: "rgba(255,255,255,0.4)" }} />
-        <div style={{ textAlign: "center" }}>
-          <span style={{ display: "block", fontSize: "0.64rem", opacity: 0.9 }}>البريد الإلكتروني</span>
-          <strong style={{ fontWeight: "700" }}>{site?.contactEmail || "info@kenan4saftey.com"}</strong>
-        </div>
-        <div style={{ width: "1px", height: "18px", background: "rgba(255,255,255,0.4)" }} />
-        <div style={{ textAlign: "center" }}>
-          <span style={{ display: "block", fontSize: "0.64rem", opacity: 0.9 }}>الهاتف / الجوال</span>
-          <strong style={{ fontWeight: "700" }}>{site?.contactPhone || "0574590198"}</strong>
-        </div>
-        <div style={{ width: "1px", height: "18px", background: "rgba(255,255,255,0.4)" }} />
-        <div style={{ textAlign: "center" }}>
-          <span style={{ display: "block", fontSize: "0.64rem", opacity: 0.9 }}>السجل التجاري</span>
-          <strong style={{ fontWeight: "700" }}>{site?.companyCRNumber || "7050404537"}</strong>
-        </div>
-        <div style={{ width: "1px", height: "18px", background: "rgba(255,255,255,0.4)" }} />
-        <div style={{ textAlign: "center" }}>
-          <span style={{ display: "block", fontSize: "0.64rem", opacity: 0.9 }}>KSA - RIYADH</span>
-          <strong style={{ fontWeight: "700" }}>السعودية - الرياض</strong>
-        </div>
-      </div>
-    </footer>
-  );
+  void site;
+  return null;
 }
 
 function ReportsView({
