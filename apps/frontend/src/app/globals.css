@@ -146,6 +146,38 @@
    وتأتي لاحقاً، فأي padding-top هنا لا أثر له. عدّل هناك لا هنا. */
 @media print{.page-header-logo{height:34mm!important;max-width:92mm!important}}
 
+/* ===== خلفية بيضاء صلبة لجميع الجداول في كل أجزاء التطبيق ===== */
+/* تمنع ظهور اللوجو أو أي عنصر خلفي من وراء الجداول */
+.table-wrap,
+.table-wrap table,
+table {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+.table-wrap thead,
+.table-wrap tbody,
+.table-wrap tfoot,
+table thead,
+table tbody,
+table tfoot {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+.table-wrap tr,
+table tr {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+.table-wrap th,
+.table-wrap td,
+table th,
+table td {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+
+
 /* تحسين تباعد وهوامش الصور لتكون بعيدة عن الحواف وبعضها البعض */
 
 /* الموقع العام: تباعد شبكة المشاريع والمظهر الجمالي */
