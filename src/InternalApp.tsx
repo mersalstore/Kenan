@@ -3838,11 +3838,22 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   const visibleNav = navItems.filter((item) => canAccess(item.id as Section));
 
   const [activeSection, setActiveSection] = useState<Section>(() => {
+    if (typeof window !== "undefined") {
+      const saved = window.localStorage.getItem("kenan.active_section") as Section;
+      if (saved) return saved;
+    }
     if (isAdmin) return "dashboard";
     const sections = (user.sections ?? []) as Section[];
     if (sections.includes("dashboard")) return "dashboard";
     return sections[0] ?? "dashboard";
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && activeSection) {
+      try { window.localStorage.setItem("kenan.active_section", activeSection); } catch (e) {}
+    }
+  }, [activeSection]);
+
   const [search, setSearch] = useState("");
   const [clients, setClients] = useLocalStorage<Client[]>("kenan.clients_v3", seedClients);
   const [projects, setProjects] = useLocalStorage<Project[]>("kenan.projects_v3", seedProjects);
@@ -3870,7 +3881,19 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   const [payroll, setPayroll] = useLocalStorage<PayrollRun[]>("kenan.payroll_v3", seedPayroll);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
 
-  const [selectedProjectId, setSelectedProjectId] = useState<number>(projects[0]?.id ?? 1);
+  const [selectedProjectId, setSelectedProjectId] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = window.localStorage.getItem("kenan.selected_project_id");
+      if (saved && !isNaN(Number(saved))) return Number(saved);
+    }
+    return projects[0]?.id ?? 1;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && selectedProjectId) {
+      try { window.localStorage.setItem("kenan.selected_project_id", String(selectedProjectId)); } catch (e) {}
+    }
+  }, [selectedProjectId]);
   const [notice, setNotice] = useState("");
   const [showRawToast, setShowRawToast] = useState(false);
 

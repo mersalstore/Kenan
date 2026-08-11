@@ -6555,11 +6555,24 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   const visibleNav = navItems.filter((item) => canAccess(item.id as Section));
 
   const [activeSection, setActiveSection] = useState<Section>(() => {
+    if (typeof window !== "undefined") {
+      const saved = window.localStorage.getItem("kenan.active_section") as Section;
+      if (saved && (isAdmin || allowedSections?.has(saved) || saved === "projectDetail")) {
+        return saved;
+      }
+    }
     if (isAdmin) return "dashboard";
     const sections = (user.sections ?? []) as Section[];
     if (sections.includes("dashboard")) return "dashboard";
     return sections[0] ?? "dashboard";
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && activeSection) {
+      try { window.localStorage.setItem("kenan.active_section", activeSection); } catch (e) {}
+    }
+  }, [activeSection]);
+
   const [search, setSearch] = useState("");
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [clients, setClients] = useLocalStorage<Client[]>("kenan.clients_v3", seedClients);
@@ -6668,9 +6681,19 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       if (projId) {
         return isNaN(Number(projId)) ? projId : Number(projId);
       }
+      const saved = window.localStorage.getItem("kenan.selected_project_id");
+      if (saved) {
+        return isNaN(Number(saved)) ? saved : Number(saved);
+      }
     }
     return projects[0]?.id ?? 1;
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && selectedProjectId !== undefined) {
+      try { window.localStorage.setItem("kenan.selected_project_id", String(selectedProjectId)); } catch (e) {}
+    }
+  }, [selectedProjectId]);
 
 
   // URL section sync removed — each account type has its own dashboard route
