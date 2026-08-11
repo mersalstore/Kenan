@@ -930,83 +930,7 @@ function ContractsView({
                       <button type="button" className="secondary-button" style={{ flex: 1, minHeight: "32px", fontSize: "0.78rem" }} onClick={() => startEdit(contract)}>تعديل</button>
                       <button type="button" className="secondary-button" style={{ flex: 1.5, minHeight: "32px", fontSize: "0.78rem", background: "rgba(225, 29, 72, 0.04)", border: "1px solid var(--brand)", color: "var(--brand)" }} onClick={() => setActiveId(contract.id)}>
                         <FileText size={15} />
-                        عرض العقد
-                      </button>
-                    </>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </div>
-
-      {activeContract && (
-        <div className="contract-modal" role="dialog" aria-modal="true" onClick={() => setActiveId(null)}>
-          <div className="contract-modal-inner" onClick={(event) => event.stopPropagation()}>
-            <div className="contract-modal-toolbar">
-              <button className="primary-button" onClick={() => window.print()}>
-                <Printer size={17} />
-                طباعة العقد
-              </button>
-              <button className="contract-modal-close" onClick={() => setActiveId(null)} aria-label="إغلاق">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="contract-payments-editor">
-              <div className="payments-editor-head">
-                <strong>دفعات هذا العقد</strong>
-                <span>{usingCustom ? "مخصصة لهذا العقد" : "الجدول الافتراضي من الإعدادات"}</span>
-                {usingCustom && (
-                  <button type="button" className="text-button" onClick={resetToDefault}>
-                    استرجاع الافتراضي
-                  </button>
-                )}
-              </div>
-              <div className="stat-editor">
-                {resolvedPayments.map((term) => (
-                  <div key={term.id} className="payment-row">
-                    <label>
-                      وصف الدفعة
-                      <input value={term.label} onChange={(event) => editContractPayment(term.id, "label", event.target.value)} />
-                    </label>
-                    <label>
-                      النسبة %
-                      <input
-                        type="number"
-                        value={term.percent}
-                        onChange={(event) => editContractPayment(term.id, "percent", event.target.value)}
-                      />
-                    </label>
-                    <button type="button" className="icon-danger" title="حذف" onClick={() => removeContractPayment(term.id)}>
-                      <Trash2 size={17} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button type="button" className="secondary-button" onClick={addContractPayment}>
-                <Plus size={17} />
-                إضافة دفعة لهذا العقد
-              </button>
-            </div>
-
-            <ContractDocument
-              contract={activeContract}
-              project={activeProject}
-              client={activeClient}
-              payments={resolvedPayments}
-              stamp={stamp}
-              signature={signature}
-            />
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-// أسماء العملات للتفقيط (الوحدة والوحدة الفرعية) حسب رمز العملة.
+                        ع// أسماء العملات للتفقيط (الوحدة والوحدة الفرعية) حسب رمز العملة.
 const currencyWords: Record<string, { unit: string; sub: string }> = {
   SAR: { unit: "ريال سعودي", sub: "هللة" },
   USD: { unit: "دولار أمريكي", sub: "سنت" },
@@ -1108,15 +1032,6 @@ function formatArabicDate(dateString: string | Date): string {
   return `${y}/${m}/${d}`;
 }
 
-function normalizeArabic(text: string): string {
-  if (!text) return "";
-  return text
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ة/g, "ه")
-    .replace(/ى/g, "ي")
-    .replace(/[\u064B-\u065F]/g, "");
-}
-
 function ContractDocument({
   contract,
   project,
@@ -1133,7 +1048,6 @@ function ContractDocument({
   signature: string;
 }) {
   const contractCurrency = contract.currency || "SAR";
-  const currencyUnit = (currencyWords[contractCurrency] ?? currencyWords.SAR).unit;
   const valueWords = numberToArabicWords(contract.value, contractCurrency);
   const dayName = getArabicDayName(contract.startDate);
   const formattedStartDate = formatArabicDate(contract.startDate);
@@ -1150,55 +1064,33 @@ function ContractDocument({
   ];
   const resolvedPayments = payments && payments.length > 0 ? payments : defaultPayments;
 
-  const HeaderWave = () => (
-    <div className="page-header-wave">
-      <svg viewBox="0 0 1000 120" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
-        {/* Navy Blue Base Swoosh Curve */}
-        <path d="M 210,0 C 440,82 730,118 1000,92 L 1000,0 Z" fill="#141b34" />
-        {/* White Separator Ribbon */}
-        <path d="M 250,0 C 470,72 750,102 1000,76 L 1000,0 Z" fill="#ffffff" />
-        {/* Main Crimson Red Wave Ribbon */}
-        <path d="M 280,0 C 490,64 770,90 1000,64 L 1000,0 Z" fill="#d91c24" />
-        {/* Navy Accent Line */}
-        <path d="M 360,0 C 540,44 790,56 1000,34 L 1000,0 Z" fill="#141b34" />
-        {/* White Separator Line */}
-        <path d="M 410,0 C 590,32 810,40 1000,20 L 1000,0 Z" fill="#ffffff" />
-        {/* Topmost Red Stripe */}
-        <path d="M 470,0 C 630,22 830,24 1000,10 L 1000,0 Z" fill="#d91c24" />
-      </svg>
-    </div>
-  );
-
   return (
     <div className="contract-doc">
       {/* ==================== PAGE 1 ==================== */}
-      <div className="contract-page">
-        <header className="contract-page-header">
-          <img src="/kenan-logo.png" alt="KENAN Logo" className="page-header-logo" />
-          <HeaderWave />
-        </header>
- 
-        <h2 className="contract-page-title">عقد الاتفاق</h2>
-        <p className="contract-intro-p">
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden", background: "#ffffff", padding: "8mm 12mm 10mm 12mm", minHeight: "297mm", maxHeight: "297mm", boxSizing: "border-box" }}>
+        <DocumentHeader documentTitle="عقد اتفاق" site={site} />
+
+        <h2 className="contract-page-title" style={{ fontSize: "1.35rem", margin: "2px 0 6px 0" }}>عقد الاتفاق</h2>
+        <p className="contract-intro-p" style={{ fontSize: "0.82rem", lineHeight: "1.45", marginBottom: "6px" }}>
           بعون الله تعالى تم الاتفاق في مدينة الرياض يوم {dayName} بتاريخ {formattedStartDate}م بين كل من:
         </p>
 
-        <div className="contract-parties-box">
-          <div className="party-card">
-            <h4>الطرف الأول (المقاول):</h4>
-            <ul className="party-details">
-              <li><strong>الاسم:</strong> مؤسسة كنان لأنظمة الأمن والسلامة</li>
-              <li><strong>السجل التجاري:</strong> 7050404537</li>
+        <div className="contract-parties-box" style={{ margin: "6px 0" }}>
+          <div className="party-card" style={{ padding: "6px 8px" }}>
+            <h4 style={{ fontSize: "0.86rem", marginBottom: "4px" }}>الطرف الأول (المقاول):</h4>
+            <ul className="party-details" style={{ fontSize: "0.78rem", lineHeight: "1.4" }}>
+              <li><strong>الاسم:</strong> {site.companyNameAr || "مؤسسة كنان لأنظمة الأمن والسلامة"}</li>
+              <li><strong>السجل التجاري:</strong> {site.companyCRNumber || "7050404537"}</li>
               <li><strong>يمثلها في التوقيع:</strong> المهندس طارق مختار علي</li>
               <li><strong>الصفة:</strong> مدير المشاريع</li>
-              <li><strong>العنوان:</strong> الرياض - حي الفيحاء - شارع المطر</li>
-              <li><strong>الهاتف:</strong> 0574590198</li>
-              <li><strong>البريد الإلكتروني:</strong> Info@kenan4saftey.com</li>
+              <li><strong>العنوان:</strong> {site.contactAddress || "الرياض - حي الفيحاء - شارع المطر"}</li>
+              <li><strong>الهاتف:</strong> {site.contactPhone || "0574590198"}</li>
+              <li><strong>البريد الإلكتروني:</strong> {site.contactEmail || "info@kenan4saftey.com"}</li>
             </ul>
           </div>
-          <div className="party-card">
-            <h4>الطرف الثاني (المالك):</h4>
-            <ul className="party-details">
+          <div className="party-card" style={{ padding: "6px 8px" }}>
+            <h4 style={{ fontSize: "0.86rem", marginBottom: "4px" }}>الطرف الثاني (المالك):</h4>
+            <ul className="party-details" style={{ fontSize: "0.78rem", lineHeight: "1.4" }}>
               <li><strong>اسم المنشأة/العميل:</strong> {contract.secondPartyName || client?.name || "................"}</li>
               <li><strong>السجل التجاري/الهوية:</strong> {contract.secondPartyRegister || client?.phone || "................"}</li>
               <li><strong>يمثلها في التوقيع:</strong> {contract.secondPartyRepresentative || client?.name || "................"}</li>
@@ -1210,67 +1102,59 @@ function ContractDocument({
           </div>
         </div>
 
-        <p className="contract-intro-p" style={{ fontSize: "0.9rem", lineHeight: "1.6", marginTop: "15px" }}>
-          ويشار إليهم مجتمعين بهذا العقد بالطرفين أو الطرفان وحيث اتفق الطرفان على أن يقوم الطرف الأول بتنفيذ وتوريد وتركيب شبكة إطفاء الحريق العادي والرش الآلي ونظام التهوية للموقع الخاص بالطرف الثاني الكائن بمدينة {contract.locationCity || "الرياض"}، حي {contract.locationDistrict || "{{District}}"}، على قطعة رقم ({contract.locationPlot || "{{PlotNumber}}"})، من المخطط التنظيمي رقم ({contract.locationPlan || "{{PlanNumber}}"}) وعليه قد تقدم الطرف الأول بعرضه بجدول للكميات مرفق بعرض الأسعار رقم ({contract.quotationNumber || `QT-${contract.id + 650}`}) وقيمته ({formatMoney(contract.quotationValue || contract.value, contractCurrency)}) فقط {numberToArabicWords(contract.quotationValue || contract.value, contractCurrency)} شامل ضريبة القيمة المضافة. وبهذا فقد تم الاتفاق والتعاقد بين الطرفين على ما يلي:
+        <p className="contract-intro-p" style={{ fontSize: "0.80rem", lineHeight: "1.45", marginTop: "4px", marginBottom: "6px", color: "#000000" }}>
+          ويشار إليهم مجتمعين بهذا العقد بالطرفين أو الطرفان وحيث اتفق الطرفان على أن يقوم الطرف الأول بتنفيذ وتوريد وتركيب شبكة إطفاء الحريق العادي والرش الآلي ونظام التهوية للموقع الخاص بالطرف الثاني الكائن بمدينة {contract.locationCity || "الرياض"}{contract.locationDistrict ? `، حي ${contract.locationDistrict}` : ""}، على قطعة رقم ({contract.locationPlot || "—"})، من المخطط التنظيمي رقم ({contract.locationPlan || "—"}) وعليه قد تقدم الطرف الأول بعرضه بجدول للكميات مرفق بعرض الأسعار رقم ({contract.quotationNumber || `QT-${contract.id + 650}`}) وقيمته ({formatMoney(contract.quotationValue || contract.value, contractCurrency)}) فقط {numberToArabicWords(contract.quotationValue || contract.value, contractCurrency)} شامل ضريبة القيمة المضافة. وبهذا فقد تم الاتفاق والتعاقد بين الطرفين على ما يلي:
         </p>
 
-        <h3 className="contract-section-title" style={{ marginTop: "15px" }}>البنود والمواصفات:</h3>
-        <p style={{ fontSize: "0.9rem", margin: "0 0 10px 0" }}>بحسب العرض الفني المقدم من الطرف الأول والمعتمد من قبل الطرف الثاني والموضح تفاصيله أدناه:</p>
-        <ol className="spec-list" style={{ fontSize: "0.82rem", lineHeight: "1.4" }}>
+        <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px", fontSize: "0.88rem" }}>البنود والمواصفات:</h3>
+        <p style={{ fontSize: "0.78rem", margin: "0 0 4px 0" }}>بحسب العرض الفني المقدم من الطرف الأول والمعتمد من قبل الطرف الثاني والموضح تفاصيله أدناه:</p>
+        <ol className="spec-list" style={{ fontSize: "0.78rem", lineHeight: "1.35", paddingRight: "16px", margin: "0 0 6px 0" }}>
           {resolvedSpecs.map((spec, index) => (
-            <li key={index} style={{ marginBottom: "4px" }}>{spec}</li>
+            <li key={index} style={{ marginBottom: "1px" }}>{spec}</li>
           ))}
         </ol>
 
-        <ContractFooter />
+        <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px", fontSize: "0.88rem" }}>الشروط العامة:</h3>
+        <ol className="terms-list" style={{ fontSize: "0.78rem", lineHeight: "1.35", paddingRight: "16px", margin: 0 }}>
+          <li>مدة هذا المشروع سنة وتعتمد حسب سير العمل في الموقع، تبدأ اعتبارا من تاريخ توقيع العقد بين الطرفين واستلام الدفعة الأولى غير قابلة للتمديد.</li>
+          <li>إنهاء الأعمال والاستلام والتسليم: يقوم الطرف الأول بإشعار الطرف الثاني بإنهاء الأعمال، ويقوم بتسليمه الاستشاري طبقاً للمخططات المعتمدة واستخراج شهادة إنهاء التركيبات للموقع وتوقيع محضر استلام وحساب ما للطرف الأول وما عليه وتسليمه باقي مستحقاته بالتنسيق مع الدفاع المدني.</li>
+          <li>لا يحق لأي طرف من الطرفين إلغاء العقد بعد البدء والمباشرة في العمل إلا بخطاب رسمي يبدي أسباب فسخ العقد.</li>
+          <li>ضمان الأعمال: ضمان الطرف الأول لمدة سنة على جميع الأجهزة والمواد من تاريخ تسليم الموقع، والضمان للأعطال ولا يشمل سوء الاستخدام.</li>
+          <li>صيانة مجانية لمدة سنة من تاريخ التشغيل.</li>
+        </ol>
       </div>
 
       {/* ==================== PAGE 2 ==================== */}
-      <div className="contract-page">
-        <header className="contract-page-header">
-          <img src="/kenan-logo.png" alt="KENAN Logo" className="page-header-logo" />
-          <HeaderWave />
-        </header>
+      <div className="contract-page" style={{ position: "relative", overflow: "hidden", background: "#ffffff", padding: "8mm 12mm 10mm 12mm", minHeight: "297mm", maxHeight: "297mm", boxSizing: "border-box" }}>
+        <DocumentHeader documentTitle="عقد اتفاق (تابع)" site={site} />
 
-        <h3 className="contract-section-title">الشروط العامة</h3>
-        <ol className="terms-list">
-          <li>مدة هذا المشروع سنة وتعتمد حسب سير العمل في الموقع، تبدأ اعتبارا من تاريخ توقيع العقد بين الطرفين واستلام الدفعة الأولى غير قابلة للتمديد.</li>
-          <li><strong>إنهاء الأعمال والاستلام والتسليم:</strong>
-            <ol style={{ listStyleType: "arabic", paddingInlineStart: "20px", marginTop: "8px" }}>
-              <li>يقوم الطرف الأول بإشعار الطرف الثاني بإنهاء الأعمال، ويقوم بتسليمه الاستشاري طبقاً للمخططات المعتمدة واستخراج شهادة إنهاء التركيبات للموقع وتوقيع محضر استلام وحساب ما للطرف الأول وما عليه وتسليمه باقي مستحقاته بالتنسيق مع الدفاع المدني.</li>
-              <li>لا يحق لأي طرف من الطرفين إلغاء العقد بعد البدء والمباشرة في العمل إلا بخطاب رسمي يبدي أسباب فسخ العقد.</li>
-            </ol>
-          </li>
-          <li><strong>ضمان الأعمال:</strong>
-            <ol style={{ listStyleType: "arabic", paddingInlineStart: "20px", marginTop: "8px" }}>
-              <li>ضمان الطرف الأول لمدة سنة على جميع الأجهزة والمواد من تاريخ تسليم الموقع، والضمان للأعطال ولا يشمل سوء الاستخدام.</li>
-              <li>يكون ضمان الأعمال من الطرف الأول لمدة سنة من تاريخ تسليم المشروع.</li>
-              <li>صيانة مجانية لمدة سنة من تاريخ التشغيل.</li>
-            </ol>
-          </li>
+        <h3 className="contract-section-title" style={{ marginTop: "4px", marginBottom: "3px", fontSize: "0.88rem" }}>تكملة الشروط العامة:</h3>
+        <ol className="terms-list" start={6} style={{ fontSize: "0.78rem", lineHeight: "1.35", paddingRight: "16px", margin: "0 0 6px 0" }}>
           <li>يقوم الطرف الثاني بتوفير مصدر الكهرباء والمياه والأعمال المدنية كالتكسير والتلييس والحفر والردم وقاطع الكهرباء والكابل وتوصيل الخاص بالمضخة والرافعة في حالة الارتفاعات التي تزيد عن 8 متر.</li>
           <li>يلتزم الطرف الثاني بأخلاء الموقع للعمل بالتنسيق مع الطرف الأول وتسهيل مهمة العاملين للتنفيذ.</li>
           <li>الطرف الأول غير مسؤول عن أي مخالفات معمارية في الموقع.</li>
-          <li>يلتزم الطرف الأول بعدم إجراء أي تعديلات أو إضافة أو حذف إلا بعد موافقة خطية من الطرف الثاني أو من يمثله.</li>
-          <li>عرض السعر والعرض الفني جزء لا يتجزأ من هذا العقد.</li>
           <li>تبلغ القيمة الإجمالية لهذا العقد مبلغ وقدره ({formatMoney(contract.value, contractCurrency)}) فقط {valueWords} شامل ضريبة القيمة المضافة.</li>
-          <li>يلتزم الطرف الأول باستمرار العمل دون توقف كما يلتزم الطرف الثاني بتسليم الدفعات في وقتها مع المراحل المذكورة في بند الدفعات.</li>
-          <li>يلتزم الطرف الثاني بسداد الدفعات خلال مدة لا تتجاوز 10 أيام عمل، وفي حالة تأخره في السداد يتم زيادة أيام التأخير في مدة العقد.</li>
         </ol>
 
-        <ContractFooter />
+        <h3 className="contract-section-title" style={{ marginTop: "6px", marginBottom: "3px", fontSize: "0.88rem" }}>الجزاءات والغرامات:</h3>
+        <ol className="terms-list" style={{ fontSize: "0.78rem", lineHeight: "1.35", paddingRight: "16px", margin: "0 0 6px 0" }}>
+          {(site.contractFines || `في حال لم ينته المقاول من تنفيذ الأعمال المتعاقد عليها بعد انقضاء المدة المحددة للعقد، يتم احتساب غرامة تأخير على الطرف الأول بمقدار (300) ريال عن كل يوم تأخير، على ألا يتجاوز إجمالي هذه المبالغ 10% من قيمة العقد.
+للط" },
+  AED: { unit: "درهم إماراتي", sub: "فلس" },
+  QAR: {     if (millionsPart === 1) {
+      return "مليون" + (remainder > 0 ? " و" + convertIntegerToArabicWords(remainder) : "");
+    }
+    return millionLabel + (remainder > 0 ? " و" + convertIntegerToArabicWords(remainder) : "");
+  }
+
+  return num.toString();
+}g>الرقم الضريبي:</strong> {site.companyTaxNumber || "313072607300003"}</div>
+            <div style={{ gridColumn: "span 2" }}><strong>رقم الحساب:</strong> <code style={{ fontStyle: "normal" }}>448000010006086265902</code></div>
+            <div style={{ gridColumn: "span 2" }}><strong>الآيبان:</strong> <code style={{ fontStyle: "normal" }}>SA9080000448608016265902</code></div>
+          </div>
+        </div>
       </div>
-
-      {/* ==================== PAGE 3 ==================== */}
-      <div className="contract-page">
-        <header className="contract-page-header">
-          <img src="/kenan-logo.png" alt="KENAN Logo" className="page-header-logo" />
-          <HeaderWave />
-        </header>
-
-        <h3 className="contract-section-title">الجزاءات والغرامات:</h3>
-        <ol className="terms-list">
-          <li>في حال لم ينته المقاول من تنفيذ الأعمال المتعاقد عليها بعد انقضاء المدة المحددة للعقد، يتم احتساب غرامة تأخير على الطرف الأول بمقدار (300) ريال عن كل يوم تأخير، على ألا يتجاوز إجمالي هذه المبالغ 10% من قيمة العقد.</li>
+    </div>ا بعد انقضاء المدة المحددة للعقد، يتم احتساب غرامة تأخير على الطرف الأول بمقدار (300) ريال عن كل يوم تأخير، على ألا يتجاوز إجمالي هذه المبالغ 10% من قيمة العقد.</li>
           <li>للطرف الثاني الحق في خصم تلك الغرامة من مستحقات المقاول بعد إخطار الطرف الأول بخطاب رسمي عن طريق الإيميل المدون بهذا العقد.</li>
         </ol>
 
