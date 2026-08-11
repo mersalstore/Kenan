@@ -3635,19 +3635,19 @@ function QuotationDocument({
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginBlock: "4px" }}>
-          <table style={{ width: "270px", borderCollapse: "collapse", fontSize: "0.76rem", backgroundColor: "#ffffff" }}>
+          <table style={{ width: "290px", borderCollapse: "collapse", fontSize: "0.76rem", backgroundColor: "#ffffff" }}>
             <tbody style={{ backgroundColor: "#ffffff" }}>
               <tr style={{ backgroundColor: "#ffffff" }}>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", fontWeight: "bold", backgroundColor: "#ffffff", color: "#0f172a" }}>المجموع الفرعي:</td>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left", backgroundColor: "#ffffff", color: "#0f172a" }}>{Number(subtotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                <td style={{ padding: "4px 8px", border: "1px solid #cbd5e1", fontWeight: "bold", backgroundColor: "#ffffff", color: "#0f172a", textAlign: "center", verticalAlign: "middle" }}>المجموع الفرعي:</td>
+                <td style={{ padding: "4px 8px", border: "1px solid #cbd5e1", textAlign: "center", backgroundColor: "#ffffff", color: "#0f172a", verticalAlign: "middle" }}>{Number(subtotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
               </tr>
               <tr style={{ backgroundColor: "#ffffff" }}>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", fontWeight: "bold", backgroundColor: "#ffffff", color: "#0f172a" }}>ضريبة القيمة المضافة ({quotation.taxPercent}%):</td>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left", backgroundColor: "#ffffff", color: "#0f172a" }}>{Number(vat).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                <td style={{ padding: "4px 8px", border: "1px solid #cbd5e1", fontWeight: "bold", backgroundColor: "#ffffff", color: "#0f172a", textAlign: "center", verticalAlign: "middle" }}>ضريبة القيمة المضافة ({quotation.taxPercent}%):</td>
+                <td style={{ padding: "4px 8px", border: "1px solid #cbd5e1", textAlign: "center", backgroundColor: "#ffffff", color: "#0f172a", verticalAlign: "middle" }}>{Number(vat).toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
               </tr>
               <tr style={{ background: "#f1f5f9", backgroundColor: "#f1f5f9", fontWeight: "bold" }}>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", backgroundColor: "#f1f5f9", color: "#0f172a" }}>الإجمالي النهائي:</td>
-                <td style={{ padding: "2px 6px", border: "1px solid #cbd5e1", textAlign: "left", color: "#d91c24", backgroundColor: "#f1f5f9" }}>{formatMoney(finalTotal, quotationCurrency)}</td>
+                <td style={{ padding: "4px 8px", border: "1px solid #cbd5e1", backgroundColor: "#f1f5f9", color: "#0f172a", textAlign: "center", verticalAlign: "middle" }}>الإجمالي النهائي:</td>
+                <td style={{ padding: "4px 8px", border: "1px solid #cbd5e1", textAlign: "center", color: "#d91c24", backgroundColor: "#f1f5f9", verticalAlign: "middle" }}>{formatMoney(finalTotal, quotationCurrency)}</td>
               </tr>
             </tbody>
           </table>
