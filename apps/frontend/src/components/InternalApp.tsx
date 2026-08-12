@@ -6775,7 +6775,7 @@ function MaintenanceView({ contracts, visits, clients, projects, addContract, up
 }
 
 export interface InternalAppProps {
-  user: { role: string; name?: string; email?: string; picture?: string; sections?: Section[]; permissions?: Partial<Record<Section, "view" | "edit">> };
+  user: { id?: string; backendId?: string; role: string; name?: string; email?: string; picture?: string; sections?: Section[]; permissions?: Partial<Record<Section, "view" | "edit">> };
   onLogout: () => void;
   onOpenSite: () => void;
 }
@@ -6877,8 +6877,9 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   
   const roleFilteredProjects = useMemo(() => {
     if (!isSiteEngineer) return projects;
-    return projects.filter((p) => (p.engineerId && String(p.engineerId) === String(user.backendId)) || p.engineer === user.name);
-  }, [projects, isSiteEngineer, user.name, user.backendId]);
+    const userEngId = user.backendId || user.id;
+    return projects.filter((p) => (p.engineerId && userEngId && String(p.engineerId) === String(userEngId)) || p.engineer === user.name);
+  }, [projects, isSiteEngineer, user.name, user.backendId, user.id]);
 
   const roleFilteredClients = useMemo(() => {
     if (!isSiteEngineer) return clients;
