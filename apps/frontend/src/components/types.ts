@@ -83,6 +83,7 @@ export type Project = {
   endDate: string;
   status: ProjectStatus;
   engineer: string;
+  engineerId?: string;
   budget: number;
   progress: number;
 };

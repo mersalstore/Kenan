@@ -2981,6 +2981,7 @@ function CompanySettingsView({
   deleteClientPayment,
   site,
   updateSiteField,
+  setNotice,
 }: {
   stamp: string;
   setStamp: (value: string) => void;
@@ -2996,15 +2997,91 @@ function CompanySettingsView({
   deleteClientPayment: (clientId: number, termId: number) => void;
   site: SiteSettings;
   updateSiteField: (field: keyof SiteSettings, value: any) => void;
+  setNotice?: (msg: string) => void;
 }) {
   const total = payments.reduce((sum, term) => sum + (Number(term.percent) || 0), 0);
-  const [selectedClientId, setSelectedClientId] = useState<number | "">(clients[0]?.id ?? "");
-  const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
+  const [selectedClientId, setSelectedClientId] = useState<number | string>(clients[0]?.id ?? "");
+  const selectedClient = clients.find((c) => String(c.id) === String(selectedClientId)) ?? null;
   const clientPayments = selectedClient?.payments ?? [];
   const clientTotal = clientPayments.reduce((sum, term) => sum + (Number(term.percent) || 0), 0);
 
+  const handleSaveNotice = () => {
+    if (setNotice) setNotice("تم حفظ إعدادات المؤسسة بنجاح ✅");
+  };
+
   return (
     <section className="section-stack">
+      {/* 1. بيانات المؤسسة والحساب البنكي */}
+      <div className="panel">
+        <SectionTitle icon={Globe} title="بيانات المؤسسة والحساب البنكي" />
+        <p className="panel-hint">
+          البيانات دي بتظهر في الترويسة والفواتير والعقود المطبوعة. تقدر تعدّلها في أي وقت وتتحفظ فوراً.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px", marginTop: "12px" }}>
+          <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <strong>اسم المؤسسة الرسمي:</strong>
+            <input
+              type="text"
+              value={site.companyNameAr ?? ""}
+              onChange={(e) => updateSiteField("companyNameAr", e.target.value)}
+              placeholder="مؤسسة كنان لأنظمة الأمن والسلامة"
+              style={{ padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.88rem" }}
+            />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <strong>رقم السجل التجاري:</strong>
+            <input
+              type="text"
+              value={site.companyCRNumber ?? ""}
+              onChange={(e) => updateSiteField("companyCRNumber", e.target.value.trim())}
+              placeholder="7050404537"
+              style={{ padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.88rem" }}
+            />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <strong>الرقم الضريبي (VAT):</strong>
+            <input
+              type="text"
+              value={site.companyTaxNumber ?? ""}
+              onChange={(e) => updateSiteField("companyTaxNumber", e.target.value.trim())}
+              placeholder="313072607300003"
+              style={{ padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.88rem" }}
+            />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <strong>رقم الهاتف / الواتساب:</strong>
+            <input
+              type="text"
+              value={site.contactPhone ?? ""}
+              onChange={(e) => updateSiteField("contactPhone", e.target.value.trim())}
+              placeholder="0574590198"
+              style={{ padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.88rem" }}
+            />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <strong>البريد الإلكتروني:</strong>
+            <input
+              type="email"
+              value={site.contactEmail ?? ""}
+              onChange={(e) => updateSiteField("contactEmail", e.target.value.trim())}
+              placeholder="info@kenan4saftey.com"
+              style={{ padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.88rem" }}
+            />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <strong>العنوان الرسمي:</strong>
+            <input
+              type="text"
+              value={site.contactAddress ?? ""}
+              onChange={(e) => updateSiteField("contactAddress", e.target.value)}
+              placeholder="الرياض - حي الفيحاء - شارع المطر"
+              style={{ padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.88rem" }}
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* 2. ختم وتوقيع المؤسسة */}
       <div className="panel">
         <SectionTitle icon={Stamp} title="ختم الشركة وتوقيع الطرف الأول" />
         <p className="panel-hint">
@@ -3016,6 +3093,7 @@ function CompanySettingsView({
         </div>
       </div>
 
+      {/* 3. جدول الدفعات الافتراضي */}
       <div className="panel">
         <SectionTitle icon={WalletCards} title="جدول الدفعات الافتراضي" />
         <p className="panel-hint">
@@ -3051,6 +3129,7 @@ function CompanySettingsView({
         </button>
       </div>
 
+      {/* 4. جدول دفعات العملاء المخصصة */}
       <div className="panel">
         <SectionTitle icon={Users} title="جدول دفعات العملاء" />
         <p className="panel-hint">
@@ -3058,7 +3137,7 @@ function CompanySettingsView({
         </p>
         <label className="compact-select" style={{ display: "grid", gap: "4px", maxWidth: "320px", marginBottom: "12px" }}>
           العميل
-          <select value={selectedClientId} onChange={(event) => setSelectedClientId(event.target.value === "" ? "" : Number(event.target.value))}>
+          <select value={selectedClientId} onChange={(event) => setSelectedClientId(event.target.value)}>
             <option value="">— اختر عميل —</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
@@ -3101,6 +3180,7 @@ function CompanySettingsView({
         )}
       </div>
 
+      {/* 5. قوالب شروط وبنود العقود وعروض الأسعار */}
       <div className="panel">
         <SectionTitle icon={FileText} title="قوالب الشروط والبنود للعقود وعروض الأسعار" />
         <p className="panel-hint">
@@ -3152,6 +3232,12 @@ function CompanySettingsView({
               style={{ padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontFamily: "inherit", fontSize: "0.88rem", width: "100%", resize: "vertical" }}
             />
           </label>
+        </div>
+
+        <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end" }}>
+          <button type="button" className="primary-button" style={{ padding: "10px 24px", fontSize: "0.92rem" }} onClick={handleSaveNotice}>
+            حفظ إعدادات المؤسسة
+          </button>
         </div>
       </div>
     </section>
@@ -3345,7 +3431,7 @@ function ImageField({
           <input
             type="file"
             accept="image/*"
-            style={{ display: "block", position: "absolute", width: "1px", height: "1px", opacity: 0, overflow: "hidden", pointerEvents: "none" }}
+            style={{ display: "block", position: "absolute", width: "1px", height: "1px", opacity: 0, overflow: "hidden" }}
             onChange={handleFile}
           />
         </label>
@@ -5354,6 +5440,7 @@ function ProjectsView({
   projects,
   clients,
   stages,
+  staff,
   addProject,
   deleteProject,
   updateProject,
@@ -5362,7 +5449,7 @@ function ProjectsView({
   isAdmin,
   isPMOrAdmin,
 }: {
-  projects: Project[]; clients: Client[]; stages: ProjectStage[];
+  projects: Project[]; clients: Client[]; stages: ProjectStage[]; staff: StaffMember[];
   addProject: (e: FormEvent<HTMLFormElement>) => void;
   deleteProject: (id: number | string) => void; updateProject: (p: Project) => void;
   setSelectedProjectId: (id: number | string) => void; setActiveSection: (s: Section) => void;
@@ -5380,7 +5467,12 @@ function ProjectsView({
           <label>العميل<select name="clientId" required><option value="">اختر عميل...</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
           <div className="two-fields">
             <Field label="نوع المشروع" name="type" placeholder="فيلا / فرع ..." />
-            <Field label="مهندس الموقع" name="engineer" />
+            <label>مهندس الموقع المسند له
+              <select name="engineerId">
+                <option value="">— اختر المهندس —</option>
+                {staff.map((s) => <option key={s.backendId || s.id} value={s.backendId || s.id}>{s.name} ({s.role})</option>)}
+              </select>
+            </label>
           </div>
           <Field label="عنوان الموقع" name="address" />
           <div className="two-fields">
@@ -5433,12 +5525,15 @@ function ProjectsView({
             <form onSubmit={(e) => {
               e.preventDefault();
               const f = new FormData(e.currentTarget);
+              const engId = String(f.get("engineerId") || "").trim();
+              const selectedEng = staff.find((s) => String(s.backendId || s.id) === engId);
               updateProject({
                 ...editingProject,
                 name: String(f.get("name") || editingProject.name).trim(),
                 type: String(f.get("type") || editingProject.type).trim(),
                 clientId: (f.get("clientId") || editingProject.clientId) as any,
-                engineer: String(f.get("engineer") || editingProject.engineer).trim(),
+                engineerId: engId || editingProject.engineerId,
+                engineer: selectedEng ? selectedEng.name : (engId ? editingProject.engineer : ""),
                 address: String(f.get("address") || editingProject.address).trim(),
                 startDate: String(f.get("startDate") || editingProject.startDate),
                 endDate: String(f.get("endDate") || editingProject.endDate),
@@ -5455,8 +5550,11 @@ function ProjectsView({
                 <label>النوع
                   <input name="type" defaultValue={editingProject.type} disabled={!isPMOrAdmin} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px", background: !isPMOrAdmin ? "#f1f5f9" : "#fff" }} />
                 </label>
-                <label>مهندس الموقع
-                  <input name="engineer" defaultValue={editingProject.engineer} disabled={!isPMOrAdmin} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px", background: !isPMOrAdmin ? "#f1f5f9" : "#fff" }} />
+                <label>مهندس الموقع المسند له
+                  <select name="engineerId" defaultValue={editingProject.engineerId || ""} disabled={!isPMOrAdmin} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px", background: !isPMOrAdmin ? "#f1f5f9" : "#fff" }}>
+                    <option value="">— اختر المهندس —</option>
+                    {staff.map((s) => <option key={s.backendId || s.id} value={s.backendId || s.id}>{s.name} ({s.role})</option>)}
+                  </select>
                 </label>
               </div>
               <label>عنوان الموقع
@@ -6261,11 +6359,30 @@ function DailyReportsView({ projects }: { projects: Project[] }) {
   );
 }
 
-function TeamsView({ teams, assignments, projects, workers, contractors, addTeam, deleteTeam, addAssignment, deleteAssignment }: {
+function TeamsView({
+  teams,
+  assignments,
+  projects,
+  workers,
+  contractors,
+  addTeam,
+  updateTeam,
+  deleteTeam,
+  addAssignment,
+  updateAssignment,
+  deleteAssignment,
+}: {
   teams: WorkTeam[]; assignments: ProjectAssignment[]; projects: Project[]; workers: Worker[]; contractors: Contractor[];
-  addTeam: (e: FormEvent<HTMLFormElement>) => void; deleteTeam: (id: number | string) => void;
-  addAssignment: (e: FormEvent<HTMLFormElement>) => void; deleteAssignment: (id: number | string) => void;
+  addTeam: (e: FormEvent<HTMLFormElement>) => void;
+  updateTeam: (t: WorkTeam) => void;
+  deleteTeam: (id: number | string) => void;
+  addAssignment: (e: FormEvent<HTMLFormElement>) => void;
+  updateAssignment: (a: ProjectAssignment) => void;
+  deleteAssignment: (id: number | string) => void;
 }) {
+  const [editingTeam, setEditingTeam] = useState<WorkTeam | null>(null);
+  const [editingAssignment, setEditingAssignment] = useState<ProjectAssignment | null>(null);
+
   return (
     <section className="content-grid content-grid--stack">
       <div className="forms-duo">
@@ -6292,13 +6409,18 @@ function TeamsView({ teams, assignments, projects, workers, contractors, addTeam
         <SectionTitle icon={UsersRound} title="فرق العمل" />
         <div className="table-wrap" style={{ marginBottom: 20 }}>
           <table>
-            <thead><tr><th>الفريق</th><th>القائد</th><th>التخصص</th><th>النوع</th><th style={{ width: 60 }}>حذف</th></tr></thead>
+            <thead><tr><th>الفريق</th><th>القائد</th><th>التخصص</th><th>النوع</th><th style={{ width: 110 }}>إجراءات</th></tr></thead>
             <tbody>
               {teams.map((t) => (
                 <tr key={t.id}>
                   <td><strong>{t.name}</strong></td><td>{t.teamLead || "—"}</td><td>{t.trade || "—"}</td>
                   <td>{t.subcontractorId ? (contractors.find((c) => c.id === t.subcontractorId)?.name || "مقاول") : "داخلي"}</td>
-                  <td><button className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => deleteTeam(t.id)}><Trash2 size={16} /></button></td>
+                  <td>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <button type="button" className="secondary-button" style={{ minHeight: 28, padding: "0 10px", fontSize: "0.76rem" }} onClick={() => setEditingTeam(t)}>تعديل</button>
+                      <button type="button" className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => triggerConfirm("حذف هذا الفريق؟", () => deleteTeam(t.id))}><Trash2 size={16} /></button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {teams.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا توجد فرق.</td></tr>}
@@ -6308,21 +6430,120 @@ function TeamsView({ teams, assignments, projects, workers, contractors, addTeam
         <SectionTitle icon={Building2} title="التعيينات على المواقع" />
         <div className="table-wrap">
           <table>
-            <thead><tr><th>الموقع</th><th>الفريق / العامل</th><th>الدور</th><th>من</th><th style={{ width: 60 }}>حذف</th></tr></thead>
+            <thead><tr><th>الموقع</th><th>المهندس المسؤول</th><th>الفريق / العامل</th><th>الدور في الموقع</th><th>تاريخ التعيين</th><th style={{ width: 110 }}>إجراءات</th></tr></thead>
             <tbody>
-              {assignments.map((a) => (
-                <tr key={a.id}>
-                  <td>{projects.find((p) => p.id === a.projectId)?.name || "—"}</td>
-                  <td>{teams.find((t) => t.id === a.teamId)?.name || workers.find((w) => w.id === a.workerId)?.name || "—"}</td>
-                  <td>{a.roleOnSite || "—"}</td><td>{formatDate(a.startDate)}</td>
-                  <td><button className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => deleteAssignment(a.id)}><Trash2 size={16} /></button></td>
-                </tr>
-              ))}
-              {assignments.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا توجد تعيينات.</td></tr>}
+              {assignments.map((a) => {
+                const prj = projects.find((p) => String(p.id) === String(a.projectId));
+                const tm = teams.find((t) => String(t.id) === String(a.teamId));
+                const wrk = workers.find((w) => String(w.id) === String(a.workerId));
+                return (
+                  <tr key={a.id}>
+                    <td><strong>{prj?.name || "—"}</strong></td>
+                    <td><span style={{ fontSize: "0.85rem", color: "var(--brand)", fontWeight: 600 }}>{prj?.engineer || "—"}</span></td>
+                    <td>{tm?.name ? `فريق: ${tm.name}` : wrk?.name ? `عامل: ${wrk.name}` : "—"}</td>
+                    <td>{a.roleOnSite || "—"}</td>
+                    <td>{formatDate(a.startDate)}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <button type="button" className="secondary-button" style={{ minHeight: 28, padding: "0 10px", fontSize: "0.76rem" }} onClick={() => setEditingAssignment(a)}>تعديل</button>
+                        <button type="button" className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => triggerConfirm("حذف هذا التعيين؟", () => deleteAssignment(a.id))}><Trash2 size={16} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {assignments.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا توجد تعيينات.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
+
+      {editingTeam && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999, padding: "20px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", width: "100%", maxWidth: "480px", padding: "24px", boxShadow: "var(--shadow-lg)", direction: "rtl", animation: "tab-fade-in 0.2s ease-out" }}>
+            <h3 style={{ margin: "0 0 16px 0", fontSize: "1.2rem", fontWeight: 800 }}>تعديل بيانات فريق العمل</h3>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget);
+              updateTeam({
+                ...editingTeam,
+                name: String(f.get("name") || editingTeam.name).trim(),
+                teamLead: String(f.get("teamLead") || "").trim(),
+                trade: String(f.get("trade") || "").trim(),
+                subcontractorId: (f.get("subcontractorId") || null) as any,
+              });
+              setEditingTeam(null);
+            }} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <label>اسم الفريق
+                <input name="name" defaultValue={editingTeam.name} required style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
+              </label>
+              <div className="two-fields">
+                <label>قائد الفريق
+                  <input name="teamLead" defaultValue={editingTeam.teamLead || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
+                </label>
+                <label>التخصص
+                  <input name="trade" defaultValue={editingTeam.trade || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
+                </label>
+              </div>
+              <label>تابع لمقاول (اختياري)
+                <select name="subcontractorId" defaultValue={editingTeam.subcontractorId || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }}>
+                  <option value="">فريق داخلي</option>
+                  {contractors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+              <div style={{ display: "flex", gap: "10px", marginTop: "12px", justifyContent: "flex-end" }}>
+                <button type="button" className="secondary-button" onClick={() => setEditingTeam(null)}>إلغاء</button>
+                <button type="submit" className="primary-button">حفظ التغييرات</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingAssignment && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999, padding: "20px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", width: "100%", maxWidth: "480px", padding: "24px", boxShadow: "var(--shadow-lg)", direction: "rtl", animation: "tab-fade-in 0.2s ease-out" }}>
+            <h3 style={{ margin: "0 0 16px 0", fontSize: "1.2rem", fontWeight: 800 }}>تعديل التعيين على الموقع</h3>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget);
+              updateAssignment({
+                ...editingAssignment,
+                projectId: String(f.get("projectId") || editingAssignment.projectId),
+                teamId: f.get("teamId") ? String(f.get("teamId")) : null,
+                workerId: f.get("workerId") ? String(f.get("workerId")) : null,
+                roleOnSite: String(f.get("roleOnSite") || editingAssignment.roleOnSite).trim(),
+              });
+              setEditingAssignment(null);
+            }} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <label>الموقع / المشروع
+                <select name="projectId" defaultValue={editingAssignment.projectId} required style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }}>
+                  {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </label>
+              <label>الفريق
+                <select name="teamId" defaultValue={editingAssignment.teamId || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }}>
+                  <option value="">—</option>
+                  {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </label>
+              <label>أو عامل مباشر
+                <select name="workerId" defaultValue={editingAssignment.workerId || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }}>
+                  <option value="">—</option>
+                  {workers.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </label>
+              <label>الدور في الموقع
+                <input name="roleOnSite" defaultValue={editingAssignment.roleOnSite} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
+              </label>
+              <div style={{ display: "flex", gap: "10px", marginTop: "12px", justifyContent: "flex-end" }}>
+                <button type="button" className="secondary-button" onClick={() => setEditingAssignment(null)}>إلغاء</button>
+                <button type="submit" className="primary-button">حفظ التغييرات</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -6656,8 +6877,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   
   const roleFilteredProjects = useMemo(() => {
     if (!isSiteEngineer) return projects;
-    return projects.filter((p) => p.engineer === user.name);
-  }, [projects, isSiteEngineer, user.name]);
+    return projects.filter((p) => (p.engineerId && String(p.engineerId) === String(user.backendId)) || p.engineer === user.name);
+  }, [projects, isSiteEngineer, user.name, user.backendId]);
 
   const roleFilteredClients = useMemo(() => {
     if (!isSiteEngineer) return clients;
@@ -6780,6 +7001,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
                     p.status === "IN_PROGRESS" ? "جاري" :
                     p.status === "SUSPENDED" ? "متوقف" :
                     p.status === "DELAYED" ? "متأخر" : "مكتمل",
+            engineerId: p.engineerId || p.engineer?.id || "",
             engineer: p.engineer?.name || "",
             budget: Number(p.budget) || 0,
             progress: Number(p.progress) || 0,
@@ -7933,6 +8155,9 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const clientId = String(f.get("clientId") ?? "");
     if (!name || !clientId) return;
 
+    const engineerId = String(f.get("engineerId") ?? "").trim();
+    const selectedEng = staff.find((s) => String(s.backendId || s.id) === engineerId);
+
     const localId = nextId(projects);
     const pData = {
       id: localId,
@@ -7943,7 +8168,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       startDate: String(f.get("startDate") || new Date().toISOString().slice(0, 10)),
       endDate: String(f.get("endDate") || new Date().toISOString().slice(0, 10)),
       status: "لم يبدأ" as const,
-      engineer: "",
+      engineerId: engineerId || undefined,
+      engineer: selectedEng ? selectedEng.name : "",
       budget: Number(f.get("budget")) || 0,
       progress: 0,
     };
@@ -7963,10 +8189,11 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           startDate: pData.startDate,
           endDate: pData.endDate,
           budget: pData.budget,
+          engineerId: engineerId || null,
         }),
       });
       if (newProject && newProject.id) {
-        setProjects((cur) => cur.map((p) => (p.id === localId ? { ...p, id: newProject.id } : p)));
+        setProjects((cur) => cur.map((p) => (p.id === localId ? { ...p, id: newProject.id, engineer: newProject.engineer?.name || p.engineer } : p)));
       }
     } catch (e) {
       console.warn("Project add backend sync skipped:", e);
@@ -8253,7 +8480,41 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       console.warn("Team delete backend sync skipped:", e);
     }
   };
-  const updateTeam = (t: WorkTeam) => { setTeams((cur) => cur.map((x) => (x.id === t.id ? t : x))); };
+  const updateTeamFromForm = async (t: WorkTeam) => {
+    setTeams((cur) => cur.map((x) => (x.id === t.id ? t : x)));
+    setNotice("تم تحديث الفريق بنجاح");
+    try {
+      await apiFetch(`/api/hr/teams/${t.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: t.name,
+          teamLead: t.teamLead,
+          trade: t.trade,
+          subcontractorId: t.subcontractorId,
+        }),
+      });
+    } catch (e) {
+      console.warn("Team update backend sync skipped:", e);
+    }
+  };
+
+  const updateAssignmentFromForm = async (a: ProjectAssignment) => {
+    setAssignments((cur) => cur.map((x) => (x.id === a.id ? a : x)));
+    setNotice("تم تحديث التعيين بنجاح");
+    try {
+      await apiFetch(`/api/hr/assignments/${a.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          projectId: a.projectId,
+          teamId: a.teamId || undefined,
+          workerId: a.workerId || undefined,
+          roleOnSite: a.roleOnSite,
+        }),
+      });
+    } catch (e) {
+      console.warn("Assignment update backend sync skipped:", e);
+    }
+  };
   const addAssignmentFromForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formEl = event.currentTarget;
@@ -8732,6 +8993,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
             projects={filteredProjects}
             clients={clients}
             stages={stages}
+            staff={staff}
             addProject={addProjectFromForm}
             deleteProject={deleteProject}
             updateProject={async (p: Project) => {
@@ -8745,12 +9007,12 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
                     startDate: p.startDate,
                     endDate: p.endDate,
                     status: p.status,
-                    engineer: p.engineer,
+                    engineerId: p.engineerId || null,
                     budget: Number(p.budget) || 0,
                     progress: Number(p.progress) || 0,
                   }),
                 });
-                setProjects((cur) => cur.map((x) => String(x.id) === String(p.id) ? { ...x, ...updated, startDate: updated.startDate ? updated.startDate.split("T")[0] : x.startDate, endDate: updated.endDate ? updated.endDate.split("T")[0] : x.endDate } : x));
+                setProjects((cur) => cur.map((x) => String(x.id) === String(p.id) ? { ...x, ...updated, engineerId: p.engineerId || x.engineerId, engineer: p.engineer || x.engineer, startDate: updated.startDate ? updated.startDate.split("T")[0] : x.startDate, endDate: updated.endDate ? updated.endDate.split("T")[0] : x.endDate } : x));
                 setNotice("تم تحديث المشروع");
               } catch (e) {
                 setNotice("خطأ أثناء تحديث المشروع: " + (e as Error).message);
@@ -8878,7 +9140,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       case "maintenance":
         return <MaintenanceView contracts={maintenanceContracts} visits={maintenanceVisits} clients={clients} projects={projects} addContract={addMaintenanceFromForm} updateContractStatus={updateMaintenanceStatus} deleteContract={deleteMaintenance} addVisit={addVisitForContract} completeVisit={completeVisit} deleteVisit={deleteVisit} />;
       case "teams":
-        return <TeamsView teams={teams} assignments={assignments} projects={projects} workers={workers} contractors={contractors} addTeam={addTeamFromForm} deleteTeam={deleteTeam} addAssignment={addAssignmentFromForm} deleteAssignment={deleteAssignment} />;
+        return <TeamsView teams={teams} assignments={assignments} projects={filteredProjects} workers={workers} contractors={contractors} addTeam={addTeamFromForm} updateTeam={updateTeamFromForm} deleteTeam={deleteTeam} addAssignment={addAssignmentFromForm} updateAssignment={updateAssignmentFromForm} deleteAssignment={deleteAssignment} />;
       case "attendance":
         return <AttendanceView attendance={roleFilteredAttendance} workers={roleFilteredWorkers} projects={filteredProjects} upsertAttendance={upsertAttendance} />;
       case "leaves":
@@ -8890,7 +9152,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       case "site":
         return <SiteContentView stats={site.stats} updateStat={updateStat} addStat={addStat} deleteStat={deleteStat} site={site} updateSiteField={updateSiteField} />;
       case "config":
-        return <CompanySettingsView stamp={site.stamp ?? ""} setStamp={setStamp} signature={site.signature ?? ""} setSignature={setSignature} payments={site.payments ?? []} updatePayment={updateDefaultPayment} addPayment={addDefaultPayment} deletePayment={deleteDefaultPayment} clients={clients} updateClientPayment={updateClientPayment} addClientPayment={addClientPayment} deleteClientPayment={deleteClientPayment} site={site} updateSiteField={updateSiteField} />;
+        return <CompanySettingsView stamp={site.stamp ?? ""} setStamp={setStamp} signature={site.signature ?? ""} setSignature={setSignature} payments={site.payments ?? []} updatePayment={updateDefaultPayment} addPayment={addDefaultPayment} deletePayment={deleteDefaultPayment} clients={clients} updateClientPayment={updateClientPayment} addClientPayment={addClientPayment} deleteClientPayment={deleteClientPayment} site={site} updateSiteField={updateSiteField} setNotice={setNotice} />;
       case "alerts":
         return <AlertsView alerts={visibleAlerts} onResolve={resolveAlert} goToSection={setActiveSection} />;
       case "settings":

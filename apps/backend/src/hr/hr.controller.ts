@@ -68,6 +68,12 @@ export class HrController {
     return this.hrService.createTeam(dto, req.user);
   }
 
+  @Patch("teams/:id")
+  @RequirePermission("teams", "UPDATE")
+  async updateTeam(@Param("id") id: string, @Body() dto: Partial<CreateTeamDto>, @Req() req: any) {
+    return this.hrService.updateTeam(id, dto, req.user);
+  }
+
   @Delete("teams/:id")
   @RequirePermission("teams", "DELETE")
   async deleteTeam(@Param("id") id: string, @Req() req: any) {
@@ -85,6 +91,12 @@ export class HrController {
   @RequirePermission("teams", "CREATE")
   async createAssignment(@Body() dto: CreateAssignmentDto, @Req() req: any) {
     return this.hrService.createAssignment(dto, req.user);
+  }
+
+  @Patch("assignments/:id")
+  @RequirePermission("teams", "UPDATE")
+  async updateAssignment(@Param("id") id: string, @Body() dto: Partial<CreateAssignmentDto>, @Req() req: any) {
+    return this.hrService.updateAssignment(id, dto, req.user);
   }
 
   @Delete("assignments/:id")

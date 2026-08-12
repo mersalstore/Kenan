@@ -101,6 +101,23 @@ export class HrService {
     return { ok: true };
   }
 
+  async updateTeam(id: string, dto: Partial<CreateTeamDto>, user: any) {
+    const team = await this.prisma.workTeam.findUnique({ where: { id } });
+    if (!team) throw new NotFoundException("الفريق غير موجود");
+
+    const updated = await this.prisma.workTeam.update({
+      where: { id },
+      data: {
+        name: dto.name ?? team.name,
+        teamLead: dto.teamLead !== undefined ? dto.teamLead : team.teamLead,
+        trade: dto.trade !== undefined ? dto.trade : team.trade,
+        subcontractorId: dto.subcontractorId !== undefined ? (dto.subcontractorId || null) : team.subcontractorId,
+      },
+    });
+    await this.auditService.log(user.sub, "UPDATE", "WorkTeam", id, team, updated);
+    return updated;
+  }
+
   async findAssignments() {
     return this.prisma.projectAssignment.findMany({ orderBy: { startDate: "desc" } });
   }
@@ -119,6 +136,25 @@ export class HrService {
     });
     await this.auditService.log(user.sub, "CREATE", "ProjectAssignment", assignment.id, null, assignment);
     return assignment;
+  }
+
+  async updateAssignment(id: string, dto: Partial<CreateAssignmentDto>, user: any) {
+    const assignment = await this.prisma.projectAssignment.findUnique({ where: { id } });
+    if (!assignment) throw new NotFoundException("التعيين غير موجود");
+
+    const updated = await this.prisma.projectAssignment.update({
+      where: { id },
+      data: {
+        projectId: dto.projectId ?? assignment.projectId,
+        teamId: dto.teamId !== undefined ? (dto.teamId || null) : assignment.teamId,
+        workerId: dto.workerId !== undefined ? (dto.workerId || null) : assignment.workerId,
+        roleOnSite: dto.roleOnSite ?? assignment.roleOnSite,
+        startDate: dto.startDate ? new Date(dto.startDate) : assignment.startDate,
+        endDate: dto.endDate ? new Date(dto.endDate) : assignment.endDate,
+      },
+    });
+    await this.auditService.log(user.sub, "UPDATE", "ProjectAssignment", id, assignment, updated);
+    return updated;
   }
 
   async deleteAssignment(id: string, user: any) {
