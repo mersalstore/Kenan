@@ -134,7 +134,10 @@ export class ProjectsService {
 
     let updateData: any = {};
 
-    if (user.role === "ADMIN" || user.role === "PROJECT_MANAGER") {
+    const roleUpper = user.role?.toUpperCase() || "";
+    const isPMOrAdmin = roleUpper === "ADMIN" || roleUpper === "PROJECT_MANAGER" || user.role === "أدمن" || user.role === "مدير عام" || user.role === "مدير مشاريع";
+
+    if (isPMOrAdmin) {
       // Admin/PM can edit everything
       if (dto.name) updateData.name = dto.name;
       if (dto.type) updateData.type = dto.type;
@@ -144,7 +147,7 @@ export class ProjectsService {
       if (dto.endDate) updateData.endDate = new Date(dto.endDate);
       if (dto.budget !== undefined) updateData.budget = dto.budget;
       if (dto.engineerId !== undefined) {
-        updateData.engineerId = dto.engineerId;
+        updateData.engineerId = dto.engineerId || null;
         // Update user project permissions
         if (dto.engineerId && dto.engineerId !== oldProject.engineerId) {
           await this.prisma.userProjectPermission.upsert({
@@ -157,7 +160,22 @@ export class ProjectsService {
     }
 
     // Any role (including Site Engineer) can update status, progress
-    if (dto.status) updateData.status = dto.status as ProjectStatus;
+    if (dto.status) {
+      const statusMap: Record<string, ProjectStatus> = {
+        "لم يبدأ": ProjectStatus.PLANNED,
+        "جاري": ProjectStatus.IN_PROGRESS,
+        "متوقف": ProjectStatus.ON_HOLD,
+        "متأخر": ProjectStatus.DELAYED,
+        "مكتمل": ProjectStatus.COMPLETED,
+        "PLANNED": ProjectStatus.PLANNED,
+        "IN_PROGRESS": ProjectStatus.IN_PROGRESS,
+        "ON_HOLD": ProjectStatus.ON_HOLD,
+        "SUSPENDED": ProjectStatus.ON_HOLD,
+        "DELAYED": ProjectStatus.DELAYED,
+        "COMPLETED": ProjectStatus.COMPLETED,
+      };
+      updateData.status = statusMap[dto.status] || ProjectStatus.IN_PROGRESS;
+    }
     if (dto.progress !== undefined) updateData.progress = dto.progress;
 
     const updatedProject = await this.prisma.project.update({
