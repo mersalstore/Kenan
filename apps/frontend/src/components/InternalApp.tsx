@@ -5449,7 +5449,7 @@ function ProjectsView({
   isAdmin,
   isPMOrAdmin,
 }: {
-  projects: Project[]; clients: Client[]; stages: ProjectStage[]; staff: StaffMember[];
+  projects: Project[]; clients: Client[]; stages: ProjectStage[]; staff: StaffAccount[];
   addProject: (e: FormEvent<HTMLFormElement>) => void;
   deleteProject: (id: number | string) => void; updateProject: (p: Project) => void;
   setSelectedProjectId: (id: number | string) => void; setActiveSection: (s: Section) => void;
