@@ -9016,28 +9016,29 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
             deleteProject={deleteProject}
             updateProject={async (p: Project) => {
               setProjects((cur) => cur.map((x) => String(x.id) === String(p.id) ? { ...x, ...p } : x));
-              try {
-                const updated = await apiFetch(`/api/projects/${p.id}`, {
-                  method: "PATCH",
-                  body: JSON.stringify({
-                    name: p.name,
-                    type: p.type,
-                    address: p.address,
-                    startDate: p.startDate,
-                    endDate: p.endDate,
-                    status: p.status,
-                    engineerId: (p.engineerId && String(p.engineerId).includes("-")) ? p.engineerId : null,
-                    budget: Number(p.budget) || 0,
-                    progress: Number(p.progress) || 0,
-                  }),
-                });
-                if (updated && updated.id) {
-                  setProjects((cur) => cur.map((x) => String(x.id) === String(p.id) ? { ...x, ...updated, engineerId: p.engineerId || x.engineerId, engineer: p.engineer || x.engineer, startDate: updated.startDate ? updated.startDate.split("T")[0] : x.startDate, endDate: updated.endDate ? updated.endDate.split("T")[0] : x.endDate } : x));
+              setNotice("تم تحديث بيانات المشروع بنجاح");
+              if (String(p.id).length > 10 && String(p.id).includes("-")) {
+                try {
+                  const updated = await apiFetch(`/api/projects/${p.id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                      name: p.name,
+                      type: p.type,
+                      address: p.address,
+                      startDate: p.startDate && !isNaN(Date.parse(p.startDate)) ? p.startDate : undefined,
+                      endDate: p.endDate && !isNaN(Date.parse(p.endDate)) ? p.endDate : undefined,
+                      status: p.status,
+                      engineerId: (p.engineerId && String(p.engineerId).includes("-")) ? p.engineerId : undefined,
+                      budget: Number(p.budget) || 0,
+                      progress: Number(p.progress) || 0,
+                    }),
+                  });
+                  if (updated && updated.id) {
+                    setProjects((cur) => cur.map((x) => String(x.id) === String(p.id) ? { ...x, ...updated, engineerId: p.engineerId || x.engineerId, engineer: p.engineer || x.engineer, startDate: updated.startDate ? updated.startDate.split("T")[0] : x.startDate, endDate: updated.endDate ? updated.endDate.split("T")[0] : x.endDate } : x));
+                  }
+                } catch (e) {
+                  console.warn("Backend update project sync skipped:", e);
                 }
-                setNotice("تم تحديث بيانات المشروع بنجاح");
-              } catch (e) {
-                console.warn("Backend update project sync skipped:", e);
-                setNotice("تم تحديث بيانات المشروع بنجاح");
               }
             }}
             setSelectedProjectId={setSelectedProjectId}

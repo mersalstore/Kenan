@@ -138,14 +138,20 @@ export class ProjectsService {
     const isPMOrAdmin = roleUpper === "ADMIN" || roleUpper === "PROJECT_MANAGER" || user.role === "أدمن" || user.role === "مدير عام" || user.role === "مدير مشاريع";
 
     if (isPMOrAdmin) {
-      // Admin/PM can edit everything
       if (dto.name) updateData.name = dto.name;
       if (dto.type) updateData.type = dto.type;
-      if (dto.clientId) updateData.clientId = dto.clientId;
+      if (dto.clientId) {
+        const validClient = await this.prisma.client.findUnique({ where: { id: dto.clientId } }).catch(() => null);
+        if (validClient) updateData.clientId = validClient.id;
+      }
       if (dto.address) updateData.address = dto.address;
-      if (dto.startDate) updateData.startDate = new Date(dto.startDate);
-      if (dto.endDate) updateData.endDate = new Date(dto.endDate);
-      if (dto.budget !== undefined) updateData.budget = dto.budget;
+      if (dto.startDate && !isNaN(Date.parse(String(dto.startDate)))) {
+        updateData.startDate = new Date(dto.startDate);
+      }
+      if (dto.endDate && !isNaN(Date.parse(String(dto.endDate)))) {
+        updateData.endDate = new Date(dto.endDate);
+      }
+      if (dto.budget !== undefined) updateData.budget = Number(dto.budget) || 0;
       if (dto.engineerId !== undefined) {
         const validUser = dto.engineerId
           ? await this.prisma.user.findUnique({ where: { id: dto.engineerId } }).catch(() => null)
@@ -163,7 +169,6 @@ export class ProjectsService {
       }
     }
 
-    // Any role (including Site Engineer) can update status, progress
     if (dto.status) {
       const statusMap: Record<string, ProjectStatus> = {
         "لم يبدأ": ProjectStatus.PLANNED,
@@ -180,14 +185,16 @@ export class ProjectsService {
       };
       updateData.status = statusMap[dto.status] || ProjectStatus.IN_PROGRESS;
     }
-    if (dto.progress !== undefined) updateData.progress = dto.progress;
+    if (dto.progress !== undefined) updateData.progress = Number(dto.progress) || 0;
 
     const updatedProject = await this.prisma.project.update({
       where: { id },
       data: updateData,
     });
 
-    await this.auditService.log(user.sub, "UPDATE", "Project", id, oldProject, updatedProject);
+    if (user?.sub) {
+      await this.auditService.log(user.sub, "UPDATE", "Project", id, oldProject, updatedProject).catch(() => {});
+    }
     return updatedProject;
   }
 
