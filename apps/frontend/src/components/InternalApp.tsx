@@ -5458,6 +5458,23 @@ function ProjectsView({
 }) {
   const projectStatuses: Project["status"][] = ["لم يبدأ", "جاري", "متوقف", "متأخر", "مكتمل"];
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const engineerSelectOptions = useMemo(() => {
+    const list: { id: string; name: string }[] = [];
+    const namesSet = new Set<string>();
+    (staff || []).forEach((s) => {
+      const val = String(s.backendId || s.id);
+      list.push({ id: val, name: s.name.includes("(") ? s.name : `${s.name} (${s.role})` });
+      namesSet.add(s.name);
+    });
+    engineers.forEach((eng) => {
+      if (!namesSet.has(eng)) {
+        list.push({ id: eng, name: eng });
+        namesSet.add(eng);
+      }
+    });
+    return list;
+  }, [staff]);
+
   return (
     <section className="content-grid content-grid--stack">
       {isPMOrAdmin && (
@@ -5470,7 +5487,7 @@ function ProjectsView({
             <label>مهندس الموقع المسند له
               <select name="engineerId">
                 <option value="">— اختر المهندس —</option>
-                {staff.map((s) => <option key={s.backendId || s.id} value={s.backendId || s.id}>{s.name} ({s.role})</option>)}
+                {engineerSelectOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </label>
           </div>
@@ -5553,7 +5570,7 @@ function ProjectsView({
                 <label>مهندس الموقع المسند له
                   <select name="engineerId" defaultValue={editingProject.engineerId || ""} disabled={!isPMOrAdmin} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px", background: !isPMOrAdmin ? "#f1f5f9" : "#fff" }}>
                     <option value="">— اختر المهندس —</option>
-                    {staff.map((s) => <option key={s.backendId || s.id} value={s.backendId || s.id}>{s.name} ({s.role})</option>)}
+                    {engineerSelectOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </label>
               </div>

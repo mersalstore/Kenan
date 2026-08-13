@@ -247,6 +247,38 @@ export const seedStaff: StaffAccount[] = [
     role: "عامل/فني",
     sections: ["dashboard", "projects", "systems", "maintenance", "deficiencies"],
   },
+  {
+    id: 6,
+    name: "م. ندى حسام (مهندس الموقع)",
+    email: "nada@kenan.com",
+    password: "123456",
+    role: "مهندس مشروع",
+    sections: ["dashboard", "projects", "stages", "systems", "deficiencies", "dailyReports", "supplyOrders", "workers", "teams", "attendance", "alerts"],
+  },
+  {
+    id: 7,
+    name: "م. يوسف سمير (مهندس الموقع)",
+    email: "youssef@kenan.com",
+    password: "123456",
+    role: "مهندس مشروع",
+    sections: ["dashboard", "projects", "stages", "systems", "deficiencies", "dailyReports", "supplyOrders", "workers", "teams", "attendance", "alerts"],
+  },
+  {
+    id: 8,
+    name: "م. منى صلاح (مهندس الموقع)",
+    email: "mona@kenan.com",
+    password: "123456",
+    role: "مهندس مشروع",
+    sections: ["dashboard", "projects", "stages", "systems", "deficiencies", "dailyReports", "supplyOrders", "workers", "teams", "attendance", "alerts"],
+  },
+  {
+    id: 9,
+    name: "م. أحمد الشامي (مهندس الموقع)",
+    email: "shami@kenan.com",
+    password: "123456",
+    role: "مهندس مشروع",
+    sections: ["dashboard", "projects", "stages", "systems", "deficiencies", "dailyReports", "supplyOrders", "workers", "teams", "attendance", "alerts"],
+  },
 ];
 
 export const staffRoles = [
