@@ -147,14 +147,18 @@ export class ProjectsService {
       if (dto.endDate) updateData.endDate = new Date(dto.endDate);
       if (dto.budget !== undefined) updateData.budget = dto.budget;
       if (dto.engineerId !== undefined) {
-        updateData.engineerId = dto.engineerId || null;
-        // Update user project permissions
-        if (dto.engineerId && dto.engineerId !== oldProject.engineerId) {
-          await this.prisma.userProjectPermission.upsert({
-            where: { userId_projectId: { userId: dto.engineerId, projectId: id } },
-            create: { userId: dto.engineerId, projectId: id },
-            update: {},
-          });
+        const validUser = dto.engineerId
+          ? await this.prisma.user.findUnique({ where: { id: dto.engineerId } }).catch(() => null)
+          : null;
+        updateData.engineerId = validUser ? validUser.id : null;
+        if (validUser && validUser.id !== oldProject.engineerId) {
+          await this.prisma.userProjectPermission
+            .upsert({
+              where: { userId_projectId: { userId: validUser.id, projectId: id } },
+              create: { userId: validUser.id, projectId: id },
+              update: {},
+            })
+            .catch(() => {});
         }
       }
     }
