@@ -3223,13 +3223,18 @@ function ContractorsView({ contractors, projects, addContractor, deleteContracto
   );
 }
 
-function ProjectsView({ projects, clients, stages, addProject, deleteProject, setSelectedProjectId, setActiveSection }: {
-  projects: Project[]; clients: Client[]; stages: ProjectStage[];
+function ProjectsView({ projects, clients, stages, staff, addProject, deleteProject, setSelectedProjectId, setActiveSection }: {
+  projects: Project[]; clients: Client[]; stages: ProjectStage[]; staff?: StaffAccount[];
   addProject: (e: FormEvent<HTMLFormElement>) => void;
   deleteProject: (id: number) => void; updateProject: (p: Project) => void;
   setSelectedProjectId: (id: number) => void; setActiveSection: (s: Section) => void;
 }) {
   const projectStatuses: Project["status"][] = ["لم يبدأ", "جاري", "متوقف", "متأخر", "مكتمل"];
+  const engineerOptions = useMemo(() => {
+    const staffNames = (staff || []).map((s) => s.name);
+    return Array.from(new Set([...engineers, ...staffNames]));
+  }, [staff]);
+
   return (
     <section className="content-grid content-grid--stack">
       <form className="form-panel" onSubmit={addProject}>
@@ -3238,7 +3243,17 @@ function ProjectsView({ projects, clients, stages, addProject, deleteProject, se
         <label>العميل<select name="clientId" required><option value="">اختر عميل...</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
         <div className="two-fields">
           <Field label="نوع المشروع" name="type" placeholder="فيلا / فرع ..." />
-          <Field label="مهندس الموقع" name="engineer" />
+          <label>
+            مهندس الموقع
+            <select name="engineer">
+              <option value="">— اختر المهندس —</option>
+              {engineerOptions.map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <Field label="عنوان الموقع" name="address" />
         <div className="two-fields">
@@ -4271,7 +4286,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       case "contractors":
         return <ContractorsView contractors={filteredContractors} projects={projects} addContractor={addContractorFromForm} deleteContractor={deleteContractor} updateContractor={updateContractor} />;
       case "projects":
-        return <ProjectsView projects={filteredProjects} clients={clients} stages={stages} addProject={addProjectFromForm} deleteProject={deleteProject} updateProject={(p: Project) => { setProjects((cur) => cur.map((x) => x.id === p.id ? p : x)); setNotice("تم تحديث المشروع"); }} setSelectedProjectId={setSelectedProjectId} setActiveSection={setActiveSection} />;
+        return <ProjectsView projects={filteredProjects} clients={clients} stages={stages} staff={staff} addProject={addProjectFromForm} deleteProject={deleteProject} updateProject={(p: Project) => { setProjects((cur) => cur.map((x) => x.id === p.id ? p : x)); setNotice("تم تحديث المشروع"); }} setSelectedProjectId={setSelectedProjectId} setActiveSection={setActiveSection} />;
       case "projectDetail":
         return <ProjectDetailView project={selectedProject} client={clientsById.get(selectedProject?.clientId ?? -1)} stages={stages.filter((s) => s.projectId === selectedProject?.id)} systems={systems.filter((s) => s.projectId === selectedProject?.id)} deficiencies={deficiencies.filter((d) => d.projectId === selectedProject?.id)} assignments={assignments.filter((a) => a.projectId === selectedProject?.id)} workers={workers} teams={teams} onBack={() => setActiveSection("projects")} />;
       case "stages":
