@@ -8067,7 +8067,14 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   const visibleAlerts = useMemo(() => {
     const projectAlerts = projects.filter((p) => p.status === "متأخر" || p.progress < 45).map((p) => ({ id: p.status === "متأخر" ? `project-late-${p.id}` : `project-prog-${p.id}`, title: p.status === "متأخر" ? "مشروع متأخر" : "نسبة تنفيذ منخفضة", detail: p.name, tone: p.status === "متأخر" ? "danger" : "warning", section: "projects" as Section }));
     const stockAlerts = inventory.filter((i) => i.quantity <= i.minQuantity).map((i) => ({ id: `stock-${i.id}`, title: "نقص خامات", detail: i.name, tone: "danger", section: "inventory" as Section }));
-    return [...projectAlerts, ...stockAlerts].filter((a) => !dismissedAlerts.includes(a.id));
+    const assignmentAlerts = projects.filter((p) => p.engineer).map((p) => ({
+      id: `assign-${p.id}-${p.engineer}`,
+      title: "إسناد مشروع جديد",
+      detail: `تم إسناد موقع مشروع (${p.name}) إلى: ${p.engineer}`,
+      tone: "info",
+      section: "projects" as Section,
+    }));
+    return [...assignmentAlerts, ...projectAlerts, ...stockAlerts].filter((a) => !dismissedAlerts.includes(a.id));
   }, [projects, inventory, dismissedAlerts]);
   const resolveAlert = (id: string) => setDismissedAlerts((cur) => (cur.includes(id) ? cur : [...cur, id]));
 
