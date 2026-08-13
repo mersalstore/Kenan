@@ -1,7 +1,4 @@
-# ====================================================
-# 🛡️ KENAN SAFETY — SECURITY HARDENING & APACHE CONFIG
-# ====================================================
-
+# Options
 Options -Indexes
 RewriteEngine On
 RewriteBase /
@@ -13,60 +10,23 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 # Allow directory index
 DirectoryIndex index.html
 
-# Block sensitive files
-<FilesMatch "\.(env|git|htaccess|htpasswd|sql|bak|config|json|log|md|yml|yaml)$">
+# Block dangerous config / source files only
+<FilesMatch "\.(env|git|htaccess|htpasswd|sql|bak|log|yml|yaml)$">
   Require all denied
 </FilesMatch>
 
-# Block dot-files and dot-directories (except .well-known/security.txt)
-RewriteRule (^|/)\.(?!well-known) - [F,L]
-
-# Block direct access to admin directory
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteRule ^admin/?$ - [F,L]
-</IfModule>
-
-# Block malicious user agents
-RewriteCond %{HTTP_USER_AGENT} (libwww-perl|wget|curl|HTTrack|python-requests|scrapy|nikto|sqlmap) [NC]
-RewriteRule .* - [F,L]
-
-# Serve subdirectories html if exists
+# Serve subdirectories index.html if exists
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME}/index.html -f
 RewriteRule ^(.*)$ $1/index.html [L]
 
-# ====================================================
-# 🔒 SECURITY HEADERS & CACHE CONTROL
-# ====================================================
+# SPA Fallback for Next.js routes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /index.html [L]
+
 <IfModule mod_headers.c>
-  # Strict Transport Security (HSTS)
-  Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-  
-  # Anti-Clickjacking
-  Header always set X-Frame-Options "DENY"
-  
-  # Prevent MIME Sniffing
+  Header always set X-Frame-Options "SAMEORIGIN"
   Header always set X-Content-Type-Options "nosniff"
-  
-  # Referrer Policy
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
-  
-  # Permissions Policy
-  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
-  
-  # Disable XSS Filter (Modern Standard)
-  Header always set X-XSS-Protection "0"
-
-  # HTML files: no cache ever (instant updates)
-  <FilesMatch "\.(html|htm)$">
-    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
-    Header set Pragma "no-cache"
-    Header set Expires "0"
-  </FilesMatch>
-
-  # Static assets cache
-  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|otf)$">
-    Header set Cache-Control "public, max-age=86400, stale-while-revalidate=3600"
-  </FilesMatch>
 </IfModule>
