@@ -29,12 +29,17 @@ export class ProjectsService {
       return this.prisma.project.findMany({ include: fullInclude });
     }
 
+    const cleanName = user.name
+      ? user.name.replace(/\s*\([^)]*\)/g, "").replace(/^م\.\s*/, "").replace(/^مهندس\s*/, "").trim()
+      : "";
+
     // Site Engineer: only see assigned projects
     return this.prisma.project.findMany({
       where: {
         OR: [
           { engineerId: user.sub },
           { projectPermissions: { some: { userId: user.sub } } },
+          ...(cleanName ? [{ engineer: { name: { contains: cleanName } } }] : []),
         ],
       },
       include: fullInclude,

@@ -6890,12 +6890,42 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   const [activeClaimContract, setActiveClaimContract] = useState<Contract | null>(null);
   const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
 
-  const isSiteEngineer = user.role?.toUpperCase() === "SITE_ENGINEER" || user.role === "مهندس مشروع" || user.role?.toLowerCase() === "site_engineer";
-  
+  const isSiteEngineer =
+    user.role?.toUpperCase() === "SITE_ENGINEER" ||
+    user.role === "مهندس مشروع" ||
+    user.role === "مهندس الموقع" ||
+    user.role === "مهندس موقع" ||
+    user.role?.toLowerCase() === "site_engineer";
+
+  const normalizeEngName = (n?: string) =>
+    (n || "")
+      .replace(/\s*\([^)]*\)/g, "")
+      .replace(/^م\.\s*/, "")
+      .replace(/^مهندس\s*/, "")
+      .trim()
+      .toLowerCase();
+
   const roleFilteredProjects = useMemo(() => {
     if (!isSiteEngineer) return projects;
     const userEngId = user.backendId || user.id;
-    return projects.filter((p) => (p.engineerId && userEngId && String(p.engineerId) === String(userEngId)) || p.engineer === user.name);
+    const cleanUserName = normalizeEngName(user.name);
+
+    return projects.filter((p) => {
+      if (p.engineerId && userEngId && String(p.engineerId) === String(userEngId)) return true;
+      if (p.engineer && cleanUserName) {
+        const cleanEngName = normalizeEngName(p.engineer);
+        if (
+          cleanEngName &&
+          (cleanEngName === cleanUserName ||
+            cleanEngName.includes(cleanUserName) ||
+            cleanUserName.includes(cleanEngName))
+        ) {
+          return true;
+        }
+      }
+      if (!p.engineer && !p.engineerId) return true;
+      return false;
+    });
   }, [projects, isSiteEngineer, user.name, user.backendId, user.id]);
 
   const roleFilteredClients = useMemo(() => {

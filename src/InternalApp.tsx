@@ -3923,8 +3923,46 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     return () => clearTimeout(t);
   }, [notice]);
 
+  const isSiteEngineer =
+    user.role?.toUpperCase() === "SITE_ENGINEER" ||
+    user.role === "مهندس مشروع" ||
+    user.role === "مهندس الموقع" ||
+    user.role === "مهندس موقع" ||
+    user.role?.toLowerCase() === "site_engineer";
+
+  const normalizeEngName = (n?: string) =>
+    (n || "")
+      .replace(/\s*\([^)]*\)/g, "")
+      .replace(/^م\.\s*/, "")
+      .replace(/^مهندس\s*/, "")
+      .trim()
+      .toLowerCase();
+
+  const roleFilteredProjects = useMemo(() => {
+    if (!isSiteEngineer) return projects;
+    const userEngId = (user as any).backendId || user.id;
+    const cleanUserName = normalizeEngName(user.name);
+
+    return projects.filter((p) => {
+      if (p.engineerId && userEngId && String(p.engineerId) === String(userEngId)) return true;
+      if (p.engineer && cleanUserName) {
+        const cleanEngName = normalizeEngName(p.engineer);
+        if (
+          cleanEngName &&
+          (cleanEngName === cleanUserName ||
+            cleanEngName.includes(cleanUserName) ||
+            cleanUserName.includes(cleanEngName))
+        ) {
+          return true;
+        }
+      }
+      if (!p.engineer && !p.engineerId) return true;
+      return false;
+    });
+  }, [projects, isSiteEngineer, user.name, user.id]);
+
   const filteredClients = clients.filter((c) => `${c.name} ${c.phone} ${c.address} ${c.type}`.toLowerCase().includes(search.toLowerCase()));
-  const filteredProjects = projects.filter((p) => {
+  const filteredProjects = roleFilteredProjects.filter((p) => {
     const cn = clientsById.get(p.clientId)?.name ?? "";
     return `${p.name} ${p.type} ${cn} ${p.engineer}`.toLowerCase().includes(search.toLowerCase());
   });

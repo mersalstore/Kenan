@@ -66,6 +66,7 @@ export const seedProjects: Project[] = [
     endDate: "2026-06-15",
     status: "جاري",
     engineer: "م. كريم عادل",
+    engineerId: "1",
     budget: 850000,
     progress: 58,
   },
