@@ -30,16 +30,17 @@ export class ProjectsService {
     }
 
     const cleanName = user.name
-      ? user.name.replace(/\s*\([^)]*\)/g, "").replace(/^م\.\s*/, "").replace(/^مهندس\s*/, "").trim()
+      ? user.name.replace(/\s*\([^)]*\)/g, "").replace(/^(المهندس|مهندس|م\.|م\/|م)\s*/gi, "").trim()
       : "";
 
-    // Site Engineer: only see assigned projects
+    // Site Engineer: see assigned projects or unassigned projects
     return this.prisma.project.findMany({
       where: {
         OR: [
           { engineerId: user.sub },
           { projectPermissions: { some: { userId: user.sub } } },
           ...(cleanName ? [{ engineer: { name: { contains: cleanName } } }] : []),
+          { engineerId: null },
         ],
       },
       include: fullInclude,

@@ -3933,30 +3933,47 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   const normalizeEngName = (n?: string) =>
     (n || "")
       .replace(/\s*\([^)]*\)/g, "")
-      .replace(/^م\.\s*/, "")
-      .replace(/^مهندس\s*/, "")
+      .replace(/^(المهندس|مهندس|م\.|م\/|م)\s*/gi, "")
+      .replace(/[^a-z0-9\u0600-\u06FF\s]/gi, "")
       .trim()
       .toLowerCase();
 
   const roleFilteredProjects = useMemo(() => {
     if (!isSiteEngineer) return projects;
-    const userEngId = (user as any).backendId || user.id;
+    const userEngId = String((user as any).backendId || user.id || "").trim();
     const cleanUserName = normalizeEngName(user.name);
 
     return projects.filter((p) => {
-      if (p.engineerId && userEngId && String(p.engineerId) === String(userEngId)) return true;
+      // 1. Direct ID matching (handling staff- prefix and numeric vs string differences)
+      if (p.engineerId && userEngId) {
+        const normPId = String(p.engineerId).replace(/^staff-/, "").trim();
+        const normUId = String(userEngId).replace(/^staff-/, "").trim();
+        if (normPId && normUId && normPId === normUId) return true;
+      }
+
+      // 2. Name matching with robust normalization
       if (p.engineer && cleanUserName) {
         const cleanEngName = normalizeEngName(p.engineer);
-        if (
-          cleanEngName &&
-          (cleanEngName === cleanUserName ||
+        if (cleanEngName) {
+          if (
+            cleanEngName === cleanUserName ||
             cleanEngName.includes(cleanUserName) ||
-            cleanUserName.includes(cleanEngName))
-        ) {
-          return true;
+            cleanUserName.includes(cleanEngName)
+          ) {
+            return true;
+          }
+          const wordsUser = cleanUserName.split(/\s+/).filter((w) => w.length >= 2);
+          const wordsEng = cleanEngName.split(/\s+/).filter((w) => w.length >= 2);
+          if (wordsUser.length > 0 && wordsEng.length > 0) {
+            const commonWords = wordsUser.filter((w) => wordsEng.includes(w));
+            if (commonWords.length >= 1) return true;
+          }
         }
       }
+
+      // 3. If project has no engineer assigned yet, allow site engineers to view it
       if (!p.engineer && !p.engineerId) return true;
+
       return false;
     });
   }, [projects, isSiteEngineer, user.name, user.id]);
