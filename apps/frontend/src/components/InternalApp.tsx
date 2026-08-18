@@ -6907,8 +6907,15 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
 
   const roleFilteredProjects = useMemo(() => {
     if (!isSiteEngineer) return projects;
-    const userEngId = String(user.backendId || user.id || "").trim();
-    const cleanUserName = normalizeEngName(user.name);
+
+    const matchedStaff = staff.find(
+      (s) => s.email && user.email && s.email.trim().toLowerCase() === user.email.trim().toLowerCase()
+    );
+
+    const userEngId = String(user.backendId || user.id || matchedStaff?.id || matchedStaff?.backendId || "").trim();
+    const userNameToUse = user.name || matchedStaff?.name || "";
+    const cleanUserName = normalizeEngName(userNameToUse);
+    const cleanStaffName = matchedStaff ? normalizeEngName(matchedStaff.name) : "";
 
     return projects.filter((p) => {
       // 1. Direct ID matching (handling staff- prefix and numeric vs string differences)
@@ -6917,35 +6924,51 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
         const normUId = String(userEngId).replace(/^staff-/, "").trim();
         if (normPId && normUId && normPId === normUId) return true;
       }
+      if (p.engineerId && matchedStaff?.id) {
+        const normPId = String(p.engineerId).replace(/^staff-/, "").trim();
+        const normSId = String(matchedStaff.id).replace(/^staff-/, "").trim();
+        if (normPId && normSId && normPId === normSId) return true;
+      }
 
       // 2. Name matching with robust normalization
-      if (p.engineer && cleanUserName) {
+      const namesToCompare = [cleanUserName, cleanStaffName].filter(Boolean);
+      if (p.engineer && namesToCompare.length > 0) {
         const cleanEngName = normalizeEngName(p.engineer);
         if (cleanEngName) {
-          if (
-            cleanEngName === cleanUserName ||
-            cleanEngName.includes(cleanUserName) ||
-            cleanUserName.includes(cleanEngName)
-          ) {
-            return true;
-          }
-          const wordsUser = cleanUserName.split(/\s+/).filter((w) => w.length >= 2);
-          const wordsEng = cleanEngName.split(/\s+/).filter((w) => w.length >= 2);
-          if (wordsUser.length > 0 && wordsEng.length > 0) {
-            const commonWords = wordsUser.filter((w) => wordsEng.includes(w));
-            if (commonWords.length >= 1) return true;
+          for (const cName of namesToCompare) {
+            if (
+              cleanEngName === cName ||
+              cleanEngName.includes(cName) ||
+              cName.includes(cleanEngName)
+            ) {
+              return true;
+            }
+            const wordsUser = cName.split(/\s+/).filter((w) => w.length >= 2);
+            const wordsEng = cleanEngName.split(/\s+/).filter((w) => w.length >= 2);
+            if (wordsUser.length > 0 && wordsEng.length > 0) {
+              const commonWords = wordsUser.filter((w) => wordsEng.includes(w));
+              if (commonWords.length >= 1) return true;
+            }
           }
         }
       }
 
       // 3. Team or assignment matching
-      if (assignments && assignments.some((a) => String(a.projectId) === String(p.id) && userEngId && String(a.workerId || a.subcontractorId).replace(/^staff-/, "") === userEngId.replace(/^staff-/, ""))) {
+      if (
+        assignments &&
+        assignments.some(
+          (a) =>
+            String(a.projectId) === String(p.id) &&
+            userEngId &&
+            String(a.workerId || a.subcontractorId).replace(/^staff-/, "") === userEngId.replace(/^staff-/, "")
+        )
+      ) {
         return true;
       }
 
       return false;
     });
-  }, [projects, isSiteEngineer, user.name, user.backendId, user.id, assignments]);
+  }, [projects, isSiteEngineer, user.name, user.email, user.backendId, user.id, staff, assignments]);
 
   const roleFilteredClients = useMemo(() => {
     if (!isSiteEngineer) return clients;
