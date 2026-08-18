@@ -84,6 +84,7 @@ export type Project = {
   status: ProjectStatus;
   engineer: string;
   engineerId?: string;
+  allowEngineerEdit?: boolean;
   budget: number;
   progress: number;
 };

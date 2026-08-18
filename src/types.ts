@@ -81,6 +81,7 @@ export type Project = {
   endDate: string;
   status: ProjectStatus;
   engineer: string;
+  allowEngineerEdit?: boolean;
   budget: number;
   progress: number;
 };

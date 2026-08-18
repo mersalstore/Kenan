@@ -3822,6 +3822,8 @@ function QuotationDocument({
   );
 }
 
+const iconDangerStyle = { background: "none", border: "none", cursor: "pointer", color: "#ef4444", display: "inline-flex", padding: 4 } as const;
+
 function QuotationsView({
   quotations,
   clients,
@@ -5231,22 +5233,102 @@ function DashboardView({
   );
 }
 
-const iconDangerStyle = { background: "none", border: "none", cursor: "pointer", color: "#ef4444", display: "inline-flex", padding: 4 } as const;
+function ProjectDetailView({ project, client, stages, systems, deficiencies, assignments, workers, teams, onBack, setActiveSection, downloadReportPdf, downloadReportExcel, isPMOrAdmin }: {
+  project?: Project; client?: Client; stages: ProjectStage[]; systems: ProjectSystem[];
+  deficiencies: SiteDeficiency[]; assignments: ProjectAssignment[]; workers: Worker[]; teams: WorkTeam[]; onBack: () => void;
+  setActiveSection: (s: Section) => void;
+  downloadReportPdf: (id: string | number, name: string) => void;
+  downloadReportExcel: (id: string | number, name: string) => void;
+  isPMOrAdmin: boolean;
+}) {
+  if (!project) return <section className="panel"><p style={{ color: "var(--muted)" }}>اختر مشروعًا من قائمة المواقع والمشاريع.</p></section>;
+  const canEdit = isPMOrAdmin || project.allowEngineerEdit !== false;
 
-function ClientsView({ clients, projects, addClient, deleteClient, updateClient, onCsvImport }: {
+  return (
+    <section className="panel" style={{ display: "grid", gap: 18, direction: "rtl" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <SectionTitle icon={Building2} title={project.name} />
+          <p style={{ margin: "4px 0 0 0", fontSize: "0.88rem", color: "var(--muted)" }}>
+            نوع المشروع: <strong>{project.type || "عام"}</strong> | العنوان: <strong>{project.address || "غير محدد"}</strong>
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" className="primary-button" style={{ height: "38px", minHeight: "auto", fontSize: "0.85rem" }} onClick={() => downloadReportPdf(project.id, project.name)}>تقرير المشروع (PDF)</button>
+          <button type="button" className="primary-button" style={{ height: "38px", minHeight: "auto", fontSize: "0.85rem", background: "#10b981", color: "#fff" }} onClick={() => downloadReportExcel(project.id, project.name)}>كشف المشروع (Excel)</button>
+          <button type="button" className="secondary-button" style={{ height: "38px", minHeight: "auto", fontSize: "0.85rem" }} onClick={onBack}>عودة للمشاريع</button>
+        </div>
+      </div>
+
+      <div className="metric-grid">
+        <MiniStat title="العميل" value={client?.name ?? "—"} icon={Users} />
+        <MiniStat title="المهندس المسند له" value={project.engineer || "—"} icon={HardHat} />
+        <MiniStat title="حالة المشروع" value={project.status} icon={Gauge} />
+        <MiniStat title="نسبة الإنجاز الكلية" value={`${project.progress}%`} icon={BarChart3} />
+      </div>
+
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", background: "var(--surface-subtle)", padding: "14px 18px", borderRadius: "var(--radius-md)", border: "1px solid var(--line)", alignItems: "center" }}>
+        <div><strong>تاريخ البدء:</strong> {project.startDate || "—"}</div>
+        <div><strong>تاريخ النهاية المتوقع:</strong> {project.endDate || "—"}</div>
+        <div><strong>الميزانية المعتمدة:</strong> {project.budget ? `${project.budget.toLocaleString()} ريال` : "—"}</div>
+        <div style={{ marginRight: "auto" }}>
+          <strong>صلاحية تعديل المهندس:</strong>{" "}
+          <span style={{ color: canEdit ? "#10b981" : "#ef4444", fontWeight: 700 }}>
+            {project.allowEngineerEdit !== false ? "متاح التعديل ✏️" : "عرض فقط (قراءة فقط) 🔒"}
+          </span>
+        </div>
+      </div>
+
+      <div className="operations-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+        <div className="panel" style={{ background: "var(--surface)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <SectionTitle icon={Layers3} title="مراحل التنفيذ" />
+            <button type="button" className="secondary-button" style={{ fontSize: "0.75rem", padding: "2px 8px" }} onClick={() => setActiveSection("stages")}>إدارة المراحل</button>
+          </div>
+          {stages.length ? stages.map((s) => <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line)" }}><span>{s.name}</span><Badge value={s.status} /></div>) : <p style={{ color: "var(--muted)" }}>لا توجد مراحل مسجلة.</p>}
+        </div>
+
+        <div className="panel" style={{ background: "var(--surface)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <SectionTitle icon={Gauge} title="الأنظمة الفنية والتركيبات" />
+            <button type="button" className="secondary-button" style={{ fontSize: "0.75rem", padding: "2px 8px" }} onClick={() => setActiveSection("systems")}>عرض الأنظمة</button>
+          </div>
+          {systems.length ? systems.map((s) => <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line)" }}><span>{s.name} <small style={{ color: "var(--muted)" }}>({s.type})</small></span><Badge value={s.status} /></div>) : <p style={{ color: "var(--muted)" }}>لا توجد أنظمة مسجلة.</p>}
+        </div>
+
+        <div className="panel" style={{ background: "var(--surface)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <SectionTitle icon={OctagonAlert} title="نواقص وملاحظات الموقع" />
+            <button type="button" className="secondary-button" style={{ fontSize: "0.75rem", padding: "2px 8px" }} onClick={() => setActiveSection("deficiencies")}>إضافة ملاحظة</button>
+          </div>
+          {deficiencies.length ? deficiencies.map((d) => <div key={d.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line)" }}><span>{d.description}</span><Badge value={d.status} /></div>) : <p style={{ color: "var(--muted)" }}>لا توجد نواقص أو ملاحظات.</p>}
+        </div>
+
+        <div className="panel" style={{ background: "var(--surface)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <SectionTitle icon={UsersRound} title="فرق العمل المعيّنة والمكلفة" />
+            <button type="button" className="secondary-button" style={{ fontSize: "0.75rem", padding: "2px 8px" }} onClick={() => setActiveSection("teams")}>فرق العمل</button>
+          </div>
+          {assignments.length ? assignments.map((a) => { const team = teams.find((t) => t.id === a.teamId); const worker = workers.find((w) => w.id === a.workerId); return <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line)" }}><span>{team?.name || worker?.name || "—"}</span><small style={{ color: "var(--muted)" }}>{a.roleOnSite}</small></div>; }) : <p style={{ color: "var(--muted)" }}>لا توجد تعيينات لفرق العمل.</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ClientsView({ clients, projects, addClient, deleteClient, onCsvImport }: {
   clients: Client[]; projects: Project[];
   addClient: (e: FormEvent<HTMLFormElement>) => void;
-  deleteClient: (id: number) => void; updateClient: (c: Client) => void;
+  deleteClient: (id: number | string) => void; updateClient: (c: Client) => void;
   onCsvImport: (t: string) => void;
 }) {
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
   return (
     <section className="content-grid content-grid--stack">
       <form className="form-panel" onSubmit={addClient}>
         <SectionTitle icon={UserPlus} title="إضافة عميل جديد" />
         <Field label="اسم العميل / المنشأة" name="name" required />
         <div className="two-fields">
-          <Field label="الهاتف" name="phone" />
+          <Field label="الهاتف" name="phone" required />
           <Field label="النوع" name="type" placeholder="مالك وحدة / استشاري ..." />
         </div>
         <Field label="العنوان" name="address" />
@@ -5263,18 +5345,13 @@ function ClientsView({ clients, projects, addClient, deleteClient, updateClient,
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>الاسم</th><th>الهاتف</th><th>العنوان</th><th>النوع</th><th>المشاريع</th><th style={{ width: 130 }}>إجراءات</th></tr></thead>
+            <thead><tr><th>الاسم</th><th>الهاتف</th><th>العنوان</th><th>النوع</th><th>المشاريع</th><th style={{ width: 60 }}>حذف</th></tr></thead>
             <tbody>
               {clients.map((c) => (
                 <tr key={c.id}>
                   <td><strong>{c.name}</strong></td><td>{c.phone || "—"}</td><td>{c.address || "—"}</td><td>{c.type || "—"}</td>
                   <td>{projects.filter((p) => p.clientId === c.id).length}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <button type="button" className="secondary-button" style={{ minHeight: 28, padding: "0 10px", fontSize: "0.76rem" }} onClick={() => setEditingClient(c)}>تعديل</button>
-                      <button className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => triggerConfirm("حذف هذا العميل؟", () => deleteClient(c.id))}><Trash2 size={16} /></button>
-                    </div>
-                  </td>
+                  <td><button className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => deleteClient(c.id)}><Trash2 size={16} /></button></td>
                 </tr>
               ))}
               {clients.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا يوجد عملاء مسجلين.</td></tr>}
@@ -5282,73 +5359,16 @@ function ClientsView({ clients, projects, addClient, deleteClient, updateClient,
           </table>
         </div>
       </div>
-
-      {editingClient && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999, padding: "20px" }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", width: "100%", maxWidth: "480px", padding: "24px", boxShadow: "var(--shadow-lg)", direction: "rtl", animation: "tab-fade-in 0.2s ease-out" }}>
-            <h3 style={{ margin: "0 0 16px 0", fontSize: "1.2rem", fontWeight: 800 }}>تعديل بيانات العميل</h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const f = new FormData(e.currentTarget);
-              updateClient({
-                ...editingClient,
-                name: String(f.get("name") || "").trim(),
-                phone: String(f.get("phone") || "").trim(),
-                type: String(f.get("type") || "").trim(),
-                address: String(f.get("address") || "").trim(),
-                notes: String(f.get("notes") || "").trim(),
-              });
-              setEditingClient(null);
-            }} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <label>الاسم
-                <input name="name" defaultValue={editingClient.name} required style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <label>الهاتف
-                <input name="phone" defaultValue={editingClient.phone} required style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <label>النوع
-                <input name="type" defaultValue={editingClient.type || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <label>العنوان
-                <input name="address" defaultValue={editingClient.address || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <label>ملاحظات
-                <textarea name="notes" defaultValue={editingClient.notes || ""} rows={2} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <div style={{ display: "flex", gap: "10px", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerConfirm("هل أنت تأكد من حذف هذا العميل بالكامل؟", () => {
-                      deleteClient(editingClient.id);
-                      setEditingClient(null);
-                    });
-                  }}
-                  style={{ background: "#dc2626", color: "#fff", border: 0, padding: "8px 14px", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                >
-                  <Trash2 size={15} />
-                  حذف العميل
-                </button>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button type="button" className="secondary-button" onClick={() => setEditingClient(null)}>إلغاء</button>
-                  <button type="submit" className="primary-button" style={{ background: "var(--brand)", color: "#fff", border: 0 }}>حفظ التغييرات</button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </section>
   );
 }
 
-function ContractorsView({ contractors, projects, addContractor, deleteContractor, updateContractor }: {
+function ContractorsView({ contractors, projects, addContractor, deleteContractor }: {
   contractors: Contractor[]; projects: Project[];
   addContractor: (e: FormEvent<HTMLFormElement>) => void;
-  deleteContractor: (id: number) => void; updateContractor: (c: Contractor) => void;
+  deleteContractor: (id: number | string) => void; updateContractor: (c: Contractor) => void;
 }) {
   void projects;
-  const [editingContractor, setEditingContractor] = useState<Contractor | null>(null);
   return (
     <section className="content-grid content-grid--stack">
       <form className="form-panel" onSubmit={addContractor}>
@@ -5369,17 +5389,12 @@ function ContractorsView({ contractors, projects, addContractor, deleteContracto
         <SectionTitle icon={BriefcaseBusiness} title="قائمة المقاولين" />
         <div className="table-wrap">
           <table>
-            <thead><tr><th>الاسم</th><th>التخصص</th><th>الشركة</th><th>الهاتف</th><th>العنوان</th><th style={{ width: 130 }}>إجراءات</th></tr></thead>
+            <thead><tr><th>الاسم</th><th>التخصص</th><th>الشركة</th><th>الهاتف</th><th>العنوان</th><th style={{ width: 60 }}>حذف</th></tr></thead>
             <tbody>
               {contractors.map((c) => (
                 <tr key={c.id}>
                   <td><strong>{c.name}</strong></td><td>{c.specialty || "—"}</td><td>{c.company || "—"}</td><td>{c.phone || "—"}</td><td>{c.address || "—"}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <button type="button" className="secondary-button" style={{ minHeight: 28, padding: "0 10px", fontSize: "0.76rem" }} onClick={() => setEditingContractor(c)}>تعديل</button>
-                      <button className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => triggerConfirm("حذف هذا المقاول؟", () => deleteContractor(c.id))}><Trash2 size={16} /></button>
-                    </div>
-                  </td>
+                  <td><button className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => deleteContractor(c.id)}><Trash2 size={16} /></button></td>
                 </tr>
               ))}
               {contractors.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا يوجد مقاولين مسجلين.</td></tr>}
@@ -5387,51 +5402,6 @@ function ContractorsView({ contractors, projects, addContractor, deleteContracto
           </table>
         </div>
       </div>
-
-      {editingContractor && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999, padding: "20px" }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", width: "100%", maxWidth: "480px", padding: "24px", boxShadow: "var(--shadow-lg)", direction: "rtl", animation: "tab-fade-in 0.2s ease-out" }}>
-            <h3 style={{ margin: "0 0 16px 0", fontSize: "1.2rem", fontWeight: 800 }}>تعديل بيانات المقاول</h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const f = new FormData(e.currentTarget);
-              updateContractor({
-                ...editingContractor,
-                name: String(f.get("name") || "").trim(),
-                phone: String(f.get("phone") || "").trim(),
-                specialty: String(f.get("specialty") || "").trim(),
-                company: String(f.get("company") || "").trim(),
-                address: String(f.get("address") || "").trim(),
-                notes: String(f.get("notes") || "").trim(),
-              });
-              setEditingContractor(null);
-            }} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <label>الاسم
-                <input name="name" defaultValue={editingContractor.name} required style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <label>الهاتف
-                <input name="phone" defaultValue={editingContractor.phone || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <label>التخصص
-                <input name="specialty" defaultValue={editingContractor.specialty || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <label>الشركة
-                <input name="company" defaultValue={editingContractor.company || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <label>العنوان
-                <input name="address" defaultValue={editingContractor.address || ""} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <label>ملاحظات
-                <textarea name="notes" defaultValue={editingContractor.notes || ""} rows={2} style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px" }} />
-              </label>
-              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" }}>
-                <button type="button" className="secondary-button" onClick={() => setEditingContractor(null)}>إلغاء</button>
-                <button type="submit" className="primary-button" style={{ background: "var(--brand)", color: "#fff", border: 0 }}>حفظ التغييرات</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </section>
   );
 }
@@ -5500,7 +5470,15 @@ function ProjectsView({
             <Field label="الميزانية (ريال)" name="budget" type="number" />
             <Field label="نسبة الإنجاز %" name="progress" type="number" />
           </div>
-          <label>الحالة<select name="status" defaultValue="جاري">{projectStatuses.map((s) => <option key={s}>{s}</option>)}</select></label>
+          <div className="two-fields">
+            <label>الحالة<select name="status" defaultValue="جاري">{projectStatuses.map((s) => <option key={s}>{s}</option>)}</select></label>
+            <label>صلاحية تعديل المهندس
+              <select name="allowEngineerEdit" defaultValue="true">
+                <option value="true">متاح للمهندس التعديل ✏️</option>
+                <option value="false">عرض التفاصيل فقط 🔒</option>
+              </select>
+            </label>
+          </div>
           <button className="primary-button"><Plus size={18} />إضافة المشروع</button>
         </form>
       )}
@@ -5606,51 +5584,6 @@ function ProjectsView({
           </div>
         </div>
       )}
-    </section>
-  );
-}
-
-function ProjectDetailView({ project, client, stages, systems, deficiencies, assignments, workers, teams, onBack, downloadReportPdf, downloadReportExcel }: {
-  project?: Project; client?: Client; stages: ProjectStage[]; systems: ProjectSystem[];
-  deficiencies: SiteDeficiency[]; assignments: ProjectAssignment[]; workers: Worker[]; teams: WorkTeam[]; onBack: () => void;
-  downloadReportPdf: (id: string | number, name: string) => void;
-  downloadReportExcel: (id: string | number, name: string) => void;
-}) {
-  if (!project) return <section className="panel"><p style={{ color: "var(--muted)" }}>اختر مشروعًا من قائمة المواقع والمشاريع.</p></section>;
-  return (
-    <section className="panel" style={{ display: "grid", gap: 18 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-        <SectionTitle icon={Building2} title={project.name} />
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" className="primary-button" style={{ height: "38px", minHeight: "auto", fontSize: "0.85rem" }} onClick={() => downloadReportPdf(project.id, project.name)}>تقرير المشروع (PDF)</button>
-          <button type="button" className="primary-button" style={{ height: "38px", minHeight: "auto", fontSize: "0.85rem", background: "#10b981", color: "#fff" }} onClick={() => downloadReportExcel(project.id, project.name)}>كشف المشروع (Excel)</button>
-          <button type="button" className="secondary-button" style={{ height: "38px", minHeight: "auto", fontSize: "0.85rem" }} onClick={onBack}>عودة للمشاريع</button>
-        </div>
-      </div>
-      <div className="metric-grid">
-        <MiniStat title="العميل" value={client?.name ?? "—"} icon={Users} />
-        <MiniStat title="المهندس" value={project.engineer || "—"} icon={HardHat} />
-        <MiniStat title="الحالة" value={project.status} icon={Gauge} />
-        <MiniStat title="نسبة الإنجاز" value={`${project.progress}%`} icon={BarChart3} />
-      </div>
-      <div className="operations-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
-        <div className="panel">
-          <SectionTitle icon={Layers3} title="مراحل التنفيذ" />
-          {stages.length ? stages.map((s) => <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line)" }}><span>{s.name}</span><Badge value={s.status} /></div>) : <p style={{ color: "var(--muted)" }}>لا توجد مراحل.</p>}
-        </div>
-        <div className="panel">
-          <SectionTitle icon={Gauge} title="الأنظمة الفنية" />
-          {systems.length ? systems.map((s) => <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line)" }}><span>{s.name} <small style={{ color: "var(--muted)" }}>({s.type})</small></span><Badge value={s.status} /></div>) : <p style={{ color: "var(--muted)" }}>لا توجد أنظمة.</p>}
-        </div>
-        <div className="panel">
-          <SectionTitle icon={OctagonAlert} title="نواقص الموقع" />
-          {deficiencies.length ? deficiencies.map((d) => <div key={d.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line)" }}><span>{d.description}</span><Badge value={d.status} /></div>) : <p style={{ color: "var(--muted)" }}>لا توجد نواقص.</p>}
-        </div>
-        <div className="panel">
-          <SectionTitle icon={UsersRound} title="فرق العمل المعيّنة" />
-          {assignments.length ? assignments.map((a) => { const team = teams.find((t) => t.id === a.teamId); const worker = workers.find((w) => w.id === a.workerId); return <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line)" }}><span>{team?.name || worker?.name || "—"}</span><small style={{ color: "var(--muted)" }}>{a.roleOnSite}</small></div>; }) : <p style={{ color: "var(--muted)" }}>لا توجد تعيينات.</p>}
-        </div>
-      </div>
     </section>
   );
 }
@@ -8251,7 +8184,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     event.currentTarget.reset();
     setNotice("تمت إضافة المقاول");
   };
-  const deleteContractor = (id: number) => { setContractors((cur) => cur.filter((c) => c.id !== id)); setNotice("تم حذف المقاول"); };
+  const deleteContractor = (id: number | string) => { setContractors((cur) => cur.filter((c) => String(c.id) !== String(id))); setNotice("تم حذف المقاول"); };
   const updateContractor = (c: Contractor) => { setContractors((cur) => cur.map((x) => (x.id === c.id ? c : x))); setNotice("تم تحديث المقاول"); };
 
   const addProjectFromForm = async (event: FormEvent<HTMLFormElement>) => {
@@ -8264,6 +8197,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     const engineerId = String(f.get("engineerId") ?? "").trim();
     const selectedEng = staff.find((s) => String(s.backendId || s.id) === engineerId || String(s.id).replace(/^staff-/, "") === engineerId.replace(/^staff-/, ""));
 
+    const allowEngineerEdit = f.get("allowEngineerEdit") !== "false";
     const localId = nextId(projects);
     const pData = {
       id: localId,
@@ -8276,6 +8210,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       status: "لم يبدأ" as const,
       engineerId: engineerId || undefined,
       engineer: selectedEng ? selectedEng.name : (engineerId || ""),
+      allowEngineerEdit,
       budget: Number(f.get("budget")) || 0,
       progress: 0,
     };
@@ -9147,8 +9082,10 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
             workers={workers}
             teams={teams}
             onBack={() => setActiveSection("projects")}
+            setActiveSection={setActiveSection}
             downloadReportPdf={downloadProjectReportPdf}
             downloadReportExcel={downloadProjectReportExcel}
+            isPMOrAdmin={isPMOrAdmin}
           />
         );
       case "stages":
