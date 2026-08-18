@@ -7575,6 +7575,9 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     }
   };
 
+  const clientsById = useMemo(() => new Map<string | number, Client>(clients.map((c) => [c.id, c])), [clients]);
+  const projectsById = useMemo(() => new Map<string | number, Project>(projects.map((p) => [p.id, p])), [projects]);
+
   const selectedProject = useMemo(() => {
     if (selectedProjectId) {
       const p = projectsById.get(selectedProjectId);
