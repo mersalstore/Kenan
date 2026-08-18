@@ -3971,12 +3971,14 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
         }
       }
 
-      // 3. If project has no engineer assigned yet, allow site engineers to view it
-      if (!p.engineer && !p.engineerId) return true;
+      // 3. Team or assignment matching
+      if (assignments && assignments.some((a) => String(a.projectId) === String(p.id) && userEngId && String(a.workerId || a.subcontractorId).replace(/^staff-/, "") === userEngId.replace(/^staff-/, ""))) {
+        return true;
+      }
 
       return false;
     });
-  }, [projects, isSiteEngineer, user.name, user.id]);
+  }, [projects, isSiteEngineer, user.name, user.id, assignments]);
 
   const filteredClients = clients.filter((c) => `${c.name} ${c.phone} ${c.address} ${c.type}`.toLowerCase().includes(search.toLowerCase()));
   const filteredProjects = roleFilteredProjects.filter((p) => {

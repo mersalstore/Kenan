@@ -6943,9 +6943,6 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
         return true;
       }
 
-      // 4. If project has no engineer assigned yet, allow site engineers to view it
-      if (!p.engineer && !p.engineerId) return true;
-
       return false;
     });
   }, [projects, isSiteEngineer, user.name, user.backendId, user.id, assignments]);
