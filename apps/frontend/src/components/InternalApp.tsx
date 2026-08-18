@@ -5543,14 +5543,14 @@ function ProjectsView({
               e.preventDefault();
               const f = new FormData(e.currentTarget);
               const engId = String(f.get("engineerId") || "").trim();
-              const selectedEng = staff.find((s) => String(s.backendId || s.id) === engId);
+              const selectedEng = staff.find((s) => String(s.backendId || s.id) === engId || String(s.id).replace(/^staff-/, "") === engId.replace(/^staff-/, ""));
               updateProject({
                 ...editingProject,
                 name: String(f.get("name") || editingProject.name).trim(),
                 type: String(f.get("type") || editingProject.type).trim(),
                 clientId: (f.get("clientId") || editingProject.clientId) as any,
                 engineerId: engId || editingProject.engineerId,
-                engineer: selectedEng ? selectedEng.name : (engId ? editingProject.engineer : ""),
+                engineer: selectedEng ? selectedEng.name : (engId || editingProject.engineer || ""),
                 address: String(f.get("address") || editingProject.address).trim(),
                 startDate: String(f.get("startDate") || editingProject.startDate),
                 endDate: String(f.get("endDate") || editingProject.endDate),
@@ -6938,12 +6938,17 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
         }
       }
 
-      // 3. If project has no engineer assigned yet, allow site engineers to view it
+      // 3. Team or assignment matching
+      if (assignments && assignments.some((a) => String(a.projectId) === String(p.id) && userEngId && String(a.workerId || a.subcontractorId).replace(/^staff-/, "") === userEngId.replace(/^staff-/, ""))) {
+        return true;
+      }
+
+      // 4. If project has no engineer assigned yet, allow site engineers to view it
       if (!p.engineer && !p.engineerId) return true;
 
       return false;
     });
-  }, [projects, isSiteEngineer, user.name, user.backendId, user.id]);
+  }, [projects, isSiteEngineer, user.name, user.backendId, user.id, assignments]);
 
   const roleFilteredClients = useMemo(() => {
     if (!isSiteEngineer) return clients;
@@ -8237,7 +8242,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     if (!name || !clientId) return;
 
     const engineerId = String(f.get("engineerId") ?? "").trim();
-    const selectedEng = staff.find((s) => String(s.backendId || s.id) === engineerId);
+    const selectedEng = staff.find((s) => String(s.backendId || s.id) === engineerId || String(s.id).replace(/^staff-/, "") === engineerId.replace(/^staff-/, ""));
 
     const localId = nextId(projects);
     const pData = {
@@ -8250,7 +8255,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       endDate: String(f.get("endDate") || new Date().toISOString().slice(0, 10)),
       status: "لم يبدأ" as const,
       engineerId: engineerId || undefined,
-      engineer: selectedEng ? selectedEng.name : "",
+      engineer: selectedEng ? selectedEng.name : (engineerId || ""),
       budget: Number(f.get("budget")) || 0,
       progress: 0,
     };
