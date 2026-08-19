@@ -3870,31 +3870,62 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   }, [activeSection]);
 
   const [search, setSearch] = useState("");
-  const [clients, setClients] = useLocalStorage<Client[]>("kenan.clients_v3", seedClients);
-  const [projects, setProjects] = useLocalStorage<Project[]>("kenan.projects_v3", seedProjects);
-  const [stages, setStages] = useLocalStorage<ProjectStage[]>("kenan.stages_v3", seedStages);
-  const [workers, setWorkers] = useLocalStorage<Worker[]>("kenan.workers_v3", seedWorkers);
-  const [inventory, setInventory] = useLocalStorage<InventoryItem[]>("kenan.inventory_v3", seedInventory);
-  const [, setInvoices] = useLocalStorage<Invoice[]>("kenan.invoices_v3", seedInvoices);
-  const [expenses, setExpenses] = useLocalStorage<Expense[]>("kenan.expenses_v3", seedExpenses);
-  const [contracts, setContracts] = useLocalStorage<Contract[]>("kenan.contracts_v3", seedContracts);
-  const [contractors, setContractors] = useLocalStorage<Contractor[]>("kenan.contractors_v3", seedContractors);
-  const [quotations, setQuotations] = useLocalStorage<Quotation[]>("kenan.quotations_v3", seedQuotations);
-  const [showcase, setShowcase] = useLocalStorage<ShowcaseItem[]>("kenan.showcase_v3", seedShowcase);
-  const [staff, setStaff] = useLocalStorage<StaffAccount[]>("kenan.staff_v3", seedStaff);
-  const [site, setSite] = useLocalStorage<SiteSettings>("kenan.site_v3", seedSite);
-  const [, setProjectDetails] = useLocalStorage<ProjectWorkflow[]>("kenan.projectDetails_v3", []);
-  const [deficiencies, setDeficiencies] = useLocalStorage<SiteDeficiency[]>("kenan.deficiencies_v3", seedDeficiencies);
-  const [maintenanceContracts, setMaintenanceContracts] = useLocalStorage<MaintenanceContract[]>("kenan.maintenanceContracts_v3", seedMaintenanceContracts);
-  const [maintenanceVisits, setMaintenanceVisits] = useLocalStorage<MaintenanceVisit[]>("kenan.maintenanceVisits_v3", seedMaintenanceVisits);
-  const [systems, setSystems] = useLocalStorage<ProjectSystem[]>("kenan.systems_v3", seedSystems);
-  const [components, setComponents] = useLocalStorage<SystemComponent[]>("kenan.components_v3", seedComponents);
-  const [teams, setTeams] = useLocalStorage<WorkTeam[]>("kenan.teams_v3", seedTeams);
-  const [assignments, setAssignments] = useLocalStorage<ProjectAssignment[]>("kenan.assignments_v3", seedAssignments);
-  const [attendance, setAttendance] = useLocalStorage<AttendanceRecord[]>("kenan.attendance_v3", seedAttendance);
-  const [leaves, setLeaves] = useLocalStorage<Leave[]>("kenan.leaves_v3", seedLeaves);
-  const [payroll, setPayroll] = useLocalStorage<PayrollRun[]>("kenan.payroll_v3", seedPayroll);
+  const [clients, setClients] = useState<Client[]>(seedClients);
+  const [projects, setProjects] = useState<Project[]>(seedProjects);
+  const [stages, setStages] = useState<ProjectStage[]>(seedStages);
+  const [workers, setWorkers] = useState<Worker[]>(seedWorkers);
+  const [inventory, setInventory] = useState<InventoryItem[]>(seedInventory);
+  const [, setInvoices] = useState<Invoice[]>(seedInvoices);
+  const [expenses, setExpenses] = useState<Expense[]>(seedExpenses);
+  const [contracts, setContracts] = useState<Contract[]>(seedContracts);
+  const [contractors, setContractors] = useState<Contractor[]>(seedContractors);
+  const [quotations, setQuotations] = useState<Quotation[]>(seedQuotations);
+  const [showcase, setShowcase] = useState<ShowcaseItem[]>(seedShowcase);
+  const [staff, setStaff] = useState<StaffAccount[]>(seedStaff);
+  const [site, setSite] = useState<SiteSettings>(seedSite);
+  const [, setProjectDetails] = useState<ProjectWorkflow[]>([]);
+  const [deficiencies, setDeficiencies] = useState<SiteDeficiency[]>(seedDeficiencies);
+  const [maintenanceContracts, setMaintenanceContracts] = useState<MaintenanceContract[]>(seedMaintenanceContracts);
+  const [maintenanceVisits, setMaintenanceVisits] = useState<MaintenanceVisit[]>(seedMaintenanceVisits);
+  const [systems, setSystems] = useState<ProjectSystem[]>(seedSystems);
+  const [components, setComponents] = useState<SystemComponent[]>(seedComponents);
+  const [teams, setTeams] = useState<WorkTeam[]>(seedTeams);
+  const [assignments, setAssignments] = useState<ProjectAssignment[]>(seedAssignments);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>(seedAttendance);
+  const [leaves, setLeaves] = useState<Leave[]>(seedLeaves);
+  const [payroll, setPayroll] = useState<PayrollRun[]>(seedPayroll);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sensitiveKeys = [
+      "kenan.clients_v3",
+      "kenan.projects_v3",
+      "kenan.stages_v3",
+      "kenan.workers_v3",
+      "kenan.inventory_v3",
+      "kenan.invoices_v3",
+      "kenan.expenses_v3",
+      "kenan.contracts_v3",
+      "kenan.contractors_v3",
+      "kenan.quotations_v3",
+      "kenan.staff_v3",
+      "kenan.deficiencies_v3",
+      "kenan.systems_v3",
+      "kenan.components_v3",
+      "kenan.teams_v3",
+      "kenan.assignments_v3",
+      "kenan.attendance_v3",
+      "kenan.leaves_v3",
+      "kenan.payroll_v3",
+      "kenan.projectDetails_v3"
+    ];
+    for (const key of sensitiveKeys) {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {}
+    }
+  }, []);
 
   const [selectedProjectId, setSelectedProjectId] = useState<number>(() => {
     if (typeof window !== "undefined") {

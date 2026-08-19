@@ -51,9 +51,15 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     headers.set("Content-Type", "application/json");
   }
 
+  const fetchOptions: RequestInit = {
+    ...options,
+    headers,
+    credentials: "include",
+  };
+
   let response: Response;
   try {
-    response = await fetch(url, { ...options, headers });
+    response = await fetch(url, fetchOptions);
   } catch (netErr) {
     throw new Error("تعذر الاتصال بالسيرفر (يعمل التطبيق في الوضع المحلي)");
   }
@@ -69,22 +75,27 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
   if (response.status === 401) {
     const refreshToken = typeof window !== "undefined" ? localStorage.getItem("kanan_refresh_token") : null;
 
-    if (refreshToken && !isFabricatedToken(refreshToken)) {
+    if (!isFabricatedToken(refreshToken)) {
       try {
         const refreshResponse = await fetch(`${cleanBackend}/api/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
+          credentials: "include",
+          body: JSON.stringify({ refreshToken: refreshToken || undefined }),
         });
 
         if (refreshResponse.ok) {
           const data = await refreshResponse.json();
-          localStorage.setItem("kanan_access_token", data.accessToken);
-          localStorage.setItem("kanan_refresh_token", data.refreshToken);
+          if (data?.accessToken) {
+            localStorage.setItem("kanan_access_token", data.accessToken);
+            headers.set("Authorization", `Bearer ${data.accessToken}`);
+          }
+          if (data?.refreshToken) {
+            localStorage.setItem("kanan_refresh_token", data.refreshToken);
+          }
 
-          // Retry original request
-          headers.set("Authorization", `Bearer ${data.accessToken}`);
-          const retryResponse = await fetch(url, { ...options, headers });
+          // Retry original request with updated credentials
+          const retryResponse = await fetch(url, { ...fetchOptions, headers });
           if (!retryResponse.ok) {
             const err = await retryResponse.json().catch(() => ({}));
             throw new Error(err.message || "فشلت العملية على السيرفر");
@@ -92,7 +103,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
           return retryResponse.json();
         }
       } catch {
-        // نتجاهل الاستثناء هنا ونُنهي الجلسة بالأسفل
+        // Ignore exception and handle session termination below
       }
     }
 
