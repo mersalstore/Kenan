@@ -5311,6 +5311,19 @@ function ProjectDetailView({ project, client, stages, systems, deficiencies, ass
           </div>
           {assignments.length ? assignments.map((a) => { const team = teams.find((t) => t.id === a.teamId); const worker = workers.find((w) => w.id === a.workerId); return <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line)" }}><span>{team?.name || worker?.name || "—"}</span><small style={{ color: "var(--muted)" }}>{a.roleOnSite}</small></div>; }) : <p style={{ color: "var(--muted)" }}>لا توجد تعيينات لفرق العمل.</p>}
         </div>
+
+        <div className="panel" style={{ background: "var(--surface)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <SectionTitle icon={ClipboardList} title="تقرير اليوم الموحد للموقع" />
+            <button type="button" className="secondary-button" style={{ fontSize: "0.75rem", padding: "2px 8px" }} onClick={() => setActiveSection("dailyReports")}>عرض / كتابة تقرير</button>
+          </div>
+          <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: "4px 0 10px 0" }}>
+            متابعة فورية يومية لتقدم الأعمال، ونسب إنجاز أنظمة الإطفاء والإنذار والتهوية، وسجل العمالة بالموقع.
+          </p>
+          <button type="button" className="primary-button" style={{ width: "100%", fontSize: "0.82rem", padding: "6px 10px", justifyContent: "center" }} onClick={() => setActiveSection("dailyReports")}>
+            <ClipboardList size={16} /> فتح تقارير الموقع اليومية
+          </button>
+        </div>
       </div>
     </section>
   );
@@ -6175,22 +6188,32 @@ function SupplyOrdersView({ projects, quotations, canCreate }: { projects: Proje
 }
 
 function DailyReportsView({ projects }: { projects: Project[] }) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id ? String(projects[0].id) : "");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("ALL");
   const [reports, setReports] = useState<DailySiteReport[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [showForm, setShowForm] = useState(true);
+  const [selectedReportDetail, setSelectedReportDetail] = useState<DailySiteReport | null>(null);
 
-  const loadReports = async (projectId: string) => {
-    if (!projectId) {
-      setReports([]);
-      return;
-    }
+  const loadReports = async (projId: string) => {
     setLoading(true);
     setError("");
     try {
-      const data = await apiFetch(`/api/projects/${projectId}/daily-reports`);
-      setReports(Array.isArray(data) ? data : []);
+      if (projId === "ALL" || !projId) {
+        const promises = projects.map((p) =>
+          apiFetch(`/api/projects/${p.id}/daily-reports`).catch(() => [])
+        );
+        const results = await Promise.all(promises);
+        const flat = results.flat().filter(Boolean) as DailySiteReport[];
+        setReports(
+          flat.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        );
+      } else {
+        const data = await apiFetch(`/api/projects/${projId}/daily-reports`);
+        setReports(Array.isArray(data) ? data : []);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذر تحميل التقارير");
     } finally {
@@ -6201,15 +6224,20 @@ function DailyReportsView({ projects }: { projects: Project[] }) {
   useEffect(() => {
     loadReports(selectedProjectId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProjectId]);
+  }, [selectedProjectId, projects]);
 
   const submitReport = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedProjectId) return;
     const form = event.currentTarget;
     const f = new FormData(form);
+    const targetProjId = String(f.get("projectId") || (selectedProjectId !== "ALL" ? selectedProjectId : ""));
+    if (!targetProjId || targetProjId === "ALL") {
+      setError("يرجى اختيار المشروع أولاً لإرسال التقرير");
+      return;
+    }
     setSubmitting(true);
     setError("");
+    setSuccessMsg("");
     try {
       const systemEntries = DAILY_REPORT_SYSTEM_TYPES.map((type) => ({
         systemType: type,
@@ -6217,7 +6245,7 @@ function DailyReportsView({ projects }: { projects: Project[] }) {
         wiringDone: f.get(`sys_${type}_wiring`) === "on",
         installDone: f.get(`sys_${type}_install`) === "on",
       }));
-      await apiFetch(`/api/projects/${selectedProjectId}/daily-reports`, {
+      await apiFetch(`/api/projects/${targetProjId}/daily-reports`, {
         method: "POST",
         body: JSON.stringify({
           workersCount: Number(f.get("workersCount")) || 0,
@@ -6232,6 +6260,8 @@ function DailyReportsView({ projects }: { projects: Project[] }) {
         }),
       });
       form.reset();
+      setSuccessMsg("تم حفظ وإرسال التقرير اليومي بنجاح إلى الإدارة 🚀");
+      setTimeout(() => setSuccessMsg(""), 5000);
       await loadReports(selectedProjectId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذر إرسال التقرير");
@@ -6240,71 +6270,432 @@ function DailyReportsView({ projects }: { projects: Project[] }) {
     }
   };
 
-  return (
-    <section className="content-grid content-grid--stack">
-      <form className="form-panel" onSubmit={submitReport}>
-        <SectionTitle icon={ClipboardList} title="تقرير اليوم الموحد" />
-        <label>
-          المشروع
-          <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)} required>
-            <option value="">اختر مشروع...</option>
-            {projects.map((p) => (
-              <option key={p.id} value={String(p.id)}>{p.name}</option>
-            ))}
-          </select>
-        </label>
-        <label>عدد العمالة بالموقع<input name="workersCount" type="number" min={0} /></label>
-        {DAILY_REPORT_SYSTEM_TYPES.map((type) => (
-          <fieldset key={type} style={{ border: "1px solid var(--line)", borderRadius: 6, padding: "8px 10px", marginBottom: 10 }}>
-            <legend style={{ fontSize: "0.85rem", fontWeight: 600, padding: "0 6px" }}>{DAILY_REPORT_SYSTEM_LABELS[type]}</legend>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}><input type="checkbox" name={`sys_${type}_foundation`} />تأسيس</label>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}><input type="checkbox" name={`sys_${type}_wiring`} />أسلاك</label>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}><input type="checkbox" name={`sys_${type}_install`} />تركيب</label>
-            </div>
-          </fieldset>
-        ))}
-        <label>المشاكل<textarea name="problems" rows={2} /></label>
-        <label>الحلول<textarea name="solutions" rows={2} /></label>
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", margin: "6px 0" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}><input type="checkbox" name="needsQuoteRequest" />يحتاج طلب سعر</label>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}><input type="checkbox" name="needsConsultantReview" />يحتاج مراجعة استشاري</label>
+  const printReport = (report: DailySiteReport) => {
+    const proj = projects.find((p) => String(p.id) === String(report.projectId));
+    const win = window.open("", "_blank");
+    if (!win) return;
+    const html = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>تقرير اليوم الموحد - ${proj?.name || "مشروع كنان"}</title>
+        <style>
+          body { font-family: 'Cairo', system-ui, sans-serif; padding: 24px; color: #1e293b; line-height: 1.6; }
+          .header { border-bottom: 2px solid #e11d48; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+          .title { font-size: 20px; font-weight: bold; color: #e11d48; }
+          .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; }
+          .meta-item strong { color: #475569; }
+          .section-title { font-size: 15px; font-weight: bold; color: #0f172a; margin: 16px 0 8px 0; border-right: 3px solid #e11d48; padding-right: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: right; }
+          th { background: #f1f5f9; font-weight: bold; }
+          .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+          .badge-ok { background: #dcfce7; color: #15803d; }
+          .badge-no { background: #fee2e2; color: #b91c1c; }
+          .box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; margin-bottom: 12px; }
+          .sig-area { margin-top: 30px; display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 15px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">شركة كنان للسلامة والأنظمة الأمنية</div>
+            <div style="font-weight: 600; color: #334155;">تقرير تشغيل الموقع اليومي الموحد</div>
+          </div>
+          <div style="text-align: left; font-size: 12px; color: #64748b;">
+            تاريخ التقرير: ${new Date(report.date).toLocaleDateString("ar-EG")}
+          </div>
         </div>
-        <label>ملاحظات مهندس المشروع<textarea name="engineerNotes" rows={2} /></label>
-        <label>نسبة استلام المشروع %<input name="completionPercent" type="number" min={0} max={100} /></label>
-        <label>التوقيع / الاعتماد<input name="signature" type="text" /></label>
-        {error && <p style={{ color: "#dc2626", fontSize: "0.85rem" }}>{error}</p>}
-        <button className="primary-button" disabled={submitting || !selectedProjectId}>
-          <Plus size={18} />
-          {submitting ? "جارٍ الإرسال..." : "إرسال التقرير"}
-        </button>
-      </form>
+
+        <div class="meta-grid">
+          <div class="meta-item"><strong>المشروع:</strong> ${proj?.name || "—"}</div>
+          <div class="meta-item"><strong>تاريخ الإرسال:</strong> ${new Date(report.date).toLocaleDateString("ar-EG")}</div>
+          <div class="meta-item"><strong>مهندس الموقع:</strong> ${report.submittedBy?.name || "مهندس الموقع"}</div>
+          <div class="meta-item"><strong>عدد العمالة بالموقع:</strong> ${report.workersCount} عمال</div>
+          <div class="meta-item"><strong>نسبة استلام المشروع:</strong> ${report.completionPercent}%</div>
+          <div class="meta-item"><strong>الاعتماد / التوقيع:</strong> ${report.signature || "معتمد إلكترونياً"}</div>
+        </div>
+
+        <div class="section-title">فحص ومتابعة مراحل الأنظمة الفنية بالموقع</div>
+        <table>
+          <thead>
+            <tr>
+              <th>النظام الفني</th>
+              <th>أعمال التأسيس</th>
+              <th>أعمال التمديدات والأسلاك</th>
+              <th>أعمال التركيب والتشغيل</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${DAILY_REPORT_SYSTEM_TYPES.map((type) => {
+              const entry = report.systemEntries?.find((e) => e.systemType === type);
+              return `
+                <tr>
+                  <td><strong>${DAILY_REPORT_SYSTEM_LABELS[type]}</strong></td>
+                  <td>${entry?.foundationDone ? '<span class="badge badge-ok">✅ تم الإنجاز</span>' : '<span class="badge badge-no">⏳ قيد العمل / لم يبدأ</span>'}</td>
+                  <td>${entry?.wiringDone ? '<span class="badge badge-ok">✅ تم الإنجاز</span>' : '<span class="badge badge-no">⏳ قيد العمل / لم يبدأ</span>'}</td>
+                  <td>${entry?.installDone ? '<span class="badge badge-ok">✅ تم الإنجاز</span>' : '<span class="badge badge-no">⏳ قيد العمل / لم يبدأ</span>'}</td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+
+        ${report.problems ? `
+          <div class="section-title">المشاكل الميدانية المرصودة</div>
+          <div class="box" style="border-right: 3px solid #ef4444;">${report.problems}</div>
+        ` : ""}
+
+        ${report.solutions ? `
+          <div class="section-title">الحلول المقترحة والإجراءات التنفيذية</div>
+          <div class="box" style="border-right: 3px solid #10b981;">${report.solutions}</div>
+        ` : ""}
+
+        ${report.engineerNotes ? `
+          <div class="section-title">ملاحظات مهندس المشروع للإدارة</div>
+          <div class="box">${report.engineerNotes}</div>
+        ` : ""}
+
+        <div class="sig-area">
+          <div>
+            <strong>توقيع مهندس الموقع:</strong> ${report.signature || report.submittedBy?.name || "معتمد"}
+          </div>
+          <div>
+            <strong>اعتماد الإدارة الهندسية:</strong> ...................
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+      win.print();
+    }, 500);
+  };
+
+  return (
+    <section className="content-grid content-grid--stack" style={{ direction: "rtl" }}>
+      {/* Header & Filter Controls */}
+      <div className="panel" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <SectionTitle icon={ClipboardList} title="تقرير اليوم الموحد لمواقع العمل" />
+          <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "var(--muted)" }}>
+            متابعة فورية يومية للعمالة، فحص شبكات الإطفاء والإنذار والتهوية، ونسب الإنجاز الميداني
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <label style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 6 }}>
+            عرض المشروع:
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              style={{ minWidth: "220px", padding: "6px 10px", borderRadius: "var(--radius)", border: "1px solid var(--line)" }}
+            >
+              <option value="ALL">🌐 جميع المشاريع (عرض مجمع)</option>
+              {projects.map((p) => (
+                <option key={p.id} value={String(p.id)}>🏢 {p.name}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="secondary-button"
+            style={{ height: "36px", minHeight: "auto", fontSize: "0.84rem" }}
+            onClick={() => setShowForm(!showForm)}
+          >
+            {showForm ? "إخفاء نموذج الإرسال" : "➕ كتابة تقرير جديد"}
+          </button>
+        </div>
+      </div>
+
+      {/* Report Submission Form */}
+      {showForm && (
+        <form className="form-panel" onSubmit={submitReport} style={{ background: "var(--surface)", border: "1px solid var(--line)" }}>
+          <SectionTitle icon={ClipboardList} title="إرسال تقرير تشغيل يومي جديد" />
+          
+          {successMsg && (
+            <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", color: "#065f46", padding: "10px 14px", borderRadius: "8px", fontWeight: 600, fontSize: "0.88rem" }}>
+              {successMsg}
+            </div>
+          )}
+
+          <label>
+            المشروع المستهدف *
+            <select
+              name="projectId"
+              defaultValue={selectedProjectId !== "ALL" ? selectedProjectId : (projects[0]?.id ? String(projects[0].id) : "")}
+              required
+            >
+              <option value="">اختر مشروع...</option>
+              {projects.map((p) => (
+                <option key={p.id} value={String(p.id)}>{p.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            عدد العمالة بالموقع اليوم
+            <input name="workersCount" type="number" min={0} placeholder="مثال: 6" defaultValue={0} />
+          </label>
+
+          <div style={{ margin: "10px 0" }}>
+            <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--text)" }}>فحص مراحل الأنظمة الفنية بالموقع:</span>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10, marginTop: 8 }}>
+              {DAILY_REPORT_SYSTEM_TYPES.map((type) => (
+                <fieldset key={type} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px", background: "var(--surface-subtle)" }}>
+                  <legend style={{ fontSize: "0.85rem", fontWeight: 700, padding: "0 6px", color: "var(--brand)" }}>{DAILY_REPORT_SYSTEM_LABELS[type]}</legend>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 4 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500, fontSize: "0.82rem" }}><input type="checkbox" name={`sys_${type}_foundation`} />تأسيس</label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500, fontSize: "0.82rem" }}><input type="checkbox" name={`sys_${type}_wiring`} />أسلاك</label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500, fontSize: "0.82rem" }}><input type="checkbox" name={`sys_${type}_install`} />تركيب</label>
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <label>المشاكل والعوائق الميدانية<textarea name="problems" rows={2} placeholder="أي عوائق بالموقع..." /></label>
+            <label>الحلول المقترحة والتنفيذية<textarea name="solutions" rows={2} placeholder="الحلول المتبعة أو المقترحة..." /></label>
+          </div>
+
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap", padding: "8px 12px", background: "var(--surface-subtle)", borderRadius: 6, border: "1px solid var(--line)" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: "#d97706", fontSize: "0.85rem" }}>
+              <input type="checkbox" name="needsQuoteRequest" /> ⚠️ يحتاج طلب سعر إضافي
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: "#e11d48", fontSize: "0.85rem" }}>
+              <input type="checkbox" name="needsConsultantReview" /> 👷 يحتاج مراجعة مهندس استشاري
+            </label>
+          </div>
+
+          <label>ملاحظات مهندس المشروع للإدارة<textarea name="engineerNotes" rows={2} placeholder="ملاحظات عامة حول تقدم العمل..." /></label>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <label>نسبة استلام / إنجاز المشروع %<input name="completionPercent" type="number" min={0} max={100} defaultValue={0} /></label>
+            <label>التوقيع / الاعتماد الرقمي<input name="signature" type="text" placeholder="اسم المهندس المعتمد" /></label>
+          </div>
+
+          {error && <p style={{ color: "#dc2626", fontSize: "0.85rem", fontWeight: 600 }}>{error}</p>}
+
+          <button className="primary-button" disabled={submitting} style={{ justifySelf: "start", marginTop: 6 }}>
+            <Plus size={18} />
+            {submitting ? "جارٍ إرسال التقرير..." : "إرسال التقرير اليومي للإدارة"}
+          </button>
+        </form>
+      )}
+
+      {/* Reports Feed & History */}
       <div className="panel wide">
-        <SectionTitle icon={ClipboardList} title="تقارير سابقة" />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <SectionTitle icon={ClipboardList} title={selectedProjectId === "ALL" ? "سجل التقارير اليومية (كافة المواقع)" : "تقارير الموقع المسجلة"} />
+          <span style={{ fontSize: "0.82rem", color: "var(--muted)", fontWeight: 600 }}>إجمالي التقارير: {reports.length}</span>
+        </div>
+
         <div className="table-wrap">
           <table>
-            <thead><tr><th>التاريخ</th><th>المهندس</th><th>العمالة</th><th>نسبة الاستلام</th><th>المشاكل</th><th>ملاحظات إضافية</th></tr></thead>
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                {selectedProjectId === "ALL" && <th>المشروع</th>}
+                <th>مهندس الموقع</th>
+                <th>العمالة</th>
+                <th>نسبة الإنجاز</th>
+                <th>المشاكل</th>
+                <th>تنبيهات الإجراء</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
             <tbody>
-              {reports.map((r) => (
-                <tr key={r.id}>
-                  <td>{new Date(r.date).toLocaleDateString("ar-EG")}</td>
-                  <td>{r.submittedBy?.name || "—"}</td>
-                  <td>{r.workersCount}</td>
-                  <td>{r.completionPercent}%</td>
-                  <td>{r.problems || "—"}</td>
-                  <td>
-                    {r.needsQuoteRequest && <Badge value="يحتاج طلب سعر" />}{" "}
-                    {r.needsConsultantReview && <Badge value="يحتاج مراجعة استشاري" />}
-                    {!r.needsQuoteRequest && !r.needsConsultantReview && "—"}
+              {reports.map((r) => {
+                const proj = projects.find((p) => String(p.id) === String(r.projectId));
+                return (
+                  <tr key={r.id} style={{ cursor: "pointer" }} onClick={() => setSelectedReportDetail(r)}>
+                    <td><strong>{new Date(r.date).toLocaleDateString("ar-EG")}</strong></td>
+                    {selectedProjectId === "ALL" && <td><strong>{proj?.name || "مشروع"}</strong></td>}
+                    <td>{r.submittedBy?.name || "مهندس الموقع"}</td>
+                    <td>{r.workersCount} عمال</td>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: 45, height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ width: `${Math.min(100, r.completionPercent)}%`, height: "100%", background: "var(--brand)" }}></div>
+                        </div>
+                        <span style={{ fontSize: "0.82rem", fontWeight: 700 }}>{r.completionPercent}%</span>
+                      </div>
+                    </td>
+                    <td style={{ maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {r.problems || "—"}
+                    </td>
+                    <td>
+                      {r.needsQuoteRequest && <Badge value="طلب سعر" />}{" "}
+                      {r.needsConsultantReview && <Badge value="مراجعة استشاري" />}
+                      {!r.needsQuoteRequest && !r.needsConsultantReview && "—"}
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          style={{ minHeight: "28px", fontSize: "0.75rem", padding: "2px 8px" }}
+                          onClick={() => setSelectedReportDetail(r)}
+                          title="عرض تفاصيل التقرير الكاملة"
+                        >
+                          <Eye size={13} /> عرض
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          style={{ minHeight: "28px", fontSize: "0.75rem", padding: "2px 8px" }}
+                          onClick={() => printReport(r)}
+                          title="طباعة التقرير"
+                        >
+                          <Printer size={13} /> طباعة
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!loading && reports.length === 0 && (
+                <tr>
+                  <td colSpan={selectedProjectId === "ALL" ? 8 : 7} style={{ textAlign: "center", padding: 20, color: "#64748b" }}>
+                    لا توجد تقارير يومية مسجلة {selectedProjectId === "ALL" ? "حالياً في النظام." : "لهذا المشروع."}
                   </td>
                 </tr>
-              ))}
-              {!loading && reports.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا توجد تقارير مسجلة لهذا المشروع.</td></tr>}
-              {loading && <tr><td colSpan={6} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>جارٍ التحميل...</td></tr>}
+              )}
+              {loading && (
+                <tr>
+                  <td colSpan={selectedProjectId === "ALL" ? 8 : 7} style={{ textAlign: "center", padding: 20, color: "#64748b" }}>
+                    جارٍ تحميل التقارير اليومية...
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Report Detail Modal */}
+      {selectedReportDetail && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 16,
+            direction: "rtl",
+          }}
+          onClick={() => setSelectedReportDetail(null)}
+        >
+          <div
+            style={{
+              background: "var(--surface)",
+              borderRadius: "var(--radius-lg)",
+              maxWidth: 680,
+              width: "100%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: 24,
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.3)",
+              border: "1px solid var(--line)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid var(--line)", paddingBottom: 14, marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "var(--brand)" }}>
+                  تفاصيل تقرير اليوم الموحد
+                </h3>
+                <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "var(--muted)" }}>
+                  مشروع: <strong>{projects.find((p) => String(p.id) === String(selectedReportDetail.projectId))?.name || "المشروع"}</strong> | تاريخ: <strong>{new Date(selectedReportDetail.date).toLocaleDateString("ar-EG")}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                className="secondary-button"
+                style={{ minHeight: "32px", padding: "4px 8px" }}
+                onClick={() => setSelectedReportDetail(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="metric-grid" style={{ marginBottom: 16 }}>
+              <MiniStat title="مهندس الموقع" value={selectedReportDetail.submittedBy?.name || "مهندس الموقع"} icon={HardHat} />
+              <MiniStat title="العمالة بالموقع" value={`${selectedReportDetail.workersCount} عمال`} icon={Users} />
+              <MiniStat title="نسبة الإنجاز" value={`${selectedReportDetail.completionPercent}%`} icon={BarChart3} />
+              <MiniStat title="التوقيع" value={selectedReportDetail.signature || "معتمد"} icon={ShieldCheck} />
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <h4 style={{ margin: "0 0 8px 0", fontSize: "0.95rem", fontWeight: 700 }}>فحص مراحل الأنظمة الفنية:</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 }}>
+                {DAILY_REPORT_SYSTEM_TYPES.map((type) => {
+                  const entry = selectedReportDetail.systemEntries?.find((e) => e.systemType === type);
+                  return (
+                    <div key={type} style={{ background: "var(--surface-subtle)", border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--brand)", marginBottom: 6 }}>{DAILY_REPORT_SYSTEM_LABELS[type]}</div>
+                      <div style={{ fontSize: "0.8rem", display: "grid", gap: 4 }}>
+                        <div>تأسيس: {entry?.foundationDone ? "✅ منجز" : "⏳ قيد العمل"}</div>
+                        <div>أسلاك: {entry?.wiringDone ? "✅ منجز" : "⏳ قيد العمل"}</div>
+                        <div>تركيب: {entry?.installDone ? "✅ منجز" : "⏳ قيد العمل"}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {selectedReportDetail.problems && (
+              <div style={{ marginBottom: 14, background: "rgba(239, 68, 68, 0.08)", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px" }}>
+                <strong style={{ color: "#b91c1c", fontSize: "0.88rem" }}>المشاكل والعوائق الميدانية:</strong>
+                <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>{selectedReportDetail.problems}</p>
+              </div>
+            )}
+
+            {selectedReportDetail.solutions && (
+              <div style={{ marginBottom: 14, background: "rgba(16, 185, 129, 0.08)", border: "1px solid #10b981", borderRadius: 8, padding: "10px 14px" }}>
+                <strong style={{ color: "#047857", fontSize: "0.88rem" }}>الحلول المقترحة والتنفيذية:</strong>
+                <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>{selectedReportDetail.solutions}</p>
+              </div>
+            )}
+
+            {selectedReportDetail.engineerNotes && (
+              <div style={{ marginBottom: 14, background: "var(--surface-subtle)", border: "1px solid var(--line)", borderRadius: 8, padding: "10px 14px" }}>
+                <strong style={{ fontSize: "0.88rem" }}>ملاحظات مهندس المشروع للإدارة:</strong>
+                <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>{selectedReportDetail.engineerNotes}</p>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => printReport(selectedReportDetail)}
+              >
+                <Printer size={16} /> طباعة التقرير الرسمي (PDF)
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setSelectedReportDetail(null)}
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
