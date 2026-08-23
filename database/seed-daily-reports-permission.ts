@@ -1,13 +1,29 @@
 import { PrismaClient, UserRole } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import * as dotenv from "dotenv";
 import * as path from "path";
 
 dotenv.config({ path: path.join(process.cwd(), ".env") });
+dotenv.config({ path: path.join(process.cwd(), "apps", "backend", ".env") });
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
+function connectionOptions() {
+  const url = new URL(
+    process.env.DATABASE_URL ??
+      "mysql://root@localhost:3306/kanan",
+  );
+
+  return {
+    host: url.hostname,
+    port: url.port ? Number(url.port) : 3306,
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    database: url.pathname.replace(/^\//, ""),
+    connectionLimit: 5,
+    connectTimeout: 10_000,
+  };
+}
+
+const adapter = new PrismaMariaDb(connectionOptions());
 const prisma = new PrismaClient({ adapter } as any);
 
 async function main() {
