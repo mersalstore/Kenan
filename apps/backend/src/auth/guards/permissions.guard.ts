@@ -127,18 +127,24 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException("ليس لديك الصلاحية للوصول إلى هذا القسم");
     }
 
-    // 3. Enforce project-level boundary for Site Engineers
+    // 3. Enforce project-level boundary for Site Engineers (allow reporting & unassigned projects)
     if (user.role === UserRole.SITE_ENGINEER || user.role === "SITE_ENGINEER") {
       const projectId = request.params.projectId || request.params.id || request.query.projectId;
       
-      const projectScopedModules = ["projects", "stages", "systems", "deficiencies", "media", "dailyReports", "supplyOrders"];
-      if (projectId && projectScopedModules.includes(requirement.module)) {
+      // تقارير التشغيل اليومية والملاحظات الميدانية لا تُحجب عن مهندسي الموقع
+      const strictlyRestrictedModules = ["projects", "stages", "systems", "supplyOrders"];
+      if (projectId && strictlyRestrictedModules.includes(requirement.module)) {
         const project = await this.prisma.project.findUnique({
           where: { id: projectId },
           include: { engineer: { select: { id: true, name: true, email: true } } },
         });
 
         if (project) {
+          // إذا كان المشروع غير مسند بعد لمهندس محدد، يُسمح للمهندس بالوصول إليه
+          if (!project.engineerId && !project.engineer) {
+            return true;
+          }
+
           const isDirectEngineer = project.engineerId === user.sub;
           const cleanUserName = user.name
             ? user.name.replace(/\s*\([^)]*\)/g, "").replace(/^(المهندس|مهندس|م\.|م\/|م)\s*/gi, "").trim().toLowerCase()
@@ -147,11 +153,12 @@ export class PermissionsGuard implements CanActivate {
             ? project.engineer.name.replace(/\s*\([^)]*\)/g, "").replace(/^(المهندس|مهندس|م\.|م\/|م)\s*/gi, "").trim().toLowerCase()
             : "";
 
-          const isNameMatch = cleanUserName && cleanEngName && (
+          const isNameMatch =
+            !cleanEngName ||
+            !cleanUserName ||
             cleanUserName === cleanEngName ||
             cleanEngName.includes(cleanUserName) ||
-            cleanUserName.includes(cleanEngName)
-          );
+            cleanUserName.includes(cleanEngName);
 
           if (!isDirectEngineer && !isNameMatch) {
             const hasProjectAccess = await this.prisma.userProjectPermission.findFirst({

@@ -610,7 +610,8 @@ export class ProjectsService {
 
   // 7.5 Daily site reports (تقرير اليوم الموحد)
   async getDailyReports(projectId: string, user: any) {
-    await this.findOne(projectId, user); // check access
+    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) throw new NotFoundException("المشروع غير موجود");
 
     return this.prisma.dailySiteReport.findMany({
       where: { projectId },
@@ -623,7 +624,8 @@ export class ProjectsService {
   }
 
   async createDailyReport(projectId: string, dto: CreateDailyReportDto, user: any) {
-    await this.findOne(projectId, user); // check access
+    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) throw new NotFoundException("المشروع غير موجود");
 
     const report = await this.prisma.dailySiteReport.create({
       data: {
