@@ -7244,11 +7244,12 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
   }, []);
 
   const isSiteEngineer =
-    user.role?.toUpperCase() === "SITE_ENGINEER" ||
-    user.role === "مهندس مشروع" ||
-    user.role === "مهندس الموقع" ||
-    user.role === "مهندس موقع" ||
-    user.role?.toLowerCase() === "site_engineer";
+    !isPMOrAdmin &&
+    (user.role?.toUpperCase() === "SITE_ENGINEER" ||
+      user.role === "مهندس مشروع" ||
+      user.role === "مهندس الموقع" ||
+      user.role === "مهندس موقع" ||
+      user.role?.toLowerCase() === "site_engineer");
 
   const normalizeEngName = (n?: string) =>
     (n || "")
@@ -7259,7 +7260,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       .toLowerCase();
 
   const roleFilteredProjects = useMemo(() => {
-    if (!isSiteEngineer) return projects;
+    // الإدارة ومدير المشاريع يرون كافة المشاريع
+    if (isPMOrAdmin || !isSiteEngineer) return projects;
 
     const matchedStaff = staff.find(
       (s) => s.email && user.email && s.email.trim().toLowerCase() === user.email.trim().toLowerCase()

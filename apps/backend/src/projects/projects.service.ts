@@ -25,15 +25,30 @@ export class ProjectsService {
       systems: { include: { components: true } },
     };
 
-    if (user.role === "ADMIN" || user.role === "PROJECT_MANAGER") {
-      return this.prisma.project.findMany({ include: fullInclude });
+    const roleUpper = String(user?.role || "").toUpperCase();
+    const isPMOrAdmin =
+      roleUpper === "ADMIN" ||
+      roleUpper === "PROJECT_MANAGER" ||
+      user?.role === "أدمن" ||
+      user?.role === "مدير عام" ||
+      user?.role === "مدير مشاريع" ||
+      user?.role === "مدير النظام" ||
+      user?.role === "admin" ||
+      user?.role === "project_manager";
+
+    // الإدارة ومديرو المشاريع يرون كافة المشاريع المسجلة بلا استثناء
+    if (isPMOrAdmin) {
+      return this.prisma.project.findMany({
+        orderBy: { createdAt: "desc" },
+        include: fullInclude,
+      });
     }
 
-    const cleanName = user.name
+    const cleanName = user?.name
       ? user.name.replace(/\s*\([^)]*\)/g, "").replace(/^(المهندس|مهندس|م\.|م\/|م)\s*/gi, "").trim()
       : "";
 
-    // Site Engineer: only see assigned projects
+    // مهندس الموقع: يرى المشاريع المسندة له فقط
     return this.prisma.project.findMany({
       where: {
         OR: [
@@ -42,6 +57,7 @@ export class ProjectsService {
           ...(cleanName ? [{ engineer: { name: { contains: cleanName } } }] : []),
         ],
       },
+      orderBy: { createdAt: "desc" },
       include: fullInclude,
     });
   }
@@ -74,16 +90,40 @@ export class ProjectsService {
       throw new NotFoundException("المشروع غير موجود");
     }
 
-    // Site Engineer authorization check
-    if (
-      user.role === "SITE_ENGINEER" &&
-      project.engineerId !== user.sub
-    ) {
-      const hasPermission = await this.prisma.userProjectPermission.findFirst({
-        where: { userId: user.sub, projectId: id },
-      });
-      if (!hasPermission) {
-        throw new ForbiddenException("غير مصرح لك بالوصول إلى هذا المشروع");
+    // فحص الصلاحية للمهندس (الإدارة ومدير المشاريع يتجاوزون الفحص دائماً)
+    const roleUpper = String(user?.role || "").toUpperCase();
+    const isPMOrAdmin =
+      roleUpper === "ADMIN" ||
+      roleUpper === "PROJECT_MANAGER" ||
+      user?.role === "أدمن" ||
+      user?.role === "مدير عام" ||
+      user?.role === "مدير مشاريع" ||
+      user?.role === "مدير النظام" ||
+      user?.role === "admin" ||
+      user?.role === "project_manager";
+
+    if (!isPMOrAdmin) {
+      const cleanUserName = user?.name
+        ? user.name.replace(/\s*\([^)]*\)/g, "").replace(/^(المهندس|مهندس|م\.|م\/|م)\s*/gi, "").trim().toLowerCase()
+        : "";
+      const cleanEngName = project.engineer?.name
+        ? project.engineer.name.replace(/\s*\([^)]*\)/g, "").replace(/^(المهندس|مهندس|م\.|م\/|م)\s*/gi, "").trim().toLowerCase()
+        : "";
+
+      const isDirectEngineer = project.engineerId === user.sub;
+      const isNameMatch = cleanUserName && cleanEngName && (
+        cleanUserName === cleanEngName ||
+        cleanEngName.includes(cleanUserName) ||
+        cleanUserName.includes(cleanEngName)
+      );
+
+      if (!isDirectEngineer && !isNameMatch) {
+        const hasPermission = await this.prisma.userProjectPermission.findFirst({
+          where: { userId: user.sub, projectId: id },
+        });
+        if (!hasPermission) {
+          throw new ForbiddenException("غير مصرح لك بالوصول إلى هذا المشروع");
+        }
       }
     }
 
