@@ -10,8 +10,9 @@ export class ReportsService {
 
   // 1. Get Project Report Data
   async getProjectReport(projectId: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
+    const trimmed = String(projectId || "").trim();
+    let project = await this.prisma.project.findUnique({
+      where: { id: trimmed },
       include: {
         client: true,
         engineer: { select: { name: true, email: true } },
@@ -22,7 +23,28 @@ export class ReportsService {
         invoices: true,
         expenses: true,
       },
-    });
+    }).catch(() => null);
+
+    if (!project) {
+      project = await this.prisma.project.findFirst({
+        where: {
+          OR: [
+            { name: trimmed },
+            { name: { contains: trimmed } },
+          ],
+        },
+        include: {
+          client: true,
+          engineer: { select: { name: true, email: true } },
+          stages: true,
+          assignments: {
+            include: { worker: true, contractor: true },
+          },
+          invoices: true,
+          expenses: true,
+        },
+      }).catch(() => null);
+    }
 
     if (!project) {
       throw new NotFoundException("المشروع غير موجود");

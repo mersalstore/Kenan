@@ -148,6 +148,52 @@ describe('Comprehensive Daily Reports & Permissions Test Suite', () => {
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
     });
+
+    it('should allow PROJECT_MANAGER / Primary account to access any project/stage/system without permission blocker', async () => {
+      jest.spyOn(reflector, 'get').mockReturnValue({ module: 'systems', action: 'READ' });
+
+      const context = createMockContext(
+        { sub: 'pm-1', name: 'مدير المشاريع', role: 'مدير مشاريع' },
+        { projectId: 'proj-any' }
+      );
+
+      const result = await guard.canActivate(context);
+      expect(result).toBe(true);
+    });
+
+    it('should allow SITE_ENGINEER to access project when engineer email matches', async () => {
+      jest.spyOn(reflector, 'get').mockReturnValue({ module: 'systems', action: 'READ' });
+      prismaMock.project.findUnique.mockResolvedValue({
+        id: 'proj-1',
+        engineerId: 'different-uuid',
+        engineer: { id: 'different-uuid', name: 'كريم', email: 'engineer@kenan.com' },
+      });
+
+      const context = createMockContext(
+        { sub: 'eng-new-id', email: 'engineer@kenan.com', name: 'م. كريم عادل (مهندس الموقع)', role: UserRole.SITE_ENGINEER },
+        { projectId: 'proj-1' }
+      );
+
+      const result = await guard.canActivate(context);
+      expect(result).toBe(true);
+    });
+
+    it('should allow SITE_ENGINEER to access project when name matches fuzzily', async () => {
+      jest.spyOn(reflector, 'get').mockReturnValue({ module: 'systems', action: 'READ' });
+      prismaMock.project.findUnique.mockResolvedValue({
+        id: 'proj-1',
+        engineerId: 'some-id',
+        engineer: { id: 'some-id', name: 'المهندس كريم عادل', email: 'other@kenan.com' },
+      });
+
+      const context = createMockContext(
+        { sub: 'eng-user-id', email: 'eng@kenan.com', name: 'م. كريم عادل (مهندس الموقع)', role: UserRole.SITE_ENGINEER },
+        { projectId: 'proj-1' }
+      );
+
+      const result = await guard.canActivate(context);
+      expect(result).toBe(true);
+    });
   });
 
   describe('2. ProjectsService.findAll (Admin vs Site Engineer Scope)', () => {

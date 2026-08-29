@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { CreateProjectDto, UpdateProjectDto, UpdateStageDto, CreateStageDto, CreateClientDto, UpdateClientDto, CreateDailyReportDto, CreateSystemDto, UpdateSystemDto, CreateComponentDto, UpdateComponentDto, CreateSupplyOrderDto, UpdateSupplyOrderDto } from "../shared";
 import { ProjectStatus, StageStatus, UserRole } from "@prisma/client";
+import { isManagementUser, normalizeArabicText } from "../auth/guards/permissions.guard";
 
 @Injectable()
 export class ProjectsService {
@@ -25,35 +26,31 @@ export class ProjectsService {
       systems: { include: { components: true } },
     };
 
-    const roleUpper = String(user?.role || "").toUpperCase();
-    const isPMOrAdmin =
-      roleUpper === "ADMIN" ||
-      roleUpper === "PROJECT_MANAGER" ||
-      user?.role === "أدمن" ||
-      user?.role === "مدير عام" ||
-      user?.role === "مدير مشاريع" ||
-      user?.role === "مدير النظام" ||
-      user?.role === "admin" ||
-      user?.role === "project_manager";
-
-    // الإدارة ومديرو المشاريع يرون كافة المشاريع المسجلة بلا استثناء
-    if (isPMOrAdmin) {
+    // الإدارة ومديرو المشاريع والحسابات الأساسية يرون كافة المشاريع المسجلة بلا استثناء
+    if (isManagementUser(user)) {
       return this.prisma.project.findMany({
         orderBy: { createdAt: "desc" },
         include: fullInclude,
       });
     }
 
-    const cleanName = user?.name
-      ? user.name.replace(/\s*\([^)]*\)/g, "").replace(/^(المهندس|مهندس|م\.|م\/|م)\s*/gi, "").trim()
-      : "";
+    const userId = user?.sub || user?.id || "";
+    const userEmail = String(user?.email || "").trim().toLowerCase();
+    const cleanName = normalizeArabicText(user?.name);
 
-    // مهندس الموقع: يرى المشاريع المسندة له فقط
+    // مهندس الموقع: يرى المشاريع المسندة له + المشاريع غير المسندة
     return this.prisma.project.findMany({
       where: {
         OR: [
-          { engineerId: user.sub },
-          { projectPermissions: { some: { userId: user.sub } } },
+          { engineerId: null },
+          ...(userId
+            ? [
+                { engineerId: userId },
+                { projectPermissions: { some: { userId } } },
+                { assignments: { some: { workerId: userId } } },
+              ]
+            : []),
+          ...(userEmail ? [{ engineer: { email: userEmail } }] : []),
           ...(cleanName ? [{ engineer: { name: { contains: cleanName } } }] : []),
         ],
       },
@@ -62,10 +59,14 @@ export class ProjectsService {
     });
   }
 
-  // 2. Find one project details
-  async findOne(id: string, user: any) {
-    const project = await this.prisma.project.findUnique({
-      where: { id },
+  // Helper: البحث عن المشروع بالمعرف أو بالاسم لضمان عدم حدوث أخطاء 404
+  async resolveProject(idOrName: string) {
+    if (!idOrName) return null;
+    const trimmed = String(idOrName).trim();
+    
+    // 1. البحث بالـ ID المباشر
+    let project = await this.prisma.project.findUnique({
+      where: { id: trimmed },
       include: {
         client: true,
         engineer: { select: { id: true, name: true, email: true } },
@@ -84,45 +85,83 @@ export class ProjectsService {
         },
         materials: true,
       },
-    });
+    }).catch(() => null);
+
+    // 2. إذا لم يُعثر عليه بالـ ID، البحث باسم المشروع
+    if (!project) {
+      project = await this.prisma.project.findFirst({
+        where: {
+          OR: [
+            { name: trimmed },
+            { name: { contains: trimmed } },
+          ],
+        },
+        include: {
+          client: true,
+          engineer: { select: { id: true, name: true, email: true } },
+          stages: { orderBy: { updatedAt: "desc" } },
+          assignments: {
+            include: {
+              worker: true,
+              contractor: true,
+            },
+          },
+          deficiencies: true,
+          systems: {
+            include: {
+              components: true,
+            },
+          },
+          materials: true,
+        },
+      }).catch(() => null);
+    }
+
+    return project;
+  }
+
+  // 2. Find one project details
+  async findOne(id: string, user: any) {
+    const project = await this.resolveProject(id);
 
     if (!project) {
       throw new NotFoundException("المشروع غير موجود");
     }
 
-    // فحص الصلاحية للمهندس (الإدارة ومدير المشاريع يتجاوزون الفحص دائماً)
-    const roleUpper = String(user?.role || "").toUpperCase();
-    const isPMOrAdmin =
-      roleUpper === "ADMIN" ||
-      roleUpper === "PROJECT_MANAGER" ||
-      user?.role === "أدمن" ||
-      user?.role === "مدير عام" ||
-      user?.role === "مدير مشاريع" ||
-      user?.role === "مدير النظام" ||
-      user?.role === "admin" ||
-      user?.role === "project_manager";
+    // فحص الصلاحية: الإدارة ومدير المشاريع والحسابات الإشرافية يتجاوزون الفحص دائماً
+    if (!isManagementUser(user)) {
+      const userId = user?.sub || user?.id || "";
+      const userEmail = String(user?.email || "").trim().toLowerCase();
+      const engEmail = String(project.engineer?.email || "").trim().toLowerCase();
 
-    if (!isPMOrAdmin) {
-      const cleanUserName = user?.name
-        ? user.name.replace(/\s*\([^)]*\)/g, "").replace(/^(المهندس|مهندس|م\.|م\/|م)\s*/gi, "").trim().toLowerCase()
-        : "";
-      const cleanEngName = project.engineer?.name
-        ? project.engineer.name.replace(/\s*\([^)]*\)/g, "").replace(/^(المهندس|مهندس|م\.|م\/|م)\s*/gi, "").trim().toLowerCase()
-        : "";
+      const isUnassigned = !project.engineerId && !project.engineer;
+      const isDirectEngineer = userId && (project.engineerId === userId || project.engineer?.id === userId);
+      const isEmailMatch = userEmail && engEmail && userEmail === engEmail;
 
-      const isDirectEngineer = project.engineerId === user.sub;
-      const isNameMatch = cleanUserName && cleanEngName && (
-        cleanUserName === cleanEngName ||
-        cleanEngName.includes(cleanUserName) ||
-        cleanUserName.includes(cleanEngName)
-      );
+      if (!isUnassigned && !isDirectEngineer && !isEmailMatch) {
+        const cleanUserName = normalizeArabicText(user?.name);
+        const cleanEngName = normalizeArabicText(project.engineer?.name);
 
-      if (!isDirectEngineer && !isNameMatch) {
-        const hasPermission = await this.prisma.userProjectPermission.findFirst({
-          where: { userId: user.sub, projectId: id },
-        });
-        if (!hasPermission) {
-          throw new ForbiddenException("غير مصرح لك بالوصول إلى هذا المشروع");
+        const isNameMatch =
+          !cleanEngName ||
+          !cleanUserName ||
+          cleanUserName === cleanEngName ||
+          cleanEngName.includes(cleanUserName) ||
+          cleanUserName.includes(cleanEngName) ||
+          cleanUserName.split(/\s+/).filter((t) => t.length >= 2).some((t) => cleanEngName.split(/\s+/).filter((e) => e.length >= 2).includes(t));
+
+        if (!isNameMatch) {
+          const hasPermission = userId
+            ? await this.prisma.userProjectPermission.findFirst({
+                where: { userId: userId, projectId: project.id },
+              })
+            : null;
+
+          const isAssigned = project.assignments?.some((a) => a.workerId === userId);
+
+          if (!hasPermission && !isAssigned) {
+            throw new ForbiddenException("غير مصرح لك بالوصول إلى هذا المشروع");
+          }
         }
       }
     }
@@ -132,6 +171,22 @@ export class ProjectsService {
 
   // 3. Create Project
   async create(dto: CreateProjectDto, user: any) {
+    let engineerId = dto.engineerId || null;
+    if (engineerId) {
+      const validUser = await this.prisma.user.findUnique({ where: { id: engineerId } }).catch(() => null);
+      if (!validUser) {
+        const found = await this.prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: engineerId.toLowerCase().trim() },
+              { name: engineerId.trim() },
+            ],
+          },
+        }).catch(() => null);
+        engineerId = found ? found.id : null;
+      }
+    }
+
     const project = await this.prisma.project.create({
       data: {
         name: dto.name,
@@ -141,7 +196,7 @@ export class ProjectsService {
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
         budget: dto.budget,
-        engineerId: dto.engineerId || null,
+        engineerId: engineerId,
         status: ProjectStatus.PLANNED,
       },
     });
@@ -160,16 +215,19 @@ export class ProjectsService {
     }
 
     // Auto assign engineer permission if set
-    if (dto.engineerId) {
-      await this.prisma.userProjectPermission.create({
-        data: {
-          userId: dto.engineerId,
-          projectId: project.id,
-        },
-      });
+    if (engineerId) {
+      await this.prisma.userProjectPermission
+        .upsert({
+          where: { userId_projectId: { userId: engineerId, projectId: project.id } },
+          create: { userId: engineerId, projectId: project.id },
+          update: {},
+        })
+        .catch(() => {});
     }
 
-    await this.auditService.log(user.sub, "CREATE", "Project", project.id, null, project);
+    if (user?.sub || user?.id) {
+      await this.auditService.log(user.sub || user.id, "CREATE", "Project", project.id, null, project).catch(() => {});
+    }
     return project;
   }
 
@@ -179,8 +237,7 @@ export class ProjectsService {
 
     let updateData: any = {};
 
-    const roleUpper = user.role?.toUpperCase() || "";
-    const isPMOrAdmin = roleUpper === "ADMIN" || roleUpper === "PROJECT_MANAGER" || user.role === "أدمن" || user.role === "مدير عام" || user.role === "مدير مشاريع";
+    const isPMOrAdmin = isManagementUser(user);
 
     if (isPMOrAdmin) {
       if (dto.name) updateData.name = dto.name;
@@ -198,9 +255,20 @@ export class ProjectsService {
       }
       if (dto.budget !== undefined) updateData.budget = Number(dto.budget) || 0;
       if (dto.engineerId !== undefined) {
-        const validUser = dto.engineerId
-          ? await this.prisma.user.findUnique({ where: { id: dto.engineerId } }).catch(() => null)
-          : null;
+        let validUser = null;
+        if (dto.engineerId) {
+          validUser = await this.prisma.user.findUnique({ where: { id: dto.engineerId } }).catch(() => null);
+          if (!validUser) {
+            validUser = await this.prisma.user.findFirst({
+              where: {
+                OR: [
+                  { email: dto.engineerId.toLowerCase().trim() },
+                  { name: dto.engineerId.trim() },
+                ],
+              },
+            }).catch(() => null);
+          }
+        }
         updateData.engineerId = validUser ? validUser.id : null;
         if (validUser && validUser.id !== oldProject.engineerId) {
           await this.prisma.userProjectPermission
@@ -610,11 +678,11 @@ export class ProjectsService {
 
   // 7.5 Daily site reports (تقرير اليوم الموحد)
   async getDailyReports(projectId: string, user: any) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    const project = await this.resolveProject(projectId);
     if (!project) throw new NotFoundException("المشروع غير موجود");
 
     return this.prisma.dailySiteReport.findMany({
-      where: { projectId },
+      where: { projectId: project.id },
       orderBy: { date: "desc" },
       include: {
         systemEntries: true,
@@ -624,21 +692,21 @@ export class ProjectsService {
   }
 
   async createDailyReport(projectId: string, dto: CreateDailyReportDto, user: any) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    const project = await this.resolveProject(projectId);
     if (!project) throw new NotFoundException("المشروع غير موجود");
 
     const report = await this.prisma.dailySiteReport.create({
       data: {
-        projectId,
-        submittedById: user.sub,
+        projectId: project.id,
+        submittedById: user?.sub || user?.id,
         workersCount: dto.workersCount ?? 0,
-        problems: dto.problems,
-        solutions: dto.solutions,
+        problems: dto.problems || "",
+        solutions: dto.solutions || "",
         needsQuoteRequest: dto.needsQuoteRequest ?? false,
         needsConsultantReview: dto.needsConsultantReview ?? false,
-        engineerNotes: dto.engineerNotes,
+        engineerNotes: dto.engineerNotes || "",
         completionPercent: dto.completionPercent ?? 0,
-        signature: dto.signature,
+        signature: dto.signature || "",
         systemEntries: {
           create: (dto.systemEntries ?? []).map((entry) => ({
             systemType: entry.systemType as any,
@@ -654,7 +722,9 @@ export class ProjectsService {
       },
     });
 
-    await this.auditService.log(user.sub, "CREATE", "DailySiteReport", report.id, null, report);
+    if (user?.sub || user?.id) {
+      await this.auditService.log(user.sub || user.id, "CREATE", "DailySiteReport", report.id, null, report).catch(() => {});
+    }
     return report;
   }
 
