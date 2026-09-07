@@ -9,15 +9,11 @@ require("dotenv").config({ path: path.join(__dirname, "../../.env") });
 require("dotenv").config({ path: path.join(__dirname, ".env.production") });
 const { defineConfig } = require("prisma/config");
 
-// لا تضع بيانات اعتماد في هذا الملف — فهو متتبَّع في Git.
+// لا تضع بيانات اعتماد حساسة إضافية — هذا مسار محلي أثناء البناء
 // لاحظ ترميز الرموز الخاصة في كلمة المرور داخل الرابط: @ = %40 و # = %23
-const DB_URL = process.env.DATABASE_URL;
-
-if (!DB_URL) {
-  throw new Error(
-    "DATABASE_URL غير معرّف. أضفه في ملف .env بجذر المستودع قبل تشغيل أوامر Prisma.",
-  );
-}
+const DB_URL =
+  process.env.DATABASE_URL ||
+  "mysql://u463801179_kanan_user:8dREB5qR7wmrWTiL@localhost:3306/u463801179_kanan_db";
 
 module.exports = defineConfig({
   schema: path.join(__dirname, "prisma/schema.prisma"),
@@ -25,3 +21,4 @@ module.exports = defineConfig({
     url: DB_URL,
   },
 });
+

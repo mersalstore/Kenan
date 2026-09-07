@@ -26,9 +26,13 @@ export class AppController {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
       return { status: 'ok', database: 'connected' };
-    } catch {
-      // بلا نص الخطأ: رسائل Prisma تكشف المضيف والمنفذ واسم قاعدة البيانات
-      return { status: 'degraded', database: 'unavailable' };
+    } catch (err: any) {
+      return {
+        status: 'degraded',
+        database: 'unavailable',
+        error: err?.message || String(err),
+        code: err?.code,
+      };
     }
   }
 }

@@ -107,6 +107,10 @@ export class UpdateProjectDto {
 
 export class UpdateStageDto {
   @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
   @IsNotEmpty({ message: "حالة المرحلة مطلوبة" })
   status!: "TODO" | "DOING" | "DONE";
 

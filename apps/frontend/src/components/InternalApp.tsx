@@ -5602,37 +5602,154 @@ function ProjectsView({
   );
 }
 
-function StagesView({ projects, stages, selectedProjectId, setSelectedProjectId, addStage, updateStageStatus, updateStageNotes, deleteStage, isAdmin }: {
-  projects: Project[]; stages: ProjectStage[]; selectedProjectId: number | string; setSelectedProjectId: (id: number | string) => void;
-  addStage: (e: FormEvent<HTMLFormElement>) => void; updateStageStatus: (id: number | string, status: ProjectStage["status"]) => void;
-  updateStageNotes: (id: number | string, notes: string) => void; deleteStage: (id: number | string) => void;
+function StagesView({
+  projects,
+  stages,
+  selectedProjectId,
+  setSelectedProjectId,
+  addStage,
+  updateStageStatus,
+  updateStageNotes,
+  updateStage,
+  deleteStage,
+  generateDefaultStages,
+  isAdmin,
+}: {
+  projects: Project[];
+  stages: ProjectStage[];
+  selectedProjectId: number | string;
+  setSelectedProjectId: (id: number | string) => void;
+  addStage: (e: FormEvent<HTMLFormElement>) => void;
+  updateStageStatus: (id: number | string, status: ProjectStage["status"]) => void;
+  updateStageNotes: (id: number | string, notes: string) => void;
+  updateStage?: (id: number | string, data: { name: string; status: ProjectStage["status"]; notes: string }) => void;
+  deleteStage: (id: number | string) => void;
+  generateDefaultStages?: (projectId: number | string) => void;
   isAdmin: boolean;
 }) {
   const stageStatuses: ProjectStage["status"][] = ["لم يبدأ", "جاري", "تم"];
   const projectStages = stages.filter((s) => String(s.projectId) === String(selectedProjectId));
+  const [editingStage, setEditingStage] = useState<ProjectStage | null>(null);
+
+  // حساب نسب الإنجاز
+  const completedStages = projectStages.filter((s) => s.status === "تم").length;
+  const inProgressStages = projectStages.filter((s) => s.status === "جاري").length;
+  const progressPercent =
+    projectStages.length > 0
+      ? Math.round(((completedStages * 100 + inProgressStages * 50) / (projectStages.length * 100)) * 100)
+      : 0;
+
+  const currentProject = projects.find((p) => String(p.id) === String(selectedProjectId));
+
+  const handleEditSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingStage) return;
+    const f = new FormData(e.currentTarget);
+    const name = String(f.get("name") ?? "").trim();
+    const status = String(f.get("status") || "لم يبدأ") as ProjectStage["status"];
+    const notes = String(f.get("notes") ?? "").trim();
+    if (!name) return;
+
+    if (updateStage) {
+      updateStage(editingStage.id, { name, status, notes });
+    } else {
+      updateStageStatus(editingStage.id, status);
+      updateStageNotes(editingStage.id, notes);
+    }
+    setEditingStage(null);
+  };
+
   return (
     <section className="content-grid content-grid--stack">
       <form className="form-panel" onSubmit={addStage}>
         <SectionTitle icon={Plus} title="إضافة مرحلة تنفيذ" />
-        <label>المشروع<select name="projectId" required value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-        <Field label="اسم المرحلة" name="name" required placeholder="تأسيس / تشطيب ..." />
-        <label>الحالة<select name="status" defaultValue="لم يبدأ">{stageStatuses.map((s) => <option key={s}>{s}</option>)}</select></label>
-        <label>ملاحظات<textarea name="notes" rows={2} /></label>
-        <button className="primary-button"><Plus size={18} />إضافة المرحلة</button>
+        <label>
+          المشروع
+          <select
+            name="projectId"
+            required
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+          >
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Field label="اسم المرحلة" name="name" required placeholder="تأسيس / تشطيب / توريد ..." />
+        <label>
+          الحالة
+          <select name="status" defaultValue="لم يبدأ">
+            {stageStatuses.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          ملاحظات
+          <textarea name="notes" rows={2} placeholder="أي تعليمات أو ملاحظات ميدانية..." />
+        </label>
+        <button className="primary-button">
+          <Plus size={18} />
+          إضافة المرحلة
+        </button>
       </form>
+
       <div className="panel wide">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={Layers3} title="مراحل التنفيذ" />
-          <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(Number(e.target.value))} style={{ padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6 }}>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <SectionTitle icon={Layers3} title="مراحل التنفيذ" />
+            {projectStages.length > 0 && (
+              <span style={{ fontSize: "0.82rem", background: "rgba(225,29,72,0.08)", color: "var(--brand)", padding: "4px 10px", borderRadius: 20, fontWeight: "bold" }}>
+                نسبة الإنجاز: {progressPercent}% ({completedStages} من {projectStages.length} مكتملة)
+              </span>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {generateDefaultStages && projectStages.length === 0 && (
+              <button
+                type="button"
+                className="secondary-button"
+                style={{ padding: "6px 14px", fontSize: "0.82rem", display: "inline-flex", alignItems: "center", gap: 6, borderColor: "var(--brand)", color: "var(--brand)" }}
+                onClick={() => generateDefaultStages(selectedProjectId)}
+              >
+                <Plus size={15} />
+                توليد المراحل القياسية للمشروع
+              </button>
+            )}
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontWeight: 500 }}
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+
         <div className="table-wrap">
           <table>
-            <thead><tr><th>المرحلة</th><th>الحالة</th><th>آخر تحديث</th><th style={{ width: 60 }}>حذف</th></tr></thead>
+            <thead>
+              <tr>
+                <th>المرحلة</th>
+                <th>الحالة</th>
+                <th>آخر تحديث</th>
+                <th style={{ width: 120, textAlign: "center" }}>إجراءات</th>
+              </tr>
+            </thead>
             <tbody>
               {projectStages.map((s) => (
                 <tr key={s.id}>
                   <td>
-                    <strong>{s.name}</strong>
+                    <strong style={{ fontSize: "0.95rem" }}>{s.name}</strong>
                     <div style={{ marginTop: "6px", display: "flex", gap: "6px", alignItems: "center" }}>
                       <span style={{ fontSize: "0.78rem", color: "#64748b", whiteSpace: "nowrap" }}>ملاحظة الموقع:</span>
                       <input
@@ -5652,7 +5769,7 @@ function StagesView({ projects, stages, selectedProjectId, setSelectedProjectId,
                           width: "100%",
                           maxWidth: "320px",
                           background: "#fff",
-                          fontWeight: "normal"
+                          fontWeight: "normal",
                         }}
                       />
                     </div>
@@ -5666,22 +5783,176 @@ function StagesView({ projects, stages, selectedProjectId, setSelectedProjectId,
                         border: "1px solid #cbd5e1",
                         borderRadius: 6,
                         fontWeight: "bold",
+                        fontSize: "0.85rem",
                         color: s.status === "تم" ? "#166534" : s.status === "جاري" ? "#1e40af" : "#b45309",
-                        background: s.status === "تم" ? "#d1fae5" : s.status === "جاري" ? "#dbeafe" : "#fef3c7"
+                        background: s.status === "تم" ? "#d1fae5" : s.status === "جاري" ? "#dbeafe" : "#fef3c7",
                       }}
                     >
-                      {stageStatuses.map((x) => <option key={x}>{x}</option>)}
+                      {stageStatuses.map((x) => (
+                        <option key={x} value={x}>
+                          {x}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td>{formatDate(s.updatedAt)}</td>
-                  <td>{isAdmin && <button className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => deleteStage(s.id)}><Trash2 size={16} /></button>}</td>
+                  <td>
+                    <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        style={{ minHeight: 28, padding: "0 8px", fontSize: "0.76rem", display: "inline-flex", alignItems: "center", gap: 4 }}
+                        title="تعديل بيانات المرحلة"
+                        onClick={() => setEditingStage(s)}
+                      >
+                        <Edit size={14} />
+                        <span>تعديل</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-danger"
+                        style={iconDangerStyle}
+                        title="حذف المرحلة"
+                        onClick={() => {
+                          if (window.confirm("هل أنت متأكد من حذف هذه المرحلة؟")) {
+                            deleteStage(s.id);
+                          }
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
-              {projectStages.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا توجد مراحل لهذا المشروع.</td></tr>}
+              {projectStages.length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: "center", padding: "36px 16px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, maxWidth: 440, margin: "0 auto" }}>
+                      <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(225,29,72,0.1)", color: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Layers3 size={26} />
+                      </div>
+                      <strong style={{ fontSize: "1.05rem", color: "#1e293b" }}>
+                        لا توجد مراحل لهذا المشروع {currentProject?.name ? `(${currentProject.name})` : ""}
+                      </strong>
+                      <p style={{ fontSize: "0.86rem", color: "#64748b", margin: 0, lineHeight: 1.6 }}>
+                        لم يتم تسجيل مراحل تنفيذية لهذا الموقع حتى الآن. يمكنك إضافة مرحلة يدوياً من النموذج أو توليد المراحل القياسية المعتمدة بنقرة واحدة.
+                      </p>
+                      {generateDefaultStages && (
+                        <button
+                          type="button"
+                          className="primary-button"
+                          style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px", fontSize: "0.9rem" }}
+                          onClick={() => generateDefaultStages(selectedProjectId)}
+                        >
+                          <Plus size={16} />
+                          توليد المراحل القياسية للمشروع
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* نافذة تعديل المرحلة */}
+      {editingStage && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.6)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setEditingStage(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 12,
+              width: "100%",
+              maxWidth: 480,
+              padding: 24,
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, borderBottom: "1px solid #e2e8f0", paddingBottom: 12 }}>
+              <SectionTitle icon={Edit} title="تعديل مرحلة التنفيذ" />
+              <button
+                type="button"
+                onClick={() => setEditingStage(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", display: "flex" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <label>
+                اسم المرحلة
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  defaultValue={editingStage.name}
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                />
+              </label>
+
+              <label>
+                الحالة
+                <select
+                  name="status"
+                  defaultValue={editingStage.status}
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                >
+                  {stageStatuses.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                ملاحظات
+                <textarea
+                  name="notes"
+                  rows={3}
+                  defaultValue={editingStage.notes || ""}
+                  placeholder="ملاحظات المتابعة الميدانية..."
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                />
+              </label>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setEditingStage(null)}
+                >
+                  إلغاء
+                </button>
+                <button type="submit" className="primary-button" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <Save size={16} />
+                  حفظ التعديلات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -5817,86 +6088,723 @@ function DeficienciesView({ deficiencies, projects, engineers, addDeficiency, up
   );
 }
 
-function SystemsView({ systems, components, projects, addSystem, updateSystemStatus, deleteSystem, addComponent, updateComponentStatus, deleteComponent, isAdmin }: {
-  systems: ProjectSystem[]; components: SystemComponent[]; projects: Project[];
-  addSystem: (e: FormEvent<HTMLFormElement>) => void; updateSystemStatus: (id: number | string, status: ProjectSystem["status"]) => void; deleteSystem: (id: number | string) => void;
-  addComponent: (systemId: number | string, data: Omit<SystemComponent, "id" | "systemId">) => void; updateComponentStatus: (id: number | string, status: SystemComponent["installStatus"]) => void; deleteComponent: (id: number | string) => void;
+function SystemsView({
+  systems,
+  components,
+  projects,
+  selectedProjectId,
+  setSelectedProjectId,
+  addSystem,
+  updateSystemStatus,
+  updateSystem,
+  deleteSystem,
+  addComponent,
+  updateComponentStatus,
+  updateComponent,
+  deleteComponent,
+  generateDefaultSystems,
+  isAdmin,
+}: {
+  systems: ProjectSystem[];
+  components: SystemComponent[];
+  projects: Project[];
+  selectedProjectId?: number | string;
+  setSelectedProjectId?: (id: number | string) => void;
+  addSystem: (e: FormEvent<HTMLFormElement>) => void;
+  updateSystemStatus: (id: number | string, status: ProjectSystem["status"]) => void;
+  updateSystem?: (id: number | string, data: { name: string; type: ProjectSystem["type"]; status: ProjectSystem["status"]; notes: string }) => void;
+  deleteSystem: (id: number | string) => void;
+  addComponent: (systemId: number | string, data: Omit<SystemComponent, "id" | "systemId">) => void;
+  updateComponentStatus: (id: number | string, status: SystemComponent["installStatus"]) => void;
+  updateComponent?: (id: number | string, data: Partial<SystemComponent>) => void;
+  deleteComponent: (id: number | string) => void;
+  generateDefaultSystems?: (projectId: number | string) => void;
   isAdmin: boolean;
 }) {
+  const [filterProjectId, setFilterProjectId] = useState<string>(() => (selectedProjectId ? String(selectedProjectId) : "all"));
   const [selectedSystemId, setSelectedSystemId] = useState<number | string | null>(null);
+  const [editingSystem, setEditingSystem] = useState<ProjectSystem | null>(null);
+  const [editingComponent, setEditingComponent] = useState<SystemComponent | null>(null);
+
+  useEffect(() => {
+    if (selectedProjectId && filterProjectId === "all") {
+      setFilterProjectId(String(selectedProjectId));
+    }
+  }, [selectedProjectId]);
+
   const sysTypes: ProjectSystem["type"][] = ["إنذار حريق", "شبكة إطفاء", "تهوية وتكييف"];
   const sysStatuses: ProjectSystem["status"][] = ["تصميم", "جاري التركيب", "مركّب", "تشغيل تجريبي", "معتمد"];
   const compStatuses: SystemComponent["installStatus"][] = ["بانتظار", "مركّب", "تم اختباره"];
-  const selectedComponents = components.filter((c) => c.systemId === selectedSystemId);
+
+  const displayedSystems = systems.filter(
+    (s) => filterProjectId === "all" || String(s.projectId) === String(filterProjectId)
+  );
+
+  const activeProject = projects.find((p) => String(p.id) === String(filterProjectId));
+  const selectedComponents = components.filter((c) => String(c.systemId) === String(selectedSystemId));
+
   const addComp = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedSystemId) return;
     const f = new FormData(e.currentTarget);
-    addComponent(selectedSystemId, { componentType: String(f.get("componentType") ?? ""), description: String(f.get("description") ?? ""), manufacturer: String(f.get("manufacturer") ?? ""), model: String(f.get("model") ?? ""), quantity: Number(f.get("quantity")) || 0, unit: String(f.get("unit") ?? ""), location: String(f.get("location") ?? ""), installStatus: "بانتظار", installDate: "" });
+    addComponent(selectedSystemId, {
+      componentType: String(f.get("componentType") ?? ""),
+      description: String(f.get("description") ?? ""),
+      manufacturer: String(f.get("manufacturer") ?? ""),
+      model: String(f.get("model") ?? ""),
+      quantity: Number(f.get("quantity")) || 0,
+      unit: String(f.get("unit") ?? ""),
+      location: String(f.get("location") ?? ""),
+      installStatus: "بانتظار",
+      installDate: "",
+    });
     e.currentTarget.reset();
   };
+
+  const handleEditSystemSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingSystem) return;
+    const f = new FormData(e.currentTarget);
+    const name = String(f.get("name") ?? "").trim();
+    const type = String(f.get("type") || "إنذار حريق") as ProjectSystem["type"];
+    const status = String(f.get("status") || "تصميم") as ProjectSystem["status"];
+    const notes = String(f.get("notes") ?? "").trim();
+    if (!name) return;
+
+    if (updateSystem) {
+      updateSystem(editingSystem.id, { name, type, status, notes });
+    } else {
+      updateSystemStatus(editingSystem.id, status);
+    }
+    setEditingSystem(null);
+  };
+
+  const handleEditComponentSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingComponent) return;
+    const f = new FormData(e.currentTarget);
+    const componentType = String(f.get("componentType") ?? "").trim();
+    const description = String(f.get("description") ?? "").trim();
+    const manufacturer = String(f.get("manufacturer") ?? "").trim();
+    const model = String(f.get("model") ?? "").trim();
+    const quantity = Number(f.get("quantity")) || 0;
+    const unit = String(f.get("unit") ?? "").trim();
+    const location = String(f.get("location") ?? "").trim();
+    const installStatus = String(f.get("installStatus") || "بانتظار") as SystemComponent["installStatus"];
+    if (!componentType) return;
+
+    if (updateComponent) {
+      updateComponent(editingComponent.id, {
+        componentType,
+        description,
+        manufacturer,
+        model,
+        quantity,
+        unit,
+        location,
+        installStatus,
+      });
+    } else {
+      updateComponentStatus(editingComponent.id, installStatus);
+    }
+    setEditingComponent(null);
+  };
+
+  const currentProjectIdForGeneration = filterProjectId !== "all" ? filterProjectId : (projects[0]?.id ?? "");
+
   return (
     <section className="content-grid content-grid--stack">
       <form className="form-panel" onSubmit={addSystem}>
-        <SectionTitle icon={Plus} title="إضافة نظام فني" />
-        <label>المشروع<select name="projectId" required><option value="">اختر مشروع...</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-        <label>نوع النظام<select name="type" defaultValue="إنذار حريق">{sysTypes.map((t) => <option key={t}>{t}</option>)}</select></label>
-        <Field label="اسم/وصف النظام" name="name" required />
-        <label>الحالة<select name="status" defaultValue="تصميم">{sysStatuses.map((s) => <option key={s}>{s}</option>)}</select></label>
-        <button className="primary-button"><Plus size={18} />إضافة النظام</button>
+        <SectionTitle icon={Plus} title="إضافة نظام فني جديد" />
+        <label>
+          المشروع
+          <select
+            name="projectId"
+            required
+            defaultValue={filterProjectId !== "all" ? filterProjectId : projects[0]?.id}
+          >
+            <option value="">اختر مشروع...</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          نوع النظام
+          <select name="type" defaultValue="إنذار حريق">
+            {sysTypes.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Field label="اسم/وصف النظام" name="name" required placeholder="مثال: شبكة رش آلي زون A / إنذار معنون..." />
+        <label>
+          الحالة
+          <select name="status" defaultValue="تصميم">
+            {sysStatuses.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          ملاحظات ومواصفات فنية
+          <textarea name="notes" rows={2} placeholder="أي كودات معتمدة مثل NFPA / SBC..." />
+        </label>
+        <button className="primary-button">
+          <Plus size={18} />
+          إضافة النظام
+        </button>
       </form>
+
       <div className="panel wide">
-        <SectionTitle icon={Gauge} title="الأنظمة الفنية" />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <SectionTitle icon={Gauge} title="الأنظمة الفنية ومكوّناتها" />
+            <span style={{ fontSize: "0.82rem", background: "rgba(225,29,72,0.08)", color: "var(--brand)", padding: "3px 10px", borderRadius: 20, fontWeight: "bold" }}>
+              {displayedSystems.length} نظام
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {generateDefaultSystems && (
+              <button
+                type="button"
+                className="secondary-button"
+                style={{ padding: "6px 14px", fontSize: "0.82rem", display: "inline-flex", alignItems: "center", gap: 6, borderColor: "var(--brand)", color: "var(--brand)" }}
+                onClick={() => {
+                  if (!currentProjectIdForGeneration) {
+                    alert("يرجى اختيار مشروع لتوليد الأنظمة القياسية له.");
+                    return;
+                  }
+                  generateDefaultSystems(currentProjectIdForGeneration);
+                }}
+              >
+                <Plus size={15} />
+                توليد الأنظمة القياسية للمشروع
+              </button>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: "0.84rem", color: "#64748b", whiteSpace: "nowrap" }}>فلترة المشروع:</span>
+              <select
+                value={filterProjectId}
+                onChange={(e) => {
+                  setFilterProjectId(e.target.value);
+                  if (setSelectedProjectId && e.target.value !== "all") {
+                    setSelectedProjectId(e.target.value);
+                  }
+                }}
+                style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontWeight: 500 }}
+              >
+                <option value="all">جميع المشاريع (عرض الكل)</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div className="table-wrap">
           <table>
-            <thead><tr><th>المشروع</th><th>النوع</th><th>النظام</th><th>الحالة</th><th>المكوّنات</th><th style={{ width: 150 }}>إجراءات</th></tr></thead>
+            <thead>
+              <tr>
+                <th>المشروع</th>
+                <th>النوع</th>
+                <th>النظام</th>
+                <th>الحالة</th>
+                <th>المكوّنات</th>
+                <th style={{ width: 170, textAlign: "center" }}>إجراءات</th>
+              </tr>
+            </thead>
             <tbody>
-              {systems.map((s) => (
+              {displayedSystems.map((s) => (
                 <tr key={s.id} style={{ background: s.id === selectedSystemId ? "rgba(225,29,72,0.04)" : undefined }}>
-                  <td>{projects.find((p) => p.id === s.projectId)?.name || "—"}</td><td>{s.type}</td><td><strong>{s.name}</strong></td>
-                  <td><select value={s.status} onChange={(e) => updateSystemStatus(s.id, e.target.value as ProjectSystem["status"])} style={{ padding: "4px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }}>{sysStatuses.map((x) => <option key={x}>{x}</option>)}</select></td>
-                  <td>{components.filter((c) => c.systemId === s.id).length}</td>
+                  <td><strong>{projects.find((p) => String(p.id) === String(s.projectId))?.name || "—"}</strong></td>
                   <td>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <button type="button" className="secondary-button" style={{ minHeight: 28, padding: "0 10px", fontSize: "0.76rem" }} onClick={() => setSelectedSystemId(s.id === selectedSystemId ? null : s.id)}>المكوّنات</button>
-                      {isAdmin && <button type="button" className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => triggerConfirm("حذف هذا النظام ومكوّناته؟", () => { if (selectedSystemId === s.id) setSelectedSystemId(null); deleteSystem(s.id); })}><Trash2 size={16} /></button>}
+                    <span style={{ fontSize: "0.8rem", background: "#f1f5f9", padding: "3px 8px", borderRadius: 4 }}>
+                      {s.type}
+                    </span>
+                  </td>
+                  <td>
+                    <strong style={{ fontSize: "0.92rem" }}>{s.name}</strong>
+                    {s.notes && <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: 2 }}>{s.notes}</div>}
+                  </td>
+                  <td>
+                    <select
+                      value={s.status}
+                      onChange={(e) => updateSystemStatus(s.id, e.target.value as ProjectSystem["status"])}
+                      style={{
+                        padding: "4px 8px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: 6,
+                        fontWeight: "bold",
+                        fontSize: "0.82rem",
+                        color: s.status === "معتمد" ? "#166534" : s.status === "جاري التركيب" ? "#1e40af" : "#b45309",
+                        background: s.status === "معتمد" ? "#d1fae5" : s.status === "جاري التركيب" ? "#dbeafe" : "#fef3c7",
+                      }}
+                    >
+                      {sysStatuses.map((x) => (
+                        <option key={x} value={x}>
+                          {x}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <span style={{ fontWeight: "bold", color: "var(--brand)" }}>
+                      {components.filter((c) => String(c.systemId) === String(s.id)).length}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "center" }}>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        style={{ minHeight: 28, padding: "0 9px", fontSize: "0.75rem", background: s.id === selectedSystemId ? "var(--brand)" : undefined, color: s.id === selectedSystemId ? "#fff" : undefined }}
+                        onClick={() => setSelectedSystemId(s.id === selectedSystemId ? null : s.id)}
+                      >
+                        المكوّنات
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        style={{ minHeight: 28, padding: "0 8px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: 3 }}
+                        title="تعديل النظام"
+                        onClick={() => setEditingSystem(s)}
+                      >
+                        <Edit size={13} />
+                        <span>تعديل</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-danger"
+                        style={iconDangerStyle}
+                        title="حذف النظام"
+                        onClick={() => {
+                          if (window.confirm("حذف هذا النظام ومكوّناته المسجلة؟")) {
+                            if (selectedSystemId === s.id) setSelectedSystemId(null);
+                            deleteSystem(s.id);
+                          }
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {systems.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا توجد أنظمة مسجلة.</td></tr>}
+              {displayedSystems.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "36px 16px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, maxWidth: 440, margin: "0 auto" }}>
+                      <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(225,29,72,0.1)", color: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Gauge size={26} />
+                      </div>
+                      <strong style={{ fontSize: "1.05rem", color: "#1e293b" }}>
+                        لا توجد أنظمة فنية مسجلة {activeProject ? `لمشروع (${activeProject.name})` : ""}
+                      </strong>
+                      <p style={{ fontSize: "0.86rem", color: "#64748b", margin: 0, lineHeight: 1.6 }}>
+                        لم يتم ربط أنظمة فنية (إنذار، إطفاء، تهوية) لهذا المشروع. يمكنك إضافة نظام فني يدوياً أو توليد الأنظمة القياسية المعتمدة بنقرة واحدة.
+                      </p>
+                      {generateDefaultSystems && (
+                        <button
+                          type="button"
+                          className="primary-button"
+                          style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px", fontSize: "0.9rem" }}
+                          onClick={() => generateDefaultSystems(currentProjectIdForGeneration)}
+                        >
+                          <Plus size={16} />
+                          توليد الأنظمة القياسية للمشروع
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* قسم مكوّنات النظام المحدد */}
         {selectedSystemId && (
-          <div style={{ marginTop: 16, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
-            <SectionTitle icon={Boxes} title={`مكوّنات: ${systems.find((s) => s.id === selectedSystemId)?.name ?? ""}`} />
-            <form onSubmit={addComp} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end", marginBottom: 12 }}>
-              <input name="componentType" placeholder="نوع المكوّن" required style={{ flex: 2, minWidth: 120, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
-              <input name="description" placeholder="الوصف" style={{ flex: 2, minWidth: 120, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
-              <input name="quantity" type="number" placeholder="الكمية" style={{ width: 80, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
-              <input name="unit" placeholder="الوحدة" style={{ width: 80, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
-              <input name="location" placeholder="الموقع داخل المبنى" style={{ flex: 1, minWidth: 100, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
-              <button className="secondary-button" style={{ minHeight: 34 }}><Plus size={14} />إضافة مكوّن</button>
+          <div style={{ marginTop: 20, borderTop: "2px solid #e2e8f0", paddingTop: 16, background: "#fafafa", borderRadius: 8, padding: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <SectionTitle icon={Boxes} title={`مكوّنات وأجهزة: ${systems.find((s) => String(s.id) === String(selectedSystemId))?.name ?? ""}`} />
+              <button
+                type="button"
+                className="secondary-button"
+                style={{ fontSize: "0.78rem", minHeight: 28 }}
+                onClick={() => setSelectedSystemId(null)}
+              >
+                إغلاق المكوّنات
+              </button>
+            </div>
+
+            <form onSubmit={addComp} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end", marginBottom: 14, background: "#fff", padding: 12, borderRadius: 6, border: "1px solid #e2e8f0" }}>
+              <input name="componentType" placeholder="نوع المكوّن (كاشف، لوحة، صمام...)" required style={{ flex: 2, minWidth: 140, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
+              <input name="description" placeholder="الوصف والمواصفة" style={{ flex: 2, minWidth: 140, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
+              <input name="manufacturer" placeholder="الشركة المصنعة" style={{ flex: 1, minWidth: 100, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
+              <input name="model" placeholder="الموديل" style={{ flex: 1, minWidth: 80, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
+              <input name="quantity" type="number" placeholder="الكمية" required style={{ width: 75, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
+              <input name="unit" placeholder="الوحدة" defaultValue="حبة" style={{ width: 70, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
+              <input name="location" placeholder="الموقع داخل المبنى" style={{ flex: 1, minWidth: 110, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
+              <button className="primary-button" style={{ minHeight: 34, padding: "0 14px" }}>
+                <Plus size={14} />
+                إضافة مكوّن
+              </button>
             </form>
-            <div className="table-wrap">
+
+            <div className="table-wrap" style={{ background: "#fff", borderRadius: 6 }}>
               <table>
-                <thead><tr><th>المكوّن</th><th>الوصف</th><th>الكمية</th><th>الموقع</th><th>حالة التركيب</th><th style={{ width: 60 }}>حذف</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>المكوّن</th>
+                    <th>الوصف</th>
+                    <th>المصنع / الموديل</th>
+                    <th>الكمية</th>
+                    <th>الموقع</th>
+                    <th>حالة التركيب</th>
+                    <th style={{ width: 110, textAlign: "center" }}>إجراءات</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {selectedComponents.map((c) => (
                     <tr key={c.id}>
-                      <td><strong>{c.componentType}</strong></td><td>{c.description || "—"}</td><td>{c.quantity} {c.unit}</td><td>{c.location || "—"}</td>
-                      <td><select value={c.installStatus} onChange={(e) => updateComponentStatus(c.id, e.target.value as SystemComponent["installStatus"])} style={{ padding: "4px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }}>{compStatuses.map((x) => <option key={x}>{x}</option>)}</select></td>
-                      <td>{isAdmin && <button className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => deleteComponent(c.id)}><Trash2 size={16} /></button>}</td>
+                      <td><strong>{c.componentType}</strong></td>
+                      <td>{c.description || "—"}</td>
+                      <td>{c.manufacturer || c.model ? `${c.manufacturer || ""} ${c.model || ""}`.trim() : "—"}</td>
+                      <td><strong>{c.quantity}</strong> <span style={{ color: "#64748b", fontSize: "0.8rem" }}>{c.unit}</span></td>
+                      <td>{c.location || "—"}</td>
+                      <td>
+                        <select
+                          value={c.installStatus}
+                          onChange={(e) => updateComponentStatus(c.id, e.target.value as SystemComponent["installStatus"])}
+                          style={{
+                            padding: "4px 8px",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 6,
+                            fontWeight: "bold",
+                            fontSize: "0.82rem",
+                            color: c.installStatus === "تم اختباره" ? "#166534" : c.installStatus === "مركّب" ? "#1e40af" : "#b45309",
+                            background: c.installStatus === "تم اختباره" ? "#d1fae5" : c.installStatus === "مركّب" ? "#dbeafe" : "#fef3c7",
+                          }}
+                        >
+                          {compStatuses.map((x) => (
+                            <option key={x} value={x}>
+                              {x}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            style={{ minHeight: 26, padding: "0 6px", fontSize: "0.74rem" }}
+                            title="تعديل المكون"
+                            onClick={() => setEditingComponent(c)}
+                          >
+                            <Edit size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-danger"
+                            style={iconDangerStyle}
+                            title="حذف المكون"
+                            onClick={() => {
+                              if (window.confirm("حذف هذا المكوّن؟")) {
+                                deleteComponent(c.id);
+                              }
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
-                  {selectedComponents.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا توجد مكوّنات لهذا النظام.</td></tr>}
+                  {selectedComponents.length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: "center", padding: 14, color: "#64748b" }}>
+                        لا توجد مكوّنات مسجلة لهذا النظام بعد. يمكنك إضافة أجهزة ومكوّنات من النموذج أعلاه.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         )}
       </div>
+
+      {/* نافذة تعديل النظام الفني */}
+      {editingSystem && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.6)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setEditingSystem(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 12,
+              width: "100%",
+              maxWidth: 500,
+              padding: 24,
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, borderBottom: "1px solid #e2e8f0", paddingBottom: 12 }}>
+              <SectionTitle icon={Edit} title="تعديل النظام الفني" />
+              <button
+                type="button"
+                onClick={() => setEditingSystem(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", display: "flex" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSystemSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <label>
+                اسم / وصف النظام
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  defaultValue={editingSystem.name}
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                />
+              </label>
+
+              <label>
+                نوع النظام
+                <select
+                  name="type"
+                  defaultValue={editingSystem.type}
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                >
+                  {sysTypes.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                الحالة
+                <select
+                  name="status"
+                  defaultValue={editingSystem.status}
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                >
+                  {sysStatuses.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                ملاحظات ومواصفات فنية
+                <textarea
+                  name="notes"
+                  rows={3}
+                  defaultValue={editingSystem.notes || ""}
+                  placeholder="المواصفات والكودات..."
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                />
+              </label>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setEditingSystem(null)}
+                >
+                  إلغاء
+                </button>
+                <button type="submit" className="primary-button" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <Save size={16} />
+                  حفظ التعديلات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تعديل المكوّن */}
+      {editingComponent && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.6)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setEditingComponent(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 12,
+              width: "100%",
+              maxWidth: 520,
+              padding: 24,
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, borderBottom: "1px solid #e2e8f0", paddingBottom: 12 }}>
+              <SectionTitle icon={Edit} title="تعديل المكوّن الفني" />
+              <button
+                type="button"
+                onClick={() => setEditingComponent(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", display: "flex" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditComponentSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <label>
+                نوع المكوّن
+                <input
+                  name="componentType"
+                  type="text"
+                  required
+                  defaultValue={editingComponent.componentType}
+                  style={{ width: "100%", padding: "7px 10px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                />
+              </label>
+
+              <label>
+                الوصف والمواصفة
+                <input
+                  name="description"
+                  type="text"
+                  defaultValue={editingComponent.description || ""}
+                  style={{ width: "100%", padding: "7px 10px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                />
+              </label>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <label>
+                  الشركة المصنعة
+                  <input
+                    name="manufacturer"
+                    type="text"
+                    defaultValue={editingComponent.manufacturer || ""}
+                    style={{ width: "100%", padding: "7px 10px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                  />
+                </label>
+                <label>
+                  الموديل
+                  <input
+                    name="model"
+                    type="text"
+                    defaultValue={editingComponent.model || ""}
+                    style={{ width: "100%", padding: "7px 10px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                  />
+                </label>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <label>
+                  الكمية
+                  <input
+                    name="quantity"
+                    type="number"
+                    required
+                    defaultValue={editingComponent.quantity}
+                    style={{ width: "100%", padding: "7px 10px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                  />
+                </label>
+                <label>
+                  الوحدة
+                  <input
+                    name="unit"
+                    type="text"
+                    defaultValue={editingComponent.unit || "حبة"}
+                    style={{ width: "100%", padding: "7px 10px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                  />
+                </label>
+              </div>
+
+              <label>
+                الموقع داخل المبنى
+                <input
+                  name="location"
+                  type="text"
+                  defaultValue={editingComponent.location || ""}
+                  style={{ width: "100%", padding: "7px 10px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                />
+              </label>
+
+              <label>
+                حالة التركيب والاختبار
+                <select
+                  name="installStatus"
+                  defaultValue={editingComponent.installStatus}
+                  style={{ width: "100%", padding: "7px 10px", border: "1px solid #cbd5e1", borderRadius: 6, marginTop: 4 }}
+                >
+                  {compStatuses.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setEditingComponent(null)}
+                >
+                  إلغاء
+                </button>
+                <button type="submit" className="primary-button" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <Save size={16} />
+                  حفظ التعديلات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -8799,6 +9707,66 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     }
   };
 
+  const updateStage = async (id: number | string, data: { name: string; status: ProjectStage["status"]; notes: string }) => {
+    setStages((cur) =>
+      cur.map((s) =>
+        String(s.id) === String(id)
+          ? { ...s, name: data.name, status: data.status, notes: data.notes, updatedAt: new Date().toISOString().slice(0, 10) }
+          : s
+      )
+    );
+    setNotice("تم تحديث بيانات المرحلة بنجاح");
+    try {
+      await apiFetch(`/api/projects/stages/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: data.name, status: stageStatusToApi[data.status], notes: data.notes }),
+      });
+    } catch (e) {
+      console.warn("Stage update backend sync skipped:", e);
+    }
+  };
+
+  const generateDefaultStages = async (projectId: number | string) => {
+    if (!projectId) return;
+    const standardStages = [
+      { name: "المعاينة والدراسة الفنية", notes: "فحص الموقع ومطابقة المخططات والرفع المساحي" },
+      { name: "التأسيس وتمديد الشبكة والمواسير", notes: "تمديد خطوط الأنابيب والكابلات المقاومة للحريق" },
+      { name: "توريد الأجهزة والمعدات", notes: "استلام وتدقيق الكواشف واللوحات والمضخات المعتمدة" },
+      { name: "التركيب والربط الميداني", notes: "تثبيت الأجهزة وربط شبكات الإنذار والإطفاء" },
+      { name: "الاختبار والتشغيل التجريبي والتسليم", notes: "الفحص الهيدروليكي والكهربائي والاعتماد النهائي للدفاع المدني" },
+    ];
+    const today = new Date().toISOString().slice(0, 10);
+    const newStages: ProjectStage[] = [];
+
+    for (let i = 0; i < standardStages.length; i++) {
+      const item = standardStages[i];
+      const localId = Date.now() + i;
+      const newStage: ProjectStage = {
+        id: localId,
+        projectId: String(projectId),
+        name: item.name,
+        status: i === 0 ? "جاري" : "لم يبدأ",
+        notes: item.notes,
+        updatedAt: today,
+      };
+      newStages.push(newStage);
+
+      apiFetch(`/api/projects/${projectId}/stages`, {
+        method: "POST",
+        body: JSON.stringify({ name: item.name, status: i === 0 ? "DOING" : "TODO", notes: item.notes }),
+      })
+        .then((created) => {
+          if (created && created.id) {
+            setStages((cur) => cur.map((s) => (s.id === localId ? { ...s, id: created.id } : s)));
+          }
+        })
+        .catch(() => {});
+    }
+
+    setStages((cur) => [...cur, ...newStages]);
+    setNotice("تم توليد المراحل القياسية للمشروع بنجاح");
+  };
+
   const addWorkerFromForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formEl = event.currentTarget;
@@ -9242,6 +10210,22 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       console.warn("System delete backend sync skipped:", e);
     }
   };
+
+  const updateSystem = async (id: number | string, data: { name: string; type: ProjectSystem["type"]; status: ProjectSystem["status"]; notes?: string }) => {
+    setSystems((cur) =>
+      cur.map((s) => (String(s.id) === String(id) ? { ...s, ...data } : s))
+    );
+    setNotice("تم تحديث بيانات النظام الفني بنجاح");
+    try {
+      await apiFetch(`/api/projects/systems/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: data.name, type: systemTypeToApi[data.type], status: systemStatusToApi[data.status], notes: data.notes || "" }),
+      });
+    } catch (e) {
+      console.warn("System update backend sync skipped:", e);
+    }
+  };
+
   const addComponentForSystem = async (systemId: number | string, data: Omit<SystemComponent, "id" | "systemId">) => {
     const localId = nextId(components);
     setComponents((cur) => [...cur, { ...data, id: localId, systemId }]);
@@ -9266,6 +10250,24 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       console.warn("Component add backend sync skipped:", e);
     }
   };
+
+  const updateComponent = async (id: number | string, data: Partial<SystemComponent>) => {
+    setComponents((cur) =>
+      cur.map((c) => (String(c.id) === String(id) ? { ...c, ...data } : c))
+    );
+    setNotice("تم تحديث بيانات المكوّن بنجاح");
+    try {
+      const payload: any = { ...data };
+      if (data.installStatus) payload.installStatus = compStatusToApi[data.installStatus];
+      await apiFetch(`/api/projects/components/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {
+      console.warn("Component update backend sync skipped:", e);
+    }
+  };
+
   const updateComponentStatus = async (id: number | string, installStatus: SystemComponent["installStatus"]) => {
     setComponents((cur) => cur.map((c) => (String(c.id) === String(id) ? { ...c, installStatus, installDate: installStatus === "تم اختباره" ? new Date().toISOString().slice(0, 10) : c.installDate } : c)));
     try {
@@ -9285,6 +10287,97 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     } catch (e) {
       console.warn("Component delete backend sync skipped:", e);
     }
+  };
+
+  const generateDefaultSystems = async (projectId: number | string) => {
+    if (!projectId) return;
+    const templates = [
+      {
+        name: "نظام إنذار الحريق المعنون (Addressable Fire Alarm)",
+        type: "إنذار حريق" as const,
+        notes: "لوحة تحكم رئيسية مع كواشف دخان وحرارة وكواسر وسارينات معتمدة من الدفاع المدني",
+        components: [
+          { componentType: "لوحة تحكم إنذار حريق رئيسية", description: "لوحة معنونة 2-Loop مع شاشة عرض وشاحن بطاريات", manufacturer: "GST", model: "GST-IFP8", quantity: 1, unit: "لوحة", location: "غرفة الأمن / الاستقبال" },
+          { componentType: "كاشف دخان ضوئي معنون", description: "كاشف دخان ذكي مع قاعدة معنونة", manufacturer: "GST", model: "DI-9102", quantity: 18, unit: "حبة", location: "الممرات والغرف والمكاتب" },
+          { componentType: "كاشف حرارة معنون", description: "كاشف حراري ثابت ومتغير", manufacturer: "GST", model: "DI-9103", quantity: 4, unit: "حبة", location: "المطبخ وغرفة الكهرباء" },
+          { componentType: "كاسر زجاجي يدوي للطوارئ", description: "كاسر إنذار يدوي أحمر مع مفتاح إعادة ضبط", manufacturer: "GST", model: "DI-9204", quantity: 4, unit: "حبة", location: "المخارج وبسطات السلالم" },
+          { componentType: "سارينة صوتية مع فلاشر ضوئي", description: "سارينة إنذار عالية الشدة مع وميض LED أحمر", manufacturer: "GST", model: "DC-9403", quantity: 4, unit: "حبة", location: "الممرات الرئيسية" },
+        ],
+      },
+      {
+        name: "شبكة مكافحة الحريق والرشاشات الآلية (Fire Sprinkler System)",
+        type: "شبكة إطفاء" as const,
+        notes: "شبكة أنابيب سيملس مجلفنة مع رؤوس رشاشات ومحابس تحكم وصناديق حريق",
+        components: [
+          { componentType: "محبس إنذار وتحكم رئيسي (Alarm Check Valve)", description: "محبس تدفق وتحكم هيدروليكي 4 بوصة مع مقياس ضغط", manufacturer: "Viking", model: "J-1", quantity: 1, unit: "محبس", location: "غرفة المضخات" },
+          { componentType: "رؤوس رشاشات حريق متدلية", description: "رشاش حريق 68°C درجة حرارة قياسية K=5.6 معتمد UL/FM", manufacturer: "Tyco", model: "TY-B", quantity: 32, unit: "رأس", location: "كامل المساحة والأسقف" },
+          { componentType: "صندوق حريق نحاسي مجهز", description: "بكرة خرطوم مطاطي 1 بوصة 30 م مع قاذف وصمام", manufacturer: "NAFFCO", model: "HR-30", quantity: 2, unit: "صندوق", location: "قرب مخارج الطوارئ" },
+        ],
+      },
+      {
+        name: "نظام سحب الدخان والتهوية الميكانيكية",
+        type: "تهوية وتكييف" as const,
+        notes: "مراوح سحب دخان مقاومة للحرارة العالية 400°C لمدة ساعتين ومخمدات حريق",
+        components: [
+          { componentType: "مروحة سحب دخان ميكانيكية", description: "مروحة طرد مركزي تعمل حتى 400°C لمدة ساعتين", manufacturer: "Systemair", model: "AXC-400", quantity: 2, unit: "مروحة", location: "السطح / المنور" },
+          { componentType: "مخمد حريق ودخان أوتوماتيكي", description: "دامبر حريق مجهز بمحرك كهربائي 24V ومصهر حراري", manufacturer: "Ruskin", model: "FSD-3", quantity: 4, unit: "قطعة", location: "اختراق الجدران المقاومة للحريق" },
+        ],
+      },
+    ];
+
+    const newSysList: ProjectSystem[] = [];
+    const newCompList: SystemComponent[] = [];
+
+    for (let i = 0; i < templates.length; i++) {
+      const tmpl = templates[i];
+      const localSysId = Date.now() + (i * 100);
+      newSysList.push({
+        id: localSysId,
+        projectId: String(projectId),
+        name: tmpl.name,
+        type: tmpl.type,
+        status: "تصميم",
+        notes: tmpl.notes,
+      });
+
+      for (let j = 0; j < tmpl.components.length; j++) {
+        const c = tmpl.components[j];
+        newCompList.push({
+          id: Date.now() + (i * 100) + j + 1,
+          systemId: localSysId,
+          componentType: c.componentType,
+          description: c.description,
+          manufacturer: c.manufacturer,
+          model: c.model,
+          quantity: c.quantity,
+          unit: c.unit,
+          location: c.location,
+          installStatus: "بانتظار",
+          installDate: "",
+        });
+      }
+
+      apiFetch(`/api/projects/${projectId}/systems`, {
+        method: "POST",
+        body: JSON.stringify({ type: systemTypeToApi[tmpl.type], name: tmpl.name, status: "DESIGN", notes: tmpl.notes }),
+      })
+        .then((createdSys) => {
+          if (createdSys && createdSys.id) {
+            setSystems((cur) => cur.map((s) => (s.id === localSysId ? { ...s, id: createdSys.id } : s)));
+            for (const c of tmpl.components) {
+              apiFetch(`/api/projects/systems/${createdSys.id}/components`, {
+                method: "POST",
+                body: JSON.stringify({ ...c, quantity: c.quantity }),
+              }).catch(() => {});
+            }
+          }
+        })
+        .catch(() => {});
+    }
+
+    setSystems((cur) => [...cur, ...newSysList]);
+    setComponents((cur) => [...cur, ...newCompList]);
+    setNotice("تم توليد الأنظمة الفنية القياسية ومكوّناتها للمشروع بنجاح");
   };
 
   const addMaintenanceFromForm = async (event: FormEvent<HTMLFormElement>) => {
@@ -9576,9 +10669,41 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           />
         );
       case "stages":
-        return <StagesView projects={filteredProjects} stages={roleFilteredStages} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} addStage={addStageFromForm} updateStageStatus={updateStageStatus} updateStageNotes={updateStageNotes} deleteStage={deleteStage} isAdmin={isAdmin} />;
+        return (
+          <StagesView
+            projects={filteredProjects}
+            stages={roleFilteredStages}
+            selectedProjectId={selectedProjectId}
+            setSelectedProjectId={setSelectedProjectId}
+            addStage={addStageFromForm}
+            updateStageStatus={updateStageStatus}
+            updateStageNotes={updateStageNotes}
+            updateStage={updateStage}
+            deleteStage={deleteStage}
+            generateDefaultStages={generateDefaultStages}
+            isAdmin={isAdmin || isPMOrAdmin}
+          />
+        );
       case "systems":
-        return <SystemsView systems={roleFilteredSystems} components={components} projects={filteredProjects} addSystem={addSystemFromForm} updateSystemStatus={updateSystemStatus} deleteSystem={deleteSystem} addComponent={addComponentForSystem} updateComponentStatus={updateComponentStatus} deleteComponent={deleteComponent} isAdmin={isAdmin} />;
+        return (
+          <SystemsView
+            systems={roleFilteredSystems}
+            components={components}
+            projects={filteredProjects}
+            selectedProjectId={selectedProjectId}
+            setSelectedProjectId={setSelectedProjectId}
+            addSystem={addSystemFromForm}
+            updateSystemStatus={updateSystemStatus}
+            updateSystem={updateSystem}
+            deleteSystem={deleteSystem}
+            addComponent={addComponentForSystem}
+            updateComponentStatus={updateComponentStatus}
+            updateComponent={updateComponent}
+            deleteComponent={deleteComponent}
+            generateDefaultSystems={generateDefaultSystems}
+            isAdmin={isAdmin || isPMOrAdmin}
+          />
+        );
       case "deficiencies":
         return <DeficienciesView deficiencies={roleFilteredDeficiencies} projects={filteredProjects} engineers={engineers} addDeficiency={addDeficiencyFromForm} updateDeficiencyStatus={updateDeficiencyStatus} deleteDeficiency={deleteDeficiency} isAdmin={isAdmin} isSiteEngineer={isSiteEngineer} />;
       case "dailyReports":

@@ -9,15 +9,27 @@ loadEnv();
  * يحوّل DATABASE_URL (mysql://user:pass@host:port/db) إلى إعدادات اتصال
  * المحوّل. كلمة المرور تكون URL-encoded داخل الرابط لذلك نفكّ ترميزها هنا.
  */
+import * as fs from "fs";
+
 function connectionOptions() {
-  const url = new URL(
-    process.env.DATABASE_URL ??
-      "mysql://root@localhost:3306/kanan",
-  );
+  const rawUrl =
+    process.env.DATABASE_URL ||
+    "mysql://u463801179_kanan_user:8dREB5qR7wmrWTiL@localhost:3306/u463801179_kanan_db";
+  const url = new URL(rawUrl);
+
+  const socketCandidates = [
+    process.env.MYSQL_SOCKET,
+    "/var/lib/mysql/mysql.sock",
+    "/tmp/mysql.sock",
+    "/var/run/mysqld/mysqld.sock",
+  ].filter((p): p is string => Boolean(p && fs.existsSync(p)));
+
+  const socketPath = socketCandidates[0];
 
   return {
-    host: url.hostname,
-    port: url.port ? Number(url.port) : 3306,
+    host: socketPath ? undefined : (url.hostname || "localhost"),
+    port: socketPath ? undefined : (url.port ? Number(url.port) : 3306),
+    socketPath: socketPath,
     user: decodeURIComponent(url.username),
     password: decodeURIComponent(url.password),
     database: url.pathname.replace(/^\//, ""),

@@ -332,13 +332,18 @@ export class ProjectsService {
     // Check project assignment permission
     await this.findOne(oldStage.projectId, user);
 
+    const updateData: any = {
+      status: dto.status as StageStatus,
+      notes: dto.notes,
+      updatedAt: new Date(),
+    };
+    if (dto.name && dto.name.trim()) {
+      updateData.name = dto.name.trim();
+    }
+
     const updatedStage = await this.prisma.projectStage.update({
       where: { id: stageId },
-      data: {
-        status: dto.status as StageStatus,
-        notes: dto.notes,
-        updatedAt: new Date(),
-      },
+      data: updateData,
     });
 
     // Write history record
