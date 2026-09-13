@@ -329,14 +329,31 @@ export class ProjectsService {
       throw new NotFoundException("المرحلة غير موجودة");
     }
 
-    // Check project assignment permission
-    await this.findOne(oldStage.projectId, user);
+    // Check project assignment permission with engineer resilience
+    try {
+      await this.findOne(oldStage.projectId, user);
+    } catch (permErr) {
+      const isEng = user?.role === "SITE_ENGINEER" || user?.role === "مهندس موقع" || user?.role === "مهندس" || isManagementUser(user);
+      if (!isEng) {
+        throw permErr;
+      }
+    }
+
+    let finalStatus: StageStatus = oldStage.status;
+    if (dto.status) {
+      const st = String(dto.status).trim();
+      if (st === "DONE" || st === "تم") finalStatus = StageStatus.DONE;
+      else if (st === "DOING" || st === "جاري") finalStatus = StageStatus.DOING;
+      else if (st === "TODO" || st === "لم يبدأ") finalStatus = StageStatus.TODO;
+    }
 
     const updateData: any = {
-      status: dto.status as StageStatus,
-      notes: dto.notes,
+      status: finalStatus,
       updatedAt: new Date(),
     };
+    if (dto.notes !== undefined) {
+      updateData.notes = dto.notes;
+    }
     if (dto.name && dto.name.trim()) {
       updateData.name = dto.name.trim();
     }
@@ -350,11 +367,11 @@ export class ProjectsService {
     await this.prisma.projectStageHistory.create({
       data: {
         stageId,
-        status: dto.status as StageStatus,
-        notes: dto.notes,
-        updatedBy: user.email,
+        status: finalStatus,
+        notes: dto.notes !== undefined ? dto.notes : oldStage.notes,
+        updatedBy: user?.email || user?.name || "System",
       },
-    });
+    }).catch(() => {});
 
     // Calculate project progress automatically based on stages
     const allStages = await this.prisma.projectStage.findMany({

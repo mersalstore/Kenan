@@ -42,6 +42,7 @@ export type Client = {
   notes: string;
   payments?: PaymentTerm[]; // جدول دفعات مخصّص لهذا العميل (اختياري)
   // حقول إضافية (اختيارية) — بيانات العميل/المؤسسة الرسمية.
+  organizationName?: string; // اسم المنشأة / المؤسسة
   sector?: ClientSector; // حكومي | خاص
   email?: string;
   city?: string;

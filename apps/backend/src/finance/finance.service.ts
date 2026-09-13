@@ -110,7 +110,23 @@ export class FinanceService {
       if (clientExists) clientId = clientExists.id;
     }
 
-    const invNumber = (dto.number && dto.number.trim() !== "") ? dto.number.trim() : `INV-${Date.now().toString().slice(-6)}`;
+    let invNumber = (dto.number && dto.number.trim() !== "" && dto.number.trim() !== "AUTO") ? dto.number.trim() : "";
+    if (!invNumber) {
+      const year = new Date().getFullYear();
+      const existingInvoices = await this.prisma.invoice.findMany({
+        where: { number: { startsWith: `INV-${year}-` } },
+        select: { number: true },
+      });
+      let maxSeq = 0;
+      for (const inv of existingInvoices) {
+        const parts = inv.number.split("-");
+        const seq = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(seq) && seq > maxSeq) {
+          maxSeq = seq;
+        }
+      }
+      invNumber = `INV-${year}-${String(maxSeq + 1).padStart(3, "0")}`;
+    }
 
     // الحقول المشتركة مع الشكل المبسّط للفاتورة
     const base = {

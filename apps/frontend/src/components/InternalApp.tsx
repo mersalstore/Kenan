@@ -54,6 +54,7 @@ import {
   Edit,
   Save,
 } from "./icons";
+import { Barcode } from "./Barcode";
 import { exportHtmlElementToWord } from "../lib/wordGenerator";
 import { ChangeEvent, FormEvent, useMemo, useState, useEffect, useRef, type ReactNode, ComponentType } from "react";
 import {
@@ -457,21 +458,33 @@ function FinanceView({
   const [showAddInvoice, setShowAddInvoice] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
 
+  // احتساب رقم الفاتورة التلقائي القادم
+  const suggestedInvoiceNumber = useMemo(() => {
+    const year = new Date().getFullYear();
+    let maxSeq = 0;
+    for (const inv of invoices) {
+      if (inv.number && typeof inv.number === "string") {
+        const match = inv.number.match(/INV-\d{4}-(\d+)/);
+        if (match) {
+          const seq = parseInt(match[1], 10);
+          if (seq > maxSeq) maxSeq = seq;
+        }
+      }
+    }
+    return `INV-${year}-${String(maxSeq + 1).padStart(3, "0")}`;
+  }, [invoices]);
+
   const handleAddInvoiceSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const projId = String(f.get("projectId") || "");
-    const number = String(f.get("number") || "").trim();
+    const number = String(f.get("number") || suggestedInvoiceNumber).trim() || suggestedInvoiceNumber;
     const amount = Number(f.get("amount")) || 0;
     const status = String(f.get("status") || "جزئية");
     const dueDate = f.get("dueDate") ? String(f.get("dueDate")) : undefined;
     
     if (!projId) {
       triggerAlert("يرجى اختيار المشروع أولاً");
-      return;
-    }
-    if (!number) {
-      triggerAlert("يرجى إدخال رقم الفاتورة");
       return;
     }
     if (!amount || amount <= 0) {
@@ -552,8 +565,11 @@ function FinanceView({
               </select>
             </div>
             <div>
-              <label>رقم الفاتورة</label>
-              <input type="text" name="number" required placeholder="INV-2026-001" className="form-input" />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                <label style={{ margin: 0 }}>رقم الفاتورة</label>
+                <span style={{ fontSize: "0.7rem", color: "#166534", background: "#dcfce7", padding: "1px 6px", borderRadius: "4px", fontWeight: 700 }}>تلقائي من النظام</span>
+              </div>
+              <input type="text" name="number" defaultValue={suggestedInvoiceNumber} required placeholder="INV-2026-001" className="form-input" style={{ fontFamily: "monospace", fontWeight: 700 }} />
             </div>
             <div>
               <label>المبلغ</label>
@@ -1440,8 +1456,11 @@ function InvoiceDocument({
   const total = invoice.amount || subtotal + vatAmount;
   const issuedAt = invoice.date ? new Date(invoice.date) : new Date();
 
-  const sellerName = site.companyNameAr || "مؤسسة كنان لأنظمة الأمن والسلامة";
+  const sellerName = site.companyNameAr || "مؤسسة فار مايل";
   const sellerTax = site.companyTaxNumber || "313072607300003";
+  const sellerAddress = site.contactAddress || "الفيحاء - شارع المطر";
+  const sellerCity = "الرياض";
+  const sellerEmail = site.contactEmail || "info@kenan4safety.com";
 
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   useEffect(() => {
@@ -1467,155 +1486,201 @@ function InvoiceDocument({
     };
   }, [sellerName, sellerTax, total, vatAmount, invoice.date]);
 
-  const ITEM_CAPACITY = 14;
-  const itemFont = items.length <= 10 ? "0.78rem" : items.length <= 12 ? "0.72rem" : "0.66rem";
-  const itemPad = items.length <= 10 ? "5px" : items.length <= 12 ? "4px" : "3px";
-
-  const cell = { padding: itemPad, border: "1px solid #cbd5e1", fontSize: itemFont } as const;
+  const formattedDate = invoice.date
+    ? new Date(invoice.date).toLocaleDateString("en-US")
+    : formatDate(invoice.date);
 
   return (
-    <div className="contract-doc">
-      <div className="contract-page" style={{ position: "relative", overflow: "hidden" }}>
-        <PageWatermark />
-        <DocumentHeader documentTitle="فاتورة ضريبية" site={site} />
+    <div className="contract-doc" style={{ background: "#f8fafc", padding: "16px 0", overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch" }}>
+      <div
+        className="contract-page invoice-page-clean"
+        style={{
+          background: "#ffffff",
+          width: "210mm",
+          minHeight: "297mm",
+          margin: "0 auto",
+          padding: "18mm 16mm",
+          boxSizing: "border-box",
+          position: "relative",
+          direction: "rtl",
+          color: "#000000",
+          fontFamily: "var(--font-arabic), Arial, sans-serif",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+        }}
+      >
+        {/* 1. الترويسة العلوية: اليمين بيانات المنشأة، الوسط عنوان الفاتورة ورمز QR، واليسار الشعار */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
+          {/* اليمين: بيانات المؤسسة */}
+          <div style={{ textAlign: "right", fontSize: "0.88rem", lineHeight: 1.6, color: "#000000" }}>
+            <strong style={{ fontSize: "1.1rem", display: "block", color: "#000000", marginBottom: "2px" }}>
+              {sellerName}
+            </strong>
+            <div>العنوان: {sellerAddress}</div>
+            <div>المدينة: {sellerCity}</div>
+            <div style={{ direction: "ltr", textAlign: "right" }}>
+              info@kenan4safety.com :البريد الإلكتروني
+            </div>
+            <div style={{ direction: "ltr", textAlign: "right" }}>
+              <span style={{ fontFamily: "monospace", letterSpacing: "0.5px", fontWeight: 600 }}>{sellerTax}</span> :الرقم الضريبي
+            </div>
+          </div>
 
-        <h2 style={{ textAlign: "center", fontSize: "1.15rem", color: "#1e293b", marginBlock: "4px 9px", fontWeight: "800" }}>
-          فاتورة ضريبية — Tax Invoice
-        </h2>
+          {/* الوسط: فاتورة ضريبية + رمز QR مباشرة أسفلها */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <h1 style={{ margin: "0 0 4px 0", fontSize: "1.55rem", fontWeight: 800, color: "#000000", letterSpacing: "0.5px" }}>
+              فاتورة ضريبية
+            </h1>
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt="QR Code" style={{ width: "82px", height: "82px", display: "block" }} />
+            ) : (
+              <div style={{ width: "82px", height: "82px", border: "1px dashed #cbd5e1", display: "grid", placeItems: "center", fontSize: "0.75rem", color: "#64748b" }}>
+                رمز QR
+              </div>
+            )}
+          </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "12px", fontSize: "0.78rem", background: "#f8fafc", padding: "9px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", direction: "rtl" }}>
-          <div><strong>رقم الفاتورة:</strong> {invoice.number}</div>
-          <div style={{ textAlign: "left" }}><strong>تاريخ الإصدار:</strong> {formatDate(invoice.date)}</div>
-          <div><strong>المشروع:</strong> {project?.name || "—"}</div>
-          <div style={{ textAlign: "left" }}><strong>تاريخ الاستحقاق:</strong> {invoice.dueDate ? formatDate(invoice.dueDate) : "—"}</div>
-          <div><strong>الحالة:</strong> {invoice.status}</div>
-          <div style={{ textAlign: "left" }}><strong>طريقة السداد:</strong> تحويل بنكي</div>
+          {/* اليسار: الشعار بارزاً في أقصى الشمال */}
+          <div>
+            <img src="/kenan-logo.png" alt="كنان" style={{ height: "105px", maxWidth: "240px", objectFit: "contain" }} />
+          </div>
         </div>
 
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "10px", direction: "rtl" }}>
-          <thead>
-            <tr style={{ background: "#f1f5f9" }}>
-              <th style={{ ...cell, textAlign: "right", width: "50%" }}>البائع (المورّد)</th>
-              <th style={{ ...cell, textAlign: "right" }}>المشتري (العميل)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ ...cell, textAlign: "right" }}>
-                <strong>{sellerName}</strong><br />
-                الرقم الضريبي: {sellerTax}
-                {site.companyCRNumber ? ` — س.ت: ${site.companyCRNumber}` : ""}<br />
-                {site.contactAddress || "الرياض — المملكة العربية السعودية"}
-              </td>
-              <td style={{ ...cell, textAlign: "right" }}>
-                <strong>{client?.name || "—"}</strong><br />
-                الرقم الضريبي: {client?.taxId || "—"}
-                {client?.commercialRegister ? ` — س.ت: ${client.commercialRegister}` : ""}<br />
-                {client?.address || "—"}{client?.phone ? ` — ${client.phone}` : ""}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {/* خط فاصل أسود مطابق للأصل تحت الترويسة العلوية */}
+        <div style={{ borderBottom: "1.5px solid #000000", margin: "14px 0 20px 0" }} />
 
-        <table style={{ width: "100%", borderCollapse: "collapse", direction: "rtl" }}>
+        {/* 2. بيانات المشتري (اليمين) وبيانات الفاتورة والباركود (اليسار) - مطابق 100% للصورة المرفقة */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "26px" }}>
+          {/* اليمين: المشتري / العنوان / الرقم الضريبي */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "0.92rem", maxWidth: "60%" }}>
+            <div style={{ display: "flex", gap: "6px", alignItems: "flex-start" }}>
+              <strong style={{ color: "#000000", fontWeight: 800, minWidth: "65px" }}>المشتري</strong>
+              <span style={{ fontWeight: 700, color: "#000000" }}>
+                {client?.organizationName || client?.name || "مؤسسة عبداللطيف ابراهيم عبدالله بن عون العقارية"}
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: "6px" }}>
+              <strong style={{ color: "#000000", fontWeight: 800, minWidth: "65px" }}>العنوان:</strong>
+              <span style={{ color: "#000000" }}>{client?.address || "الرياض - حي النخيل الغربي"}</span>
+            </div>
+            <div style={{ display: "flex", gap: "6px" }}>
+              <strong style={{ color: "#000000", fontWeight: 800, minWidth: "85px" }}>الرقم الضريبي</strong>
+              <span style={{ fontFamily: "monospace", letterSpacing: "0.5px", color: "#000000", fontWeight: 700 }}>
+                {client?.taxId || "311113620400003"}
+              </span>
+            </div>
+          </div>
+
+          {/* اليسار: رقم الفاتورة / الباركود الخطي الحقيقي / التاريخ */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "3px", fontSize: "0.92rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "190px" }}>
+              <strong style={{ color: "#000000", fontWeight: 800 }}>رقم الفاتورة</strong>
+              <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "1rem", color: "#000000" }}>
+                {invoice.number}
+              </span>
+            </div>
+            {/* الباركود الخطي الحقيقي القابل للمسح بنسبة 100% مع Quiet Zone */}
+            <div style={{ margin: "2px 0 2px 0", background: "#ffffff" }}>
+              <Barcode value={invoice.number} height={34} barWidth={1.5} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "190px" }}>
+              <strong style={{ color: "#000000", fontWeight: 800 }}>التاريخ</strong>
+              <span style={{ color: "#000000", fontWeight: 600 }}>{formattedDate}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. جدول البنود والإجماليات: مطابق لملف الـ PDF الرسمي بالضبط */}
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0", direction: "rtl" }}>
           <thead>
-            <tr style={{ background: "#f1f5f9" }}>
-              <th style={{ ...cell, textAlign: "center", width: "34px" }}>#</th>
-              <th style={{ ...cell, textAlign: "right" }}>البيان / الوصف</th>
-              <th style={{ ...cell, textAlign: "center", width: "55px" }}>الكمية</th>
-              <th style={{ ...cell, textAlign: "left", width: "92px" }}>سعر الوحدة</th>
-              <th style={{ ...cell, textAlign: "left", width: "96px" }}>الإجمالي</th>
+            <tr style={{ background: "#ffffff" }}>
+              <th style={{ border: "1px solid #000000", padding: "7px 10px", textAlign: "right", fontWeight: 800, color: "#000000", fontSize: "0.92rem" }}>
+                الوصف
+              </th>
+              <th style={{ border: "1px solid #000000", padding: "7px 10px", textAlign: "center", width: "65px", fontWeight: 800, color: "#000000", fontSize: "0.92rem" }}>
+                الكمية
+              </th>
+              <th style={{ border: "1px solid #000000", padding: "7px 10px", textAlign: "center", width: "135px", fontWeight: 800, color: "#000000", fontSize: "0.92rem" }}>
+                السعر
+              </th>
+              <th style={{ border: "1px solid #000000", padding: "7px 10px", textAlign: "center", width: "145px", fontWeight: 800, color: "#000000", fontSize: "0.92rem" }}>
+                الإجمالي
+              </th>
             </tr>
           </thead>
           <tbody>
             {items.map((item, index) => (
               <tr key={index}>
-                <td style={{ ...cell, textAlign: "center" }}>{index + 1}</td>
-                <td style={{ ...cell, textAlign: "right" }}>{item.description}</td>
-                <td style={{ ...cell, textAlign: "center" }}>{item.quantity}</td>
-                <td style={{ ...cell, textAlign: "left" }}>{formatMoney(item.unitPrice, currency)}</td>
-                <td style={{ ...cell, textAlign: "left" }}>{formatMoney(item.total, currency)}</td>
+                <td style={{ border: "1px solid #000000", padding: "9px 10px", textAlign: "right", fontSize: "0.88rem", color: "#000000", fontWeight: 600 }}>
+                  {item.description}
+                </td>
+                <td style={{ border: "1px solid #000000", padding: "9px 10px", textAlign: "center", fontSize: "0.88rem", color: "#000000" }}>
+                  {item.quantity}
+                </td>
+                <td style={{ border: "1px solid #000000", padding: "9px 10px", textAlign: "center", fontSize: "0.88rem", color: "#000000" }}>
+                  {formatMoney(item.unitPrice, currency)}
+                </td>
+                <td style={{ border: "1px solid #000000", padding: "9px 10px", textAlign: "center", fontSize: "0.88rem", color: "#000000", fontWeight: 700 }}>
+                  {formatMoney(item.total, currency)}
+                </td>
               </tr>
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ ...cell, textAlign: "center", color: "#64748b" }}>
-                  فاتورة بمبلغ إجمالي بلا بنود تفصيلية.
+                <td colSpan={4} style={{ border: "1px solid #000000", padding: "16px", textAlign: "center", color: "#64748b" }}>
+                  فاتورة بمبلغ إجمالي شامل.
                 </td>
               </tr>
             )}
+
+            {/* صفوف الإجماليات الثلاثة مطابقة للأصل: تحت عمودي السعر والإجمالي فقط، والجانب الأيمن فارغ بدون حدود */}
+            <tr>
+              <td colSpan={2} style={{ border: "none" }}></td>
+              <td style={{ border: "1px solid #000000", padding: "6px 10px", textAlign: "center", fontWeight: 800, fontSize: "0.92rem", color: "#000000" }}>
+                الإجمالي
+              </td>
+              <td style={{ border: "1px solid #000000", padding: "6px 10px", textAlign: "center", fontSize: "0.88rem", fontWeight: 700, color: "#000000" }}>
+                {formatMoney(subtotal, currency)}
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={2} style={{ border: "none" }}></td>
+              <td style={{ border: "1px solid #000000", padding: "6px 10px", textAlign: "center", fontWeight: 800, fontSize: "0.92rem", color: "#000000" }}>
+                ضريبة القيمة المضافة
+              </td>
+              <td style={{ border: "1px solid #000000", padding: "6px 10px", textAlign: "center", fontSize: "0.88rem", fontWeight: 700, color: "#000000" }}>
+                {formatMoney(vatAmount, currency)}
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={2} style={{ border: "none" }}></td>
+              <td style={{ border: "1px solid #000000", padding: "6px 10px", textAlign: "center", fontWeight: 900, fontSize: "0.95rem", color: "#000000" }}>
+                الصافى
+              </td>
+              <td style={{ border: "1px solid #000000", padding: "6px 10px", textAlign: "center", fontSize: "0.95rem", fontWeight: 900, color: "#000000" }}>
+                {formatMoney(total, currency)}
+              </td>
+            </tr>
           </tbody>
         </table>
 
-        {items.length > ITEM_CAPACITY && (
-          <p style={{ marginTop: "6px", padding: "6px 10px", border: "1px solid #dc2626", borderRadius: "6px", background: "#fef2f2", color: "#991b1b", fontSize: "0.72rem", fontWeight: "700" }}>
-            تنبيه: عدد البنود ({items.length}) يتجاوز ما تتّسع له الصفحة ({ITEM_CAPACITY} بنداً).
-            البنود الأخيرة لن تظهر في النسخة المطبوعة — قسّم الفاتورة أو ادمج البنود المتشابهة.
-          </p>
-        )}
-
-        <div style={{ display: "flex", gap: "12px", alignItems: "flex-start", marginTop: "10px", direction: "rtl" }}>
-          <div style={{ display: "flex", gap: "10px", alignItems: "flex-start", flex: 1 }}>
-            {qrDataUrl ? (
-              <img src={qrDataUrl} alt="رمز الفاتورة الضريبية" style={{ width: "24mm", height: "24mm", flex: "none", border: "1px solid #e2e8f0", borderRadius: "6px" }} />
-            ) : (
-              <div style={{ width: "24mm", height: "24mm", flex: "none", border: "1px dashed #94a3b8", borderRadius: "6px", display: "grid", placeItems: "center", fontSize: "0.62rem", color: "#64748b", textAlign: "center" }}>
-                رمز QR
-              </div>
-            )}
-            <div style={{ flex: 1, padding: "9px 12px", border: "1px solid #cbd5e1", borderRadius: "8px", background: "#f8fafc" }}>
-              <strong style={{ fontSize: "0.82rem", color: "#1e3a8a", display: "block", borderBottom: "1px dashed #cbd5e1", paddingBottom: "5px", marginBottom: "6px" }}>
-                الحساب البنكي والضريبي للمؤسسة:
-              </strong>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 15px", fontSize: "0.78rem", color: "#334155" }}>
-                <div><strong>اسم البنك:</strong> مصرف الراجحي</div>
-                <div style={{ textAlign: "left" }}><strong>الرقم الضريبي:</strong> {sellerTax}</div>
-                <div style={{ gridColumn: "span 2" }}><strong>الآيبان:</strong> <code style={{ fontStyle: "normal" }}>SA9080000448608016265902</code></div>
-              </div>
-            </div>
+        {/* 4. الحساب البنكي أسفل الجدول على اليمين مباشرة مطابق للصورة المرفقة تماماً */}
+        <div style={{ textAlign: "right", direction: "rtl", fontSize: "0.92rem", color: "#000000", lineHeight: 1.85, fontStyle: "italic", marginTop: "20px" }}>
+          <div style={{ fontWeight: 800, fontSize: "0.96rem", color: "#000000", marginBottom: "2px" }}>
+            :الحساب البنكي
           </div>
-
-          <table style={{ width: "82mm", borderCollapse: "collapse", fontSize: "0.8rem" }}>
-            <tbody>
-              <tr><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1" }}>الإجمالي قبل الضريبة</td><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(subtotal, currency)}</td></tr>
-              <tr><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1" }}>وعاء ضريبة القيمة المضافة</td><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(subtotal, currency)}</td></tr>
-              <tr><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1" }}>ضريبة القيمة المضافة ({vatPercent}%)</td><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1", textAlign: "left" }}>{formatMoney(vatAmount, currency)}</td></tr>
-              <tr><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1", background: "#fff5f5", fontWeight: "800", color: "#e11d48" }}>الإجمالي المستحق</td><td style={{ padding: "5px 9px", border: "1px solid #cbd5e1", background: "#fff5f5", fontWeight: "800", color: "#e11d48", textAlign: "left" }}>{formatMoney(total, currency)}</td></tr>
-            </tbody>
-          </table>
+          <div>البنك الراجحي</div>
+          <div>
+            448000010006086265902 :رقم الحساب
+          </div>
+          <div>
+            SA9080000448608016265902 :رقم الايبان
+          </div>
+          <div>
+            313072607300003 :الرقم الضريبي
+          </div>
         </div>
 
-        <p style={{ fontWeight: "600", fontSize: "0.8rem", marginBlock: "8px", textAlign: "right", direction: "rtl" }}>
-          الإجمالي كتابةً: فقط {numberToArabicWords(total, currency)} لا غير، شامل ضريبة القيمة المضافة.
-        </p>
-
-        <table className="contract-sign-table" style={{ marginTop: "6px", direction: "rtl", width: "100%" }}>
-          <thead>
-            <tr>
-              <th style={{ textAlign: "right", padding: "4px 6px", fontSize: "0.8rem" }}>المُصدِر</th>
-              <th style={{ textAlign: "right", padding: "4px 6px", fontSize: "0.8rem" }}>استلام العميل</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <div className="sign-cell" style={{ padding: "7px", fontSize: "0.78rem" }}>
-                  <span style={{ fontWeight: "800", display: "block" }}>{sellerName}</span>
-                  <span>يمثلها: المهندس طارق مختار علي</span>
-                  {stamp && <img src={stamp} alt="ختم المؤسسة" className="stamp-img" style={{ maxHeight: "50px", marginBlock: "4px" }} />}
-                  {signature && <img src={signature} alt="توقيع المؤسسة" className="stamp-img" style={{ maxHeight: "50px", marginBlock: "4px" }} />}
-                  <span style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "10px", display: "block" }}>الختم والتوقيع: ............................</span>
-                </div>
-              </td>
-              <td>
-                <div className="sign-cell" style={{ padding: "7px", fontSize: "0.78rem" }}>
-                  <span style={{ fontWeight: "800", display: "block" }}>{client?.name || "................"}</span>
-                  <span style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "10px", display: "block" }}>التوقيع بالاستلام: ............................</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {/* لا يوجد توقيعات في الأسفل كما طلب العميل ومطابق للصورة تماماً */}
       </div>
     </div>
   );
@@ -5329,28 +5394,53 @@ function ProjectDetailView({ project, client, stages, systems, deficiencies, ass
   );
 }
 
-function ClientsView({ clients, projects, addClient, deleteClient, onCsvImport }: {
+function ClientsView({ clients, projects, addClient, deleteClient, updateClient, onCsvImport }: {
   clients: Client[]; projects: Project[];
   addClient: (e: FormEvent<HTMLFormElement>) => void;
   deleteClient: (id: number | string) => void; updateClient: (c: Client) => void;
   onCsvImport: (t: string) => void;
 }) {
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+
+  const handleEditSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingClient) return;
+    const f = new FormData(e.currentTarget);
+    const updated: Client = {
+      ...editingClient,
+      name: String(f.get("name") ?? "").trim() || editingClient.name,
+      taxId: String(f.get("taxId") ?? "").trim(),
+      commercialRegister: String(f.get("commercialRegister") ?? "").trim(),
+      phone: String(f.get("phone") ?? "").trim(),
+      address: String(f.get("address") ?? "").trim(),
+      type: String(f.get("type") ?? "شركة").trim(),
+      notes: String(f.get("notes") ?? "").trim(),
+    };
+    updateClient(updated);
+    setEditingClient(null);
+  };
+
   return (
     <section className="content-grid content-grid--stack">
       <form className="form-panel" onSubmit={addClient}>
-        <SectionTitle icon={UserPlus} title="إضافة عميل جديد" />
-        <Field label="اسم العميل / المنشأة" name="name" required />
+        <SectionTitle icon={UserPlus} title="إضافة عميل / مؤسسة جديدة" />
+        <Field label="اسم المنشأة / المؤسسة / العميل" name="name" required placeholder="مثال: فنون الإنشاء للمقاولات" />
         <div className="two-fields">
-          <Field label="الهاتف" name="phone" required />
-          <Field label="النوع" name="type" placeholder="مالك وحدة / استشاري ..." />
+          <Field label="الرقم الضريبي (15 رقم)" name="taxId" placeholder="300000000000003" />
+          <Field label="السجل التجاري (اختياري)" name="commercialRegister" placeholder="1010000000" />
         </div>
-        <Field label="العنوان" name="address" />
+        <div className="two-fields">
+          <Field label="الهاتف / الجوال" name="phone" required />
+          <Field label="النوع" name="type" placeholder="شركة / مالك / استشاري..." />
+        </div>
+        <Field label="العنوان الوطني / عنوان المقر" name="address" required placeholder="الرياض - حي المنار..." />
         <label>ملاحظات<textarea name="notes" rows={2} /></label>
         <button className="primary-button"><Plus size={18} />إضافة العميل</button>
       </form>
+
       <div className="panel wide">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={Users} title="قائمة العملاء" />
+          <SectionTitle icon={Users} title="قائمة العملاء والمؤسسات" />
           <label className="secondary-button" style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, margin: 0 }}>
             <Download size={16} style={{ transform: "rotate(180deg)" }} /><span>استيراد CSV</span>
             <input type="file" accept=".csv" style={{ display: "none" }} onChange={(e) => { const file = e.target.files?.[0]; if (file) { const r = new FileReader(); r.onload = (ev) => onCsvImport(ev.target?.result as string); r.readAsText(file, "UTF-8"); } e.target.value = ""; }} />
@@ -5358,20 +5448,57 @@ function ClientsView({ clients, projects, addClient, deleteClient, onCsvImport }
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>الاسم</th><th>الهاتف</th><th>العنوان</th><th>النوع</th><th>المشاريع</th><th style={{ width: 60 }}>حذف</th></tr></thead>
+            <thead><tr><th>اسم المؤسسة / العميل</th><th>الرقم الضريبي</th><th>العنوان</th><th>الهاتف</th><th>النوع</th><th>المشاريع</th><th style={{ width: 120 }}>إجراءات</th></tr></thead>
             <tbody>
               {clients.map((c) => (
                 <tr key={c.id}>
-                  <td><strong>{c.name}</strong></td><td>{c.phone || "—"}</td><td>{c.address || "—"}</td><td>{c.type || "—"}</td>
-                  <td>{projects.filter((p) => p.clientId === c.id).length}</td>
-                  <td><button className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => deleteClient(c.id)}><Trash2 size={16} /></button></td>
+                  <td><strong>{c.name}</strong></td>
+                  <td>{c.taxId ? <span style={{ fontFamily: "monospace", fontSize: "0.82rem", fontWeight: 700, color: "#1e3a8a", background: "#e0e7ff", padding: "2px 6px", borderRadius: 4 }}>{c.taxId}</span> : <span style={{ color: "#94a3b8" }}>—</span>}</td>
+                  <td>{c.address || "—"}</td>
+                  <td>{c.phone || "—"}</td>
+                  <td>{c.type || "—"}</td>
+                  <td>{projects.filter((p) => String(p.clientId) === String(c.id)).length}</td>
+                  <td>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <button type="button" className="secondary-button" style={{ minHeight: 26, padding: "0 8px", fontSize: "0.76rem" }} onClick={() => setEditingClient(c)}><Edit size={14} />تعديل</button>
+                      <button className="icon-danger" style={iconDangerStyle} title="حذف" onClick={() => { if (window.confirm("حذف هذا العميل؟")) deleteClient(c.id); }}><Trash2 size={16} /></button>
+                    </div>
+                  </td>
                 </tr>
               ))}
-              {clients.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا يوجد عملاء مسجلين.</td></tr>}
+              {clients.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", padding: 12, color: "#64748b" }}>لا يوجد عملاء مسجلين.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
+
+      {editingClient && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999, padding: "20px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", width: "100%", maxWidth: "520px", padding: "24px", boxShadow: "var(--shadow-lg)", direction: "rtl" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <SectionTitle icon={Edit} title="تعديل بيانات العميل / المنشأة" />
+              <button type="button" onClick={() => setEditingClient(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleEditSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <Field label="اسم المنشأة / المؤسسة / العميل" name="name" defaultValue={editingClient.name} required />
+              <div className="two-fields">
+                <Field label="الرقم الضريبي (15 رقم)" name="taxId" defaultValue={editingClient.taxId || ""} placeholder="300000000000003" />
+                <Field label="السجل التجاري (اختياري)" name="commercialRegister" defaultValue={editingClient.commercialRegister || ""} placeholder="1010000000" />
+              </div>
+              <div className="two-fields">
+                <Field label="الهاتف" name="phone" defaultValue={editingClient.phone} required />
+                <Field label="النوع" name="type" defaultValue={editingClient.type} />
+              </div>
+              <Field label="العنوان الوطني / عنوان المقر" name="address" defaultValue={editingClient.address} required />
+              <label>ملاحظات<textarea name="notes" rows={2} defaultValue={editingClient.notes || ""} /></label>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" }}>
+                <button type="button" className="secondary-button" onClick={() => setEditingClient(null)}>إلغاء</button>
+                <button type="submit" className="primary-button" style={{ background: "var(--brand)", color: "#fff", border: 0 }}>حفظ التعديلات</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -5614,6 +5741,11 @@ function StagesView({
   deleteStage,
   generateDefaultStages,
   isAdmin,
+  deficiencies = [],
+  addDeficiency,
+  updateDeficiencyStatus,
+  currentUserName,
+  setActiveSection,
 }: {
   projects: Project[];
   stages: ProjectStage[];
@@ -5626,10 +5758,17 @@ function StagesView({
   deleteStage: (id: number | string) => void;
   generateDefaultStages?: (projectId: number | string) => void;
   isAdmin: boolean;
+  deficiencies?: SiteDeficiency[];
+  addDeficiency?: (e: FormEvent<HTMLFormElement>) => void;
+  updateDeficiencyStatus?: (id: number | string, status: SiteDeficiency["status"]) => void;
+  currentUserName?: string;
+  setActiveSection?: (s: Section) => void;
 }) {
   const stageStatuses: ProjectStage["status"][] = ["لم يبدأ", "جاري", "تم"];
   const projectStages = stages.filter((s) => String(s.projectId) === String(selectedProjectId));
+  const projectDeficiencies = (deficiencies || []).filter((d) => String(d.projectId) === String(selectedProjectId));
   const [editingStage, setEditingStage] = useState<ProjectStage | null>(null);
+  const [showDeficiencyModal, setShowDeficiencyModal] = useState(false);
 
   // حساب نسب الإنجاز
   const completedStages = projectStages.filter((s) => s.status === "تم").length;
@@ -5710,6 +5849,31 @@ function StagesView({
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="secondary-button"
+              style={{
+                padding: "6px 14px",
+                fontSize: "0.82rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                borderColor: "#ef4444",
+                color: "#b91c1c",
+                background: "#fef2f2",
+                fontWeight: 600,
+              }}
+              onClick={() => setShowDeficiencyModal(true)}
+              title="تسجيل نقص أو ملاحظة فنية لموقع هذا المشروع"
+            >
+              <OctagonAlert size={15} />
+              <span>تسجيل نقص للموقع</span>
+              {projectDeficiencies.length > 0 && (
+                <span style={{ background: "#ef4444", color: "#fff", borderRadius: "10px", padding: "1px 7px", fontSize: "0.72rem", fontWeight: 700 }}>
+                  {projectDeficiencies.length}
+                </span>
+              )}
+            </button>
             {generateDefaultStages && projectStages.length === 0 && (
               <button
                 type="button"
@@ -5736,13 +5900,13 @@ function StagesView({
         </div>
 
         <div className="table-wrap">
-          <table>
+          <table style={{ minWidth: "700px" }}>
             <thead>
               <tr>
-                <th>المرحلة</th>
-                <th>الحالة</th>
-                <th>آخر تحديث</th>
-                <th style={{ width: 120, textAlign: "center" }}>إجراءات</th>
+                <th>المرحلة وملاحظة الموقع</th>
+                <th style={{ width: 140 }}>الحالة</th>
+                <th style={{ width: 120 }}>آخر تحديث</th>
+                <th style={{ width: 140, textAlign: "center" }}>إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -5750,10 +5914,11 @@ function StagesView({
                 <tr key={s.id}>
                   <td>
                     <strong style={{ fontSize: "0.95rem" }}>{s.name}</strong>
-                    <div style={{ marginTop: "6px", display: "flex", gap: "6px", alignItems: "center" }}>
+                    <div style={{ marginTop: "6px", display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
                       <span style={{ fontSize: "0.78rem", color: "#64748b", whiteSpace: "nowrap" }}>ملاحظة الموقع:</span>
                       <input
                         type="text"
+                        id={`stage-note-${s.id}`}
                         defaultValue={s.notes || ""}
                         placeholder="اكتب ملاحظة هنا..."
                         onBlur={(e) => {
@@ -5767,11 +5932,25 @@ function StagesView({
                           border: "1px solid #cbd5e1",
                           borderRadius: "4px",
                           width: "100%",
-                          maxWidth: "320px",
+                          maxWidth: "280px",
                           background: "#fff",
                           fontWeight: "normal",
                         }}
                       />
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        style={{ minHeight: "28px", padding: "0 10px", fontSize: "0.76rem", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4, background: "#f1f5f9", borderColor: "#94a3b8" }}
+                        title="حفظ ملاحظة الموقع فوراً"
+                        onClick={() => {
+                          const inputEl = document.getElementById(`stage-note-${s.id}`) as HTMLInputElement;
+                          const val = inputEl ? inputEl.value : (s.notes || "");
+                          updateStageNotes(s.id, val);
+                        }}
+                      >
+                        <Save size={13} />
+                        <span>حفظ</span>
+                      </button>
                     </div>
                   </td>
                   <td>
@@ -5801,7 +5980,7 @@ function StagesView({
                       <button
                         type="button"
                         className="secondary-button"
-                        style={{ minHeight: 28, padding: "0 8px", fontSize: "0.76rem", display: "inline-flex", alignItems: "center", gap: 4 }}
+                        style={{ minHeight: 28, padding: "0 10px", fontSize: "0.76rem", display: "inline-flex", alignItems: "center", gap: 4, borderColor: "var(--brand)", color: "var(--brand)", fontWeight: 700 }}
                         title="تعديل بيانات المرحلة"
                         onClick={() => setEditingStage(s)}
                       >
@@ -5855,6 +6034,99 @@ function StagesView({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* بطاقة نواقص وملاحظات الموقع للمهندس */}
+        <div style={{ marginTop: 24, borderTop: "1px solid var(--line)", paddingTop: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: "rgba(239,68,68,0.1)", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <OctagonAlert size={16} />
+              </div>
+              <strong style={{ fontSize: "1rem", color: "#1e293b" }}>
+                نواقص وملاحظات هذا الموقع {currentProject?.name ? `(${currentProject.name})` : ""}
+              </strong>
+              {projectDeficiencies.length > 0 && (
+                <span style={{ fontSize: "0.78rem", background: projectDeficiencies.some((d) => d.status !== "تم الحل") ? "#fef2f2" : "#f0fdf4", color: projectDeficiencies.some((d) => d.status !== "تم الحل") ? "#b91c1c" : "#166534", padding: "3px 10px", borderRadius: 12, fontWeight: 700 }}>
+                  {projectDeficiencies.filter((d) => d.status !== "تم الحل").length} نقص مفتوح / {projectDeficiencies.length} إجمالي
+                </span>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button
+                type="button"
+                className="primary-button"
+                style={{ padding: "6px 14px", fontSize: "0.82rem", background: "#ef4444", color: "#fff", display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700 }}
+                onClick={() => setShowDeficiencyModal(true)}
+              >
+                <Plus size={15} />
+                <span>تسجيل نقص جديد للموقع</span>
+              </button>
+              {setActiveSection && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  style={{ padding: "6px 12px", fontSize: "0.82rem" }}
+                  onClick={() => setActiveSection("deficiencies")}
+                >
+                  كافة نواقص الشركة
+                </button>
+              )}
+            </div>
+          </div>
+
+          {projectDeficiencies.length > 0 ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>وصف النقص / الملاحظة الفنية</th>
+                    <th style={{ width: 120 }}>درجة الخطورة</th>
+                    <th style={{ width: 140 }}>رفعه</th>
+                    <th style={{ width: 120 }}>تاريخ الرفع</th>
+                    <th style={{ width: 140 }}>الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projectDeficiencies.map((d) => (
+                    <tr key={d.id} style={{ background: d.status === "تم الحل" ? "rgba(16,185,129,0.04)" : undefined }}>
+                      <td><strong style={{ fontSize: "0.9rem", color: "#1e293b" }}>{d.description}</strong></td>
+                      <td><Badge value={d.severity} /></td>
+                      <td>{d.raisedBy || "—"}</td>
+                      <td>{d.raisedDate || "—"}</td>
+                      <td>
+                        {updateDeficiencyStatus ? (
+                          <select
+                            value={d.status}
+                            onChange={(e) => updateDeficiencyStatus(d.id, e.target.value as SiteDeficiency["status"])}
+                            style={{
+                              padding: "5px 10px",
+                              border: "1px solid #cbd5e1",
+                              borderRadius: 6,
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              color: d.status === "تم الحل" ? "#166534" : d.status === "قيد المعالجة" ? "#1e40af" : "#b45309",
+                              background: d.status === "تم الحل" ? "#d1fae5" : d.status === "قيد المعالجة" ? "#dbeafe" : "#fef3c7",
+                            }}
+                          >
+                            <option value="مفتوح">مفتوح</option>
+                            <option value="قيد المعالجة">قيد المعالجة</option>
+                            <option value="تم الحل">تم الحل</option>
+                          </select>
+                        ) : (
+                          <Badge value={d.status} />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 8, padding: "18px", textAlign: "center", color: "#64748b", fontSize: "0.88rem" }}>
+              لا توجد نواقص أو ملاحظات مفتوحة لهذا الموقع حالياً. كافة المواد والتجهيزات مكتملة.
+            </div>
+          )}
         </div>
       </div>
 
@@ -5947,6 +6219,113 @@ function StagesView({
                 <button type="submit" className="primary-button" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                   <Save size={16} />
                   حفظ التعديلات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تسجيل نقص الموقع للمهندس */}
+      {showDeficiencyModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.6)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setShowDeficiencyModal(false)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 12,
+              width: "100%",
+              maxWidth: 500,
+              padding: 24,
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
+              position: "relative",
+              direction: "rtl",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, borderBottom: "1px solid #e2e8f0", paddingBottom: 12 }}>
+              <SectionTitle icon={OctagonAlert} title={`تسجيل نقص موقع: ${currentProject?.name || ""}`} />
+              <button
+                type="button"
+                onClick={() => setShowDeficiencyModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", display: "flex" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                if (addDeficiency) {
+                  addDeficiency(e);
+                }
+                setShowDeficiencyModal(false);
+              }}
+              style={{ display: "flex", flexDirection: "column", gap: 14 }}
+            >
+              <input type="hidden" name="projectId" value={String(selectedProjectId)} />
+              <input type="hidden" name="raisedBy" value={currentUserName || ""} />
+
+              <div>
+                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: "0.9rem" }}>
+                  المشروع / الموقع
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={currentProject?.name || "مشروع غير محدد"}
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#f8fafc", fontWeight: "bold" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: "0.9rem" }}>
+                  وصف النقص / المواد والملاحظات المطلوبة <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <textarea
+                  name="description"
+                  rows={3}
+                  required
+                  placeholder="مثال: نقص محابس دلتا 4 بوصة، الحاجة لتوريد 5 كواشف دخان إضافية للدرج..."
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: "0.9rem" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: "0.9rem" }}>
+                  درجة الخطورة والتأثير
+                </label>
+                <select name="severity" defaultValue="متوسطة" style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: "0.9rem" }}>
+                  <option value="منخفضة">منخفضة (لا تعطل العمل حالياً)</option>
+                  <option value="متوسطة">متوسطة (مطلوبة خلال المرحلة الحالية)</option>
+                  <option value="عالية">عالية (توقف أو تؤخر الأعمال فوراً)</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setShowDeficiencyModal(false)}
+                >
+                  إلغاء
+                </button>
+                <button type="submit" className="primary-button" style={{ background: "#ef4444", color: "#fff", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <Plus size={16} />
+                  تسجيل النقص وإرساله للنظام
                 </button>
               </div>
             </form>
@@ -6879,6 +7258,9 @@ const supplyStatusLabels: Record<SupplyOrderStatus, string> = {
 
 function SupplyOrdersView({ projects, quotations, canCreate }: { projects: Project[]; quotations: Quotation[]; canCreate: boolean }) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id ? String(projects[0].id) : "");
+  const [selectedOrderFilter, setSelectedOrderFilter] = useState<string>("ALL");
+  const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
+  const [printingOrder, setPrintingOrder] = useState<SupplyOrder | null>(null);
   const [orders, setOrders] = useState<SupplyOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -6910,6 +7292,7 @@ function SupplyOrdersView({ projects, quotations, canCreate }: { projects: Proje
 
   useEffect(() => {
     loadOrders(selectedProjectId);
+    setSelectedOrderFilter("ALL");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProjectId]);
 
@@ -6943,13 +7326,15 @@ function SupplyOrdersView({ projects, quotations, canCreate }: { projects: Proje
       setDraftItems([{ name: "", brand: "", orderedQty: 1, unit: "" }]);
       setDraftNotes("");
       setSourceQuotationId("");
+      setShowCreateForm(false);
       await loadOrders(selectedProjectId);
     } catch (e) {
       console.warn("Supply orders submit failed, saving locally:", e);
+      const year = new Date().getFullYear();
       const orderId = `so-${Date.now()}`;
       const newOrder: SupplyOrder = {
         id: orderId,
-        orderNumber: `SO-${Date.now().toString().slice(-4)}`,
+        orderNumber: `SUP-${year}-${String(orders.length + 1).padStart(3, "0")}`,
         projectId: selectedProjectId,
         quotationId: sourceQuotationId || null,
         status: "PENDING",
@@ -6963,6 +7348,7 @@ function SupplyOrdersView({ projects, quotations, canCreate }: { projects: Proje
       setDraftItems([{ name: "", brand: "", orderedQty: 1, unit: "" }]);
       setDraftNotes("");
       setSourceQuotationId("");
+      setShowCreateForm(false);
     } finally {
       setSubmitting(false);
     }
@@ -6981,7 +7367,9 @@ function SupplyOrdersView({ projects, quotations, canCreate }: { projects: Proje
       const updatedOrders = orders.map((o) => {
         if (o.id === order.id) {
           const updatedItems = o.items.map((it) => (it.id === item.id ? { ...it, receivedQty, confirmed } : it));
-          return { ...o, items: updatedItems };
+          const allRec = updatedItems.length > 0 && updatedItems.every((it) => it.confirmed && Number(it.receivedQty) >= Number(it.orderedQty));
+          const anyRec = updatedItems.some((it) => it.confirmed || Number(it.receivedQty) > 0);
+          return { ...o, status: (allRec ? "RECEIVED" : anyRec ? "PARTIAL" : "PENDING") as SupplyOrderStatus, items: updatedItems };
         }
         return o;
       });
@@ -6992,73 +7380,418 @@ function SupplyOrdersView({ projects, quotations, canCreate }: { projects: Proje
     }
   };
 
+  const handleConfirmAll = async (order: SupplyOrder) => {
+    const updatedItems = order.items.map((it) => ({
+      id: it.id,
+      receivedQty: it.orderedQty,
+      confirmed: true,
+    }));
+    try {
+      const updated = await apiFetch(`/api/projects/${selectedProjectId}/supply-orders/${order.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ items: updatedItems }),
+      });
+      setOrders((cur) =>
+        cur.map((o) =>
+          o.id === order.id
+            ? {
+                ...updated,
+                items: (updated.items ?? []).map((it: any) => ({
+                  ...it,
+                  orderedQty: Number(it.orderedQty) || 0,
+                  receivedQty: Number(it.receivedQty) || 0,
+                })),
+              }
+            : o
+        )
+      );
+    } catch (e) {
+      console.warn("Receive all failed, updating locally:", e);
+      const localUpdated = orders.map((o) => {
+        if (o.id === order.id) {
+          return {
+            ...o,
+            status: "RECEIVED" as SupplyOrderStatus,
+            items: o.items.map((it) => ({ ...it, receivedQty: it.orderedQty, confirmed: true })),
+          };
+        }
+        return o;
+      });
+      setOrders(localUpdated);
+      try {
+        window.localStorage.setItem(`kenan.supply_orders_${selectedProjectId}`, JSON.stringify(localUpdated));
+      } catch {}
+    }
+  };
+
   const projectQuotations = quotations;
+  const currentProj = projects.find((p) => String(p.id) === String(selectedProjectId));
+
+  const displayedOrders =
+    selectedOrderFilter === "ALL"
+      ? orders
+      : orders.filter((o) => o.id === selectedOrderFilter || o.orderNumber === selectedOrderFilter);
 
   return (
     <section className="content-grid content-grid--stack">
-      {canCreate && (
-        <form className="form-panel" onSubmit={submitOrder}>
-          <SectionTitle icon={Plus} title="إنشاء طلب توريد" />
+      {/* شريط الإجراءات والفلترة بالطلب والمشروع */}
+      <div className="panel wide" style={{ padding: "16px 20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <SectionTitle icon={Truck} title="استلام طلبات التوريد وكشوف الفحص" />
+            {orders.length > 0 && (
+              <span style={{ fontSize: "0.82rem", background: "rgba(225,29,72,0.08)", color: "var(--brand)", padding: "4px 10px", borderRadius: 20, fontWeight: "bold" }}>
+                {orders.length} {orders.length === 1 ? "طلب توريد" : "طلبات توريد"} لهذا الموقع
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {canCreate && (
+              <button
+                type="button"
+                className="primary-button"
+                style={{ padding: "6px 14px", fontSize: "0.82rem", display: "inline-flex", alignItems: "center", gap: 6 }}
+                onClick={() => setShowCreateForm(!showCreateForm)}
+              >
+                <Plus size={15} />
+                <span>{showCreateForm ? "إخفاء نموذج الإنشاء" : "إنشاء طلب توريد جديد"}</span>
+              </button>
+            )}
+
+            {/* اختيار المشروع */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: "0.82rem", color: "#64748b", fontWeight: 600 }}>المشروع:</span>
+              <select
+                value={selectedProjectId}
+                onChange={(e) => {
+                  setSelectedProjectId(e.target.value);
+                  setSelectedOrderFilter("ALL");
+                }}
+                style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontWeight: 600 }}
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* اختيار رقم طلب التوريد في حال تعدد الطلبات */}
+            {orders.length > 1 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: "0.82rem", color: "#64748b", fontWeight: 600 }}>رقم الطلب:</span>
+                <select
+                  value={selectedOrderFilter}
+                  onChange={(e) => setSelectedOrderFilter(e.target.value)}
+                  style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontWeight: 700, color: "var(--brand)" }}
+                >
+                  <option value="ALL">كافة طلبات التوريد ({orders.length})</option>
+                  {orders.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.orderNumber} {o.quotation ? `(عرض ${o.quotation.number})` : ""} - {supplyStatusLabels[o.status] || o.status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ألسنة التبويب لاختيار طلب التوريد عند وجود أكثر من طلب لنفس المشروع */}
+        {orders.length > 1 && (
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 6, marginTop: 10, borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
+            <button
+              type="button"
+              onClick={() => setSelectedOrderFilter("ALL")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 20,
+                border: "1px solid",
+                borderColor: selectedOrderFilter === "ALL" ? "var(--brand)" : "#cbd5e1",
+                background: selectedOrderFilter === "ALL" ? "var(--brand)" : "#ffffff",
+                color: selectedOrderFilter === "ALL" ? "#ffffff" : "#475569",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              كافة الطلبات ({orders.length})
+            </button>
+            {orders.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => setSelectedOrderFilter(o.id)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 20,
+                  border: "1px solid",
+                  borderColor: selectedOrderFilter === o.id ? "var(--brand)" : "#cbd5e1",
+                  background: selectedOrderFilter === o.id ? "rgba(225,29,72,0.08)" : "#ffffff",
+                  color: selectedOrderFilter === o.id ? "var(--brand)" : "#475569",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span>{o.orderNumber}</span>
+                <span style={{ fontSize: "0.74rem", opacity: 0.85 }}>({supplyStatusLabels[o.status] || o.status})</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* نموذج إنشاء طلب توريد جديد عند التفعيل */}
+      {canCreate && showCreateForm && (
+        <form className="form-panel" onSubmit={submitOrder} style={{ border: "2px solid rgba(225,29,72,0.2)", borderRadius: 10 }}>
+          <SectionTitle icon={Plus} title={`إنشاء طلب توريد جديد لمشروع: ${currentProj?.name || ""}`} />
           <label>
-            المشروع
-            <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)} required>
-              <option value="">اختر مشروع...</option>
-              {projects.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-            </select>
-          </label>
-          <label>
-            من عرض سعر (اختياري — ينسخ البنود والكميات)
+            من عرض سعر (اختياري — ينسخ البنود والماركات والكميات تلقائياً)
             <select value={sourceQuotationId} onChange={(e) => applyQuotationItems(e.target.value)}>
               <option value="">بدون — إدخال يدوي</option>
-              {projectQuotations.map((q) => <option key={q.id} value={String(q.id)}>{q.number}</option>)}
+              {projectQuotations.map((q) => (
+                <option key={q.id} value={String(q.id)}>
+                  {q.number}{q.clientName ? ` (${q.clientName})` : ""}
+                </option>
+              ))}
             </select>
           </label>
           {draftItems.map((it, i) => (
-            <div key={i} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-end" }}>
-              <input placeholder="الصنف" value={it.name} onChange={(e) => setDraftItems((cur) => cur.map((x, xi) => xi === i ? { ...x, name: e.target.value } : x))} style={{ flex: 2, minWidth: 130, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
-              <input placeholder="الماركة" value={it.brand} onChange={(e) => setDraftItems((cur) => cur.map((x, xi) => xi === i ? { ...x, brand: e.target.value } : x))} style={{ width: 100, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
-              <input type="number" min={0.01} step="any" placeholder="الكمية" value={it.orderedQty} onChange={(e) => setDraftItems((cur) => cur.map((x, xi) => xi === i ? { ...x, orderedQty: Number(e.target.value) || 0 } : x))} style={{ width: 80, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
-              <input placeholder="الوحدة" value={it.unit} onChange={(e) => setDraftItems((cur) => cur.map((x, xi) => xi === i ? { ...x, unit: e.target.value } : x))} style={{ width: 80, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 4 }} />
-              {draftItems.length > 1 && <button type="button" className="icon-danger" style={iconDangerStyle} onClick={() => setDraftItems((cur) => cur.filter((_, xi) => xi !== i))}><Trash2 size={14} /></button>}
+            <div key={i} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <input
+                placeholder="الصنف (مثال: طفاية بودرة 6 كغ / مضخة حريق...)"
+                value={it.name}
+                onChange={(e) => setDraftItems((cur) => cur.map((x, xi) => (xi === i ? { ...x, name: e.target.value } : x)))}
+                style={{ flex: 3, minWidth: 150, padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6 }}
+              />
+              <input
+                placeholder="الماركة"
+                value={it.brand}
+                onChange={(e) => setDraftItems((cur) => cur.map((x, xi) => (xi === i ? { ...x, brand: e.target.value } : x)))}
+                style={{ width: 110, padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6 }}
+              />
+              <input
+                type="number"
+                min={0.01}
+                step="any"
+                placeholder="الكمية"
+                value={it.orderedQty}
+                onChange={(e) => setDraftItems((cur) => cur.map((x, xi) => (xi === i ? { ...x, orderedQty: Number(e.target.value) || 0 } : x)))}
+                style={{ width: 85, padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6 }}
+              />
+              <input
+                placeholder="الوحدة"
+                value={it.unit}
+                onChange={(e) => setDraftItems((cur) => cur.map((x, xi) => (xi === i ? { ...x, unit: e.target.value } : x)))}
+                style={{ width: 85, padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6 }}
+              />
+              {draftItems.length > 1 && (
+                <button type="button" className="icon-danger" style={iconDangerStyle} onClick={() => setDraftItems((cur) => cur.filter((_, xi) => xi !== i))}>
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           ))}
-          <button type="button" className="secondary-button" onClick={() => setDraftItems((cur) => [...cur, { name: "", brand: "", orderedQty: 1, unit: "" }])}><Plus size={14} />إضافة صنف</button>
-          <label>ملاحظات<textarea rows={2} value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} /></label>
-          <button className="primary-button" disabled={submitting || !selectedProjectId}><Plus size={18} />{submitting ? "جارٍ الإنشاء..." : "إنشاء طلب التوريد"}</button>
+          <button type="button" className="secondary-button" onClick={() => setDraftItems((cur) => [...cur, { name: "", brand: "", orderedQty: 1, unit: "" }])}>
+            <Plus size={14} /> إضافة صنف آخر
+          </button>
+          <label>
+            ملاحظات وتوجيهات التوريد
+            <textarea rows={2} value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} placeholder="أي اشتراطات خاصة بالتوريد والموقع..." />
+          </label>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <button type="button" className="secondary-button" onClick={() => setShowCreateForm(false)}>
+              إلغاء
+            </button>
+            <button className="primary-button" disabled={submitting || !selectedProjectId}>
+              <Plus size={18} />
+              {submitting ? "جارٍ الإنشاء..." : "إنشاء وحفظ طلب التوريد"}
+            </button>
+          </div>
         </form>
       )}
-      <div className="panel wide">
-        <SectionTitle icon={Truck} title="طلبات التوريد والاستلام" />
-        {!canCreate && (
-          <label style={{ maxWidth: 320, display: "block", marginBottom: 10 }}>
-            المشروع
-            <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
-              <option value="">اختر مشروع...</option>
-              {projects.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-            </select>
-          </label>
-        )}
-        {error && <p style={{ color: "#dc2626", fontSize: "0.85rem" }}>{error}</p>}
-        {loading && <p style={{ color: "#64748b" }}>جارٍ التحميل...</p>}
-        {!loading && orders.length === 0 && <p style={{ color: "#64748b", padding: 8 }}>لا توجد طلبات توريد لهذا المشروع.</p>}
-        {orders.map((order) => (
-          <div key={order.id} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 12, marginBottom: 12 }}>
-            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-              <strong>{order.orderNumber}</strong>
-              {order.quotation && <span style={{ fontSize: "0.82rem", color: "#64748b" }}>مرتبط بعرض {order.quotation.number}</span>}
-              <Badge value={supplyStatusLabels[order.status]} />
-              <span style={{ marginInlineStart: "auto", fontSize: "0.8rem", color: "#64748b" }}>{order.createdBy?.name || ""} · {order.createdAt ? String(order.createdAt).split("T")[0] : ""}</span>
+
+      {/* عرض الأخطاء والتحميل */}
+      {error && <p style={{ color: "#dc2626", fontSize: "0.85rem" }}>{error}</p>}
+      {loading && <p style={{ color: "#64748b", padding: 12 }}>جارٍ تحميل طلبات التوريد...</p>}
+
+      {!loading && orders.length === 0 && (
+        <div className="panel wide" style={{ textAlign: "center", padding: "40px 20px" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(225,29,72,0.1)", color: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+            <Truck size={28} />
+          </div>
+          <strong style={{ fontSize: "1.1rem", color: "#1e293b" }}>لا توجد طلبات توريد لهذا المشروع بعد</strong>
+          <p style={{ color: "#64748b", fontSize: "0.88rem", maxWidth: 460, margin: "6px auto 16px" }}>
+            يمكنك إنشاء طلب توريد جديد يدوياً أو استيراد بنوده مباشرة من عرض السعر المعتمد للمشروع.
+          </p>
+          {canCreate && (
+            <button type="button" className="primary-button" onClick={() => setShowCreateForm(true)}>
+              <Plus size={16} /> إنشاء أول طلب توريد لهذا الموقع
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* كشوف استلام طلبات التوريد - كل طلب منفصل تماماً ومطابق للصورة المرفقة */}
+      {displayedOrders.map((order) => {
+        const totalItems = order.items.length;
+        const confirmedItems = order.items.filter((it) => it.confirmed).length;
+        const progressPct = totalItems > 0 ? Math.round((confirmedItems / totalItems) * 100) : 0;
+
+        return (
+          <div
+            key={order.id}
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 10,
+              padding: "18px 22px",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+              direction: "rtl",
+            }}
+          >
+            {/* شريط رأس الكشف مطابق للصورة: SUP-... - مرتبط بعرض - تم الاستلام - اسم وتاريخ */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 12,
+                marginBottom: 16,
+                paddingBottom: 12,
+                borderBottom: "1px solid #f1f5f9",
+              }}
+            >
+              {/* يمين: رقم الطلب + كبسولة العرض + كبسولة الحالة */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <strong style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0f172a", letterSpacing: "0.5px" }}>
+                  {order.orderNumber}
+                </strong>
+                {order.quotation && (
+                  <span
+                    style={{
+                      background: "#f1f5f9",
+                      color: "#475569",
+                      padding: "4px 12px",
+                      borderRadius: 16,
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    مرتبط بعرض {order.quotation.number}
+                  </span>
+                )}
+                <span
+                  style={{
+                    background: order.status === "RECEIVED" ? "#dcfce7" : order.status === "PARTIAL" ? "#dbeafe" : "#fef3c7",
+                    color: order.status === "RECEIVED" ? "#166534" : order.status === "PARTIAL" ? "#1e40af" : "#b45309",
+                    padding: "4px 14px",
+                    borderRadius: 16,
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                  }}
+                >
+                  {supplyStatusLabels[order.status] || order.status}
+                </span>
+              </div>
+
+              {/* يسار: المنشئ والتاريخ + أزرار الإجراءات والطباعة */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.84rem", color: "#64748b", direction: "ltr" }}>
+                  {order.createdBy?.name || "Kenan"} · {order.createdAt ? String(order.createdAt).split("T")[0] : ""}
+                </span>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  style={{ padding: "5px 12px", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: 5 }}
+                  onClick={() => setPrintingOrder(order)}
+                  title="طباعة كشف الاستلام الرسمي لهذا الطلب"
+                >
+                  <Printer size={14} />
+                  <span>طباعة الكشف</span>
+                </button>
+                {order.status !== "RECEIVED" && (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    style={{
+                      padding: "5px 12px",
+                      fontSize: "0.8rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      borderColor: "#10b981",
+                      color: "#059669",
+                      background: "#f0fdf4",
+                      fontWeight: 700,
+                    }}
+                    onClick={() => handleConfirmAll(order)}
+                    title="تأكيد استلام كامل البنود والكميات بنقرة واحدة"
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>استلام كامل البنود</span>
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* جدول الكشف مطابق تماماً لأعمدة وتصميم الصورة: الصنف - الماركة - المطلوب - المستلم - تأكيد الاستلام */}
             <div className="table-wrap">
-              <table>
-                <thead><tr><th>الصنف</th><th>الماركة</th><th>المطلوب</th><th style={{ width: 110 }}>المستلم</th><th style={{ width: 120 }}>تأكيد الاستلام</th></tr></thead>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                    <th style={{ textAlign: "right", padding: "10px 14px", fontWeight: 700, color: "#334155", fontSize: "0.88rem" }}>
+                      الصنف
+                    </th>
+                    <th style={{ textAlign: "right", padding: "10px 14px", width: 140, fontWeight: 700, color: "#334155", fontSize: "0.88rem" }}>
+                      الماركة
+                    </th>
+                    <th style={{ textAlign: "center", padding: "10px 14px", width: 100, fontWeight: 700, color: "#334155", fontSize: "0.88rem" }}>
+                      المطلوب
+                    </th>
+                    <th style={{ textAlign: "center", padding: "10px 14px", width: 120, fontWeight: 700, color: "#334155", fontSize: "0.88rem" }}>
+                      المستلم
+                    </th>
+                    <th style={{ textAlign: "center", padding: "10px 14px", width: 140, fontWeight: 700, color: "#334155", fontSize: "0.88rem" }}>
+                      تأكيد الاستلام
+                    </th>
+                  </tr>
+                </thead>
                 <tbody>
                   {order.items.map((it) => (
-                    <tr key={it.id} style={{ background: it.confirmed ? "rgba(16,185,129,0.06)" : undefined }}>
-                      <td><strong>{it.name}</strong></td>
-                      <td>{it.brand || "—"}</td>
-                      <td>{it.orderedQty} {it.unit || ""}</td>
-                      <td>
+                    <tr
+                      key={it.id}
+                      style={{
+                        borderBottom: "1px solid #f1f5f9",
+                        background: it.confirmed ? "rgba(16,185,129,0.02)" : undefined,
+                      }}
+                    >
+                      {/* اسم الصنف */}
+                      <td style={{ padding: "12px 14px" }}>
+                        <strong style={{ fontSize: "0.92rem", color: "#0f172a" }}>{it.name}</strong>
+                      </td>
+
+                      {/* الماركة */}
+                      <td style={{ padding: "12px 14px", color: "#475569", fontSize: "0.9rem" }}>
+                        {it.brand || "—"}
+                      </td>
+
+                      {/* المطلوب */}
+                      <td style={{ textAlign: "center", padding: "12px 14px", fontWeight: 700, color: "#1e293b", fontSize: "0.98rem" }}>
+                        {it.orderedQty} {it.unit ? <small style={{ color: "#64748b", fontWeight: 400 }}>{it.unit}</small> : ""}
+                      </td>
+
+                      {/* المستلم (حقل إدخال مربع ومحدد) */}
+                      <td style={{ textAlign: "center", padding: "12px 14px" }}>
                         <input
                           type="number"
                           min={0}
@@ -7069,18 +7802,52 @@ function SupplyOrdersView({ projects, quotations, canCreate }: { projects: Proje
                             const v = Number(e.target.value) || 0;
                             if (v !== it.receivedQty) receiveItem(order, it, v, it.confirmed);
                           }}
-                          style={{ width: 90, padding: "4px 6px", border: "1px solid #cbd5e1", borderRadius: 4 }}
+                          style={{
+                            width: 75,
+                            textAlign: "center",
+                            padding: "6px 8px",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 6,
+                            fontWeight: 700,
+                            fontSize: "0.95rem",
+                            color: "#0f172a",
+                            background: it.confirmed ? "#f8fafc" : "#ffffff",
+                          }}
                         />
                       </td>
-                      <td>
-                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}>
+
+                      {/* تأكيد الاستلام (مربع الاختيار الأزرق مع نص مؤكد مطابق للصورة) */}
+                      <td style={{ textAlign: "center", padding: "12px 14px" }}>
+                        <label
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 8,
+                            cursor: "pointer",
+                            fontWeight: 700,
+                            fontSize: "0.9rem",
+                            color: it.confirmed ? "#0284c7" : "#64748b",
+                          }}
+                        >
                           <input
                             type="checkbox"
                             checked={it.confirmed}
                             disabled={savingItem === it.id}
-                            onChange={(e) => receiveItem(order, it, it.receivedQty, e.target.checked)}
+                            onChange={(e) => {
+                              const newConfirmed = e.target.checked;
+                              const newReceived = newConfirmed && it.receivedQty === 0 ? it.orderedQty : it.receivedQty;
+                              receiveItem(order, it, newReceived, newConfirmed);
+                            }}
+                            style={{
+                              width: 22,
+                              height: 22,
+                              accentColor: "#0284c7",
+                              cursor: "pointer",
+                              borderRadius: 4,
+                            }}
                           />
-                          {it.confirmed ? "مؤكد" : "تأكيد"}
+                          <span>{it.confirmed ? "مؤكد" : "تأكيد"}</span>
                         </label>
                       </td>
                     </tr>
@@ -7088,10 +7855,191 @@ function SupplyOrdersView({ projects, quotations, canCreate }: { projects: Proje
                 </tbody>
               </table>
             </div>
-            {order.notes && <p style={{ fontSize: "0.82rem", color: "#64748b", marginTop: 6 }}>ملاحظات: {order.notes}</p>}
+
+            {/* ذيل الكشف والملاحظات والإقرار */}
+            <div
+              style={{
+                marginTop: 14,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 10,
+                paddingTop: 10,
+                borderTop: "1px solid #f1f5f9",
+              }}
+            >
+              <div style={{ fontSize: "0.84rem", color: "#64748b" }}>
+                {order.notes ? (
+                  <span>
+                    <strong>ملاحظات التوريد:</strong> {order.notes}
+                  </span>
+                ) : (
+                  <span style={{ color: "#94a3b8" }}>تم فحص ومطابقة المواد المذكورة أعلاه في موقع {currentProj?.name || "المشروع"}.</span>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: "0.82rem", color: "#475569", fontWeight: 700 }}>
+                  تم استلام ومطابقة {confirmedItems} من {totalItems} صنف ({progressPct}%)
+                </span>
+                {progressPct === 100 && (
+                  <span style={{ fontSize: "0.78rem", background: "#dcfce7", color: "#166534", padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>
+                    مكتمل الاستلام بنجاح ✓
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
+
+      {/* نافذة طباعة كشف الاستلام الرسمي لطلب التوريد */}
+      {printingOrder && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.6)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setPrintingOrder(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 12,
+              width: "100%",
+              maxWidth: 780,
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: 28,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+              position: "relative",
+              direction: "rtl",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* شريط الإجراءات أعلى نافذة الطباعة */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, borderBottom: "1px solid #e2e8f0", paddingBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Printer size={20} color="var(--brand)" />
+                <strong style={{ fontSize: "1.1rem" }}>معاينة كشف استلام وفحص التوريد</strong>
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <button
+                  type="button"
+                  className="primary-button"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                  onClick={() => window.print()}
+                >
+                  <Printer size={16} />
+                  <span>طباعة الكشف (A4)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintingOrder(null)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", display: "flex" }}
+                >
+                  <X size={22} />
+                </button>
+              </div>
+            </div>
+
+            {/* المستند الرسمي للطباعة */}
+            <div style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 24, background: "#fff" }}>
+              {/* ترويسة مؤسسة كنان مع الباركود */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #0f172a", paddingBottom: 14, marginBottom: 18 }}>
+                <div>
+                  <h2 style={{ margin: "0 0 4px 0", fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>مؤسسة كنان لأنظمة الأمن والسلامة</h2>
+                  <p style={{ margin: 0, fontSize: "0.82rem", color: "#64748b" }}>
+                    الرقم الضريبي: 310892544200003 | السجل التجاري: 1010729481
+                  </p>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <Barcode value={printingOrder.orderNumber} height={26} showText={true} />
+                </div>
+              </div>
+
+              <div style={{ textAlign: "center", marginBottom: 18 }}>
+                <h3 style={{ margin: "0 0 4px 0", fontSize: "1.15rem", fontWeight: 800, color: "var(--brand)" }}>
+                  كشف استلام ومطابقة توريد مواد سلامة
+                </h3>
+                <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                  مشروع: <strong>{currentProj?.name || "—"}</strong>
+                </span>
+              </div>
+
+              {/* بيانات الطلب */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, background: "#f8fafc", padding: 12, borderRadius: 6, border: "1px solid #e2e8f0", marginBottom: 16, fontSize: "0.85rem" }}>
+                <div><strong>رقم طلب التوريد:</strong> {printingOrder.orderNumber}</div>
+                <div><strong>عرض السعر المرتبط:</strong> {printingOrder.quotation?.number || "—"}</div>
+                <div><strong>حالة الاستلام:</strong> {supplyStatusLabels[printingOrder.status]}</div>
+                <div><strong>تاريخ الطلب:</strong> {printingOrder.createdAt ? String(printingOrder.createdAt).split("T")[0] : "—"}</div>
+                <div><strong>الموقع:</strong> {currentProj?.address || "الرياض"}</div>
+                <div><strong>الجهة الطالبة:</strong> {printingOrder.createdBy?.name || "إدارة المشاريع"}</div>
+              </div>
+
+              {/* جدول بنود الكشف */}
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16, fontSize: "0.85rem" }}>
+                <thead>
+                  <tr style={{ background: "#0f172a", color: "#fff" }}>
+                    <th style={{ padding: "8px 10px", textAlign: "center", width: 40 }}>#</th>
+                    <th style={{ padding: "8px 10px", textAlign: "right" }}>الصنف والمواصفات</th>
+                    <th style={{ padding: "8px 10px", textAlign: "center", width: 120 }}>الماركة</th>
+                    <th style={{ padding: "8px 10px", textAlign: "center", width: 80 }}>المطلوب</th>
+                    <th style={{ padding: "8px 10px", textAlign: "center", width: 80 }}>المستلم</th>
+                    <th style={{ padding: "8px 10px", textAlign: "center", width: 100 }}>حالة الفحص</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {printingOrder.items.map((it, idx) => (
+                    <tr key={it.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "8px 10px", textAlign: "center" }}>{idx + 1}</td>
+                      <td style={{ padding: "8px 10px" }}><strong>{it.name}</strong></td>
+                      <td style={{ padding: "8px 10px", textAlign: "center" }}>{it.brand || "—"}</td>
+                      <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700 }}>{it.orderedQty} {it.unit || ""}</td>
+                      <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, color: it.confirmed ? "#166534" : "#b45309" }}>{it.receivedQty}</td>
+                      <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                        <span style={{ color: it.confirmed ? "#166534" : "#b45309", fontWeight: 700 }}>
+                          {it.confirmed ? "مطابق ومستلم ✓" : "قيد الاستلام"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* إقرار الاستلام والتوقيعات الرسمية */}
+              <div style={{ marginTop: 24, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
+                <p style={{ margin: "0 0 16px 0", fontSize: "0.82rem", color: "#475569", lineHeight: 1.6 }}>
+                  <strong>إقرار الاستلام:</strong> يشهد الموقعون أدناه بأنه قد تم فحص واستلام المواد والأصناف المبينة أعلاه في موقع المشروع، ومطابقتها للشروط والمواصفات الفنية المعتمدة من الدفاع المدني واستشاري المشروع.
+                </p>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, textAlign: "center", marginTop: 20 }}>
+                  <div style={{ border: "1px dashed #cbd5e1", borderRadius: 6, padding: "12px 8px" }}>
+                    <strong style={{ fontSize: "0.85rem", display: "block", marginBottom: 30 }}>مسؤول التوريد / المستودع</strong>
+                    <div style={{ fontSize: "0.78rem", color: "#64748b" }}>التوقيع: ..........................</div>
+                  </div>
+                  <div style={{ border: "1px dashed #cbd5e1", borderRadius: 6, padding: "12px 8px" }}>
+                    <strong style={{ fontSize: "0.85rem", display: "block", marginBottom: 30 }}>مهندس الموقع المشرف</strong>
+                    <div style={{ fontSize: "0.78rem", color: "#64748b" }}>التوقيع: ..........................</div>
+                  </div>
+                  <div style={{ border: "1px dashed #cbd5e1", borderRadius: 6, padding: "12px 8px" }}>
+                    <strong style={{ fontSize: "0.85rem", display: "block", marginBottom: 30 }}>اعتماد مدير المشاريع</strong>
+                    <div style={{ fontSize: "0.78rem", color: "#64748b" }}>الختم والاعتماد: ...............</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -8397,6 +9345,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
             address: c.address || "",
             type: c.type || "عميل",
             notes: c.notes || "",
+            taxId: c.taxId || "",
+            commercialRegister: c.commercialRegister || "",
           }));
           setClients(mapped);
         }
@@ -8968,11 +9918,13 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
       return;
     }
     const address = String(form.get("address") ?? "");
+    const taxId = String(form.get("taxId") ?? "").trim();
+    const commercialRegister = String(form.get("commercialRegister") ?? "").trim();
     const type = String(form.get("type") ?? "عميل");
     const notes = String(form.get("notes") ?? "");
 
     const newId = nextId(clients);
-    const newClient: Client = { id: newId, name, phone, address, type, notes } as unknown as Client;
+    const newClient: Client = { id: newId, name, phone, address, taxId, commercialRegister, type, notes } as unknown as Client;
     setClients((cur) => [...cur, newClient]);
     event.currentTarget.reset();
     setNotice("تمت إضافة العميل بنجاح");
@@ -8980,7 +9932,7 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
     try {
       const saved = await apiFetch("/api/projects/clients", {
         method: "POST",
-        body: JSON.stringify({ name, phone, address, type, notes }),
+        body: JSON.stringify({ name, phone, address, taxId, commercialRegister, type, notes }),
       });
       if (saved && saved.id) {
         setClients((cur) => cur.map((c) => (c.id === newId ? { ...c, id: saved.id } : c)));
@@ -9008,6 +9960,8 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
           name: client.name,
           phone: client.phone,
           address: client.address,
+          taxId: client.taxId,
+          commercialRegister: client.commercialRegister,
           type: client.type,
           notes: client.notes,
         }),
@@ -10682,6 +11636,11 @@ export function InternalApp({ user, onLogout, onOpenSite }: InternalAppProps) {
             deleteStage={deleteStage}
             generateDefaultStages={generateDefaultStages}
             isAdmin={isAdmin || isPMOrAdmin}
+            deficiencies={roleFilteredDeficiencies}
+            addDeficiency={addDeficiencyFromForm}
+            updateDeficiencyStatus={updateDeficiencyStatus}
+            currentUserName={user.name}
+            setActiveSection={setActiveSection}
           />
         );
       case "systems":
