@@ -807,14 +807,47 @@ export class ProjectsService {
   async deleteClient(id: string, user: any) {
     const oldClient = await this.prisma.client.findUnique({
       where: { id },
+      include: {
+        projects: { select: { id: true } },
+        quotations: { select: { id: true } },
+        contracts: { select: { id: true } },
+        maintenanceContracts: { select: { id: true } },
+        invoices: { select: { id: true } },
+      },
     });
 
     if (!oldClient) {
       throw new NotFoundException("العميل غير موجود");
     }
 
-    await this.prisma.client.delete({
-      where: { id },
+    // حذف كل البيانات المرتبطة بالعميل في transaction واحد
+    await this.prisma.$transaction(async (tx) => {
+      // حذف المشاريع (وكل ما يتبعها: مراحل، أنظمة، نواقص، تقارير، إلخ)
+      if (oldClient.projects.length > 0) {
+        const projectIds = oldClient.projects.map((p) => p.id);
+        await tx.project.deleteMany({ where: { id: { in: projectIds } } });
+      }
+
+      // حذف عروض الأسعار
+      if (oldClient.quotations.length > 0) {
+        const quotationIds = oldClient.quotations.map((q) => q.id);
+        await tx.quotation.deleteMany({ where: { id: { in: quotationIds } } });
+      }
+
+      // حذف العقود
+      if (oldClient.contracts.length > 0) {
+        const contractIds = oldClient.contracts.map((c) => c.id);
+        await tx.contract.deleteMany({ where: { id: { in: contractIds } } });
+      }
+
+      // حذف عقود الصيانة
+      if (oldClient.maintenanceContracts.length > 0) {
+        const mIds = oldClient.maintenanceContracts.map((m) => m.id);
+        await tx.maintenanceContract.deleteMany({ where: { id: { in: mIds } } });
+      }
+
+      // حذف العميل نفسه
+      await tx.client.delete({ where: { id } });
     });
 
     await this.auditService.log(user.sub, "DELETE", "Client", id, oldClient, null);

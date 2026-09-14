@@ -113,7 +113,7 @@ model Project {
   name       String
   type       String // "نظام إنذار حريق" | "كاميرات وشبكات" | إلخ
   clientId   String
-  client     Client        @relation(fields: [clientId], references: [id])
+  client     Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   address    String
   startDate  DateTime
   endDate    DateTime
@@ -331,7 +331,7 @@ model Quotation {
   id         String          @id @default(uuid())
   number     String          @unique // مثل "QT-2026-001"
   clientId   String
-  client     Client          @relation(fields: [clientId], references: [id])
+  client     Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   date       DateTime
   validUntil DateTime
   status     QuotationStatus @default(DRAFT)
@@ -374,7 +374,7 @@ model Contract {
   projectId                 String
   project                   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   clientId                  String
-  client                    Client   @relation(fields: [clientId], references: [id])
+  client                    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   value                     Decimal  
   currency                  String   @default("SAR")
   startDate                 DateTime
@@ -678,9 +678,9 @@ model MaintenanceContract {
   id             String                       @id @default(uuid())
   contractNumber String                       @unique // "MNT-2026-001"
   clientId       String
-  client         Client                       @relation(fields: [clientId], references: [id])
+  client         Client                       @relation(fields: [clientId], references: [id], onDelete: Cascade)
   projectId      String?
-  project        Project?                     @relation(fields: [projectId], references: [id])
+  project        Project?                     @relation(fields: [projectId], references: [id], onDelete: SetNull)
   value          Decimal                      
   currency       String                       @default("SAR")
   startDate      DateTime
